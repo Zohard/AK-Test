@@ -1,0 +1,3 @@
+node apply-fixed-schema.js    # Create tables
+node final-data-import.js     # Import data
+node server-postgresql.js     # Start API
