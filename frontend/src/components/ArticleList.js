@@ -7,7 +7,7 @@ function ArticleList() {
   const limit = 10;
 
   useEffect(() => {
-    axios.get(`http://localhost:3000/api/articles?page=${page}&limit=${limit}`)
+    axios.get(`http://localhost:3002/api/articles?page=${page}&limit=${limit}`)
       .then(res => setArticles(res.data.data))
       .catch(err => console.error('Erreur:', err));
   }, [page]);

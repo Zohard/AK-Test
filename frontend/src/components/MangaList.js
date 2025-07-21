@@ -7,7 +7,7 @@ function MangaList() {
   const limit = 10;
 
   useEffect(() => {
-    axios.get(`http://localhost:3000/api/mangas?page=${page}&limit=${limit}`)
+    axios.get(`http://localhost:3002/api/mangas?page=${page}&limit=${limit}`)
       .then(res => setMangas(res.data.data))
       .catch(err => console.error('Erreur:', err));
   }, [page]);

@@ -22,7 +22,7 @@ const HeroBanner = () => {
 
   const fetchRecentAnimes = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/animes?limit=5&recent=true');
+      const response = await axios.get('http://localhost:3002/api/animes?limit=5&recent=true');
       if (response.data.data && response.data.data.length > 0) {
         setAnimes(response.data.data);
       }

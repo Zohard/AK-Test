@@ -1,4 +1,5 @@
 import React from 'react';
+import FormattedText from './FormattedText';
 
 const ArticleCard = ({ article }) => {
   const formatDate = (dateString) => {
@@ -53,9 +54,14 @@ const ArticleCard = ({ article }) => {
         </div>
         <h3 className="article-title">{title}</h3>
         {article.critique && (
-          <p className="article-excerpt">
-            {article.critique.replace(/<[^>]*>/g, '').substring(0, 100)}...
-          </p>
+          <div className="article-excerpt">
+            <FormattedText 
+              text={article.critique}
+              maxLength={150}
+              showReadMore={true}
+              className="text-sm text-gray-600"
+            />
+          </div>
         )}
         <div className="article-footer">
           <p className="article-date">

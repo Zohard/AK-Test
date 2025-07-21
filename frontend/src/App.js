@@ -22,7 +22,7 @@ const HomePage = () => {
 
   const fetchCritiques = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/critiques?limit=3');
+      const response = await axios.get('http://localhost:3002/api/critiques?limit=3');
       setCritiques(response.data.data || []);
     } catch (error) {
       console.error('Error fetching critiques:', error);

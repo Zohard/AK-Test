@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: anime-kun-postgres
+    environment:
+      POSTGRES_DB: anime_kun
+      POSTGRES_USER: anime_user
+      POSTGRES_PASSWORD: anime_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./schema-postgresql.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U anime_user -d anime_kun"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - anime-network
+
+  # API Server
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: anime-kun-api
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_USER=anime_user
+      - DB_PASSWORD=anime_password
+      - DB_NAME=anime_kun
+      - DB_PORT=5432
+      - PORT=3000
+      - FRONTEND_URL=http://localhost
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - anime-network
+    command: ["npm", "run", "start:postgresql"]
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../Dockerfile.frontend
+    container_name: anime-kun-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - anime-network
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: anime-kun-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - anime-network
+
+  # Prometheus for monitoring (optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: anime-kun-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    restart: unless-stopped
+    networks:
+      - anime-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  anime-network:
+    driver: bridge

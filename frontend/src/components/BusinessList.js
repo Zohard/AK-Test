@@ -7,7 +7,7 @@ function BusinessList() {
   const limit = 10;
 
   useEffect(() => {
-    axios.get(`http://localhost:3000/api/anime-business?page=${page}&limit=${limit}`)
+    axios.get(`http://localhost:3002/api/anime-business?page=${page}&limit=${limit}`)
       .then(res => setBusiness(res.data.data))
       .catch(err => console.error('Erreur:', err));
   }, [page]);
