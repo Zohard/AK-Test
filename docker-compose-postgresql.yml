@@ -14,7 +14,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./schema-postgresql.sql:/docker-entrypoint-initdb.d/01-schema.sql
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U anime_user -d anime_kun"]
@@ -57,11 +56,13 @@ services:
   # Frontend
   frontend:
     build:
-      context: ./frontend
-      dockerfile: ../Dockerfile.frontend
+      context: .
+      dockerfile: Dockerfile.frontend
     container_name: anime-kun-frontend
+    environment:
+      - API_BASE_URL=http://api:3000
     ports:
-      - "80:80"
+      - "3001:3000"
     depends_on:
       - api
     restart: unless-stopped
