@@ -16,6 +16,13 @@ const NodeCache = require('node-cache');
 const promClient = require('prom-client');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Import authentication utilities
+const { verifyPassword, generateToken, sanitizeUser } = require('./utils/auth');
+const { authenticateToken: authMiddleware, optionalAuth, requireAdmin: adminMiddleware } = require('./middleware/auth');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -161,6 +168,45 @@ app.use('/api/', limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Multer configuration for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../frontend/public/images');
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    // Generate unique filename with original extension
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const extension = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + extension);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  // Check file type
+  const allowedTypes = /jpeg|jpg|gif/;
+  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedTypes.test(file.mimetype);
+
+  if (mimetype && extname) {
+    return cb(null, true);
+  } else {
+    cb(new Error('Formats autorisés: JPG, JPEG, GIF uniquement'));
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 200 * 1024 // 200KB max
+  },
+  fileFilter: fileFilter
+});
+
 // Session setup
 app.use(session({
   secret: process.env.SESSION_SECRET || 'anime-kun-secret',
@@ -172,6 +218,7 @@ app.use(session({
 // Passport setup
 app.use(passport.initialize());
 app.use(passport.session());
+
 
 // Swagger UI with CORS-friendly configuration
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
@@ -472,14 +519,13 @@ app.post('/api/auth/register', [
  *           schema:
  *             type: object
  *             required:
- *               - email
+ *               - username
  *               - password
  *             properties:
- *               email:
+ *               username:
  *                 type: string
- *                 format: email
- *                 description: Adresse email de l'utilisateur
- *                 example: "user@anime-kun.com"
+ *                 description: Nom d'utilisateur ou adresse email
+ *                 example: "zohard"
  *               password:
  *                 type: string
  *                 description: Mot de passe
@@ -524,37 +570,270 @@ app.post('/api/auth/register', [
  *               $ref: '#/components/schemas/Error'
  */
 app.post('/api/auth/login', [
-  body('email').isEmail(),
-  body('password').notEmpty()
+  body('username').notEmpty().withMessage('Username is required'),
+  body('password').notEmpty().withMessage('Password is required')
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({ 
+      error: 'Validation failed',
+      details: errors.array() 
+    });
   }
 
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
     
-    const result = await pool.query('SELECT * FROM smf_members WHERE email_address = $1', [email]);
+    // Find user by username or email
+    const result = await pool.query(
+      'SELECT * FROM smf_members WHERE member_name = $1 OR email_address = $1', 
+      [username]
+    );
     const user = result.rows[0];
     
-    if (!user || !(await bcrypt.compare(password, user.passwd))) {
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Verify SMF password
+    const isPasswordValid = verifyPassword(
+      password, 
+      user.passwd, 
+      user.member_name, 
+      user.password_salt
+    );
+    
+    if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    // Update last login
-    await pool.query('UPDATE smf_members SET last_login = NOW() WHERE id_member = $1', [user.id_member]);
-    
-    const token = jwt.sign(
-      { userId: user.id_member, username: user.member_name, role: user.id_group === 1 ? 'admin' : 'user' },
-      process.env.JWT_SECRET || 'secret',
-      { expiresIn: '24h' }
+    // Update last login (Unix timestamp)
+    await pool.query(
+      'UPDATE smf_members SET last_login = $1 WHERE id_member = $2', 
+      [Math.floor(Date.now() / 1000), user.id_member]
     );
     
-    res.json({ token, user: { id: user.id_member, username: user.member_name, email: user.email_address } });
+    // Generate JWT token
+    const token = generateToken(user);
+    
+    // Return sanitized user data
+    const sanitizedUser = sanitizeUser(user);
+    
+    res.json({ 
+      success: true,
+      token, 
+      user: sanitizedUser 
+    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Déconnexion utilisateur
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Déconnexion réussie
+ *       401:
+ *         description: Token invalide
+ */
+app.post('/api/auth/logout', authMiddleware, (req, res) => {
+  // With JWT, logout is typically handled client-side by removing the token
+  // Here we can implement token blacklisting if needed
+  res.json({ 
+    success: true,
+    message: 'Logged out successfully' 
+  });
+});
+
+/**
+ * @swagger
+ * /sso:
+ *   get:
+ *     summary: Discourse SSO Provider
+ *     description: Handles Discourse Single Sign-On authentication
+ *     tags: [SSO]
+ *     parameters:
+ *       - in: query
+ *         name: sso
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Base64 encoded SSO payload from Discourse
+ *       - in: query
+ *         name: sig
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: HMAC-SHA256 signature of the SSO payload
+ *     responses:
+ *       302:
+ *         description: Redirect to Discourse with authenticated user data
+ *       403:
+ *         description: Invalid SSO signature
+ *       401:
+ *         description: User not authenticated
+ */
+app.get('/sso', async (req, res) => {
+  try {
+    const { sso, sig } = req.query;
+    
+    if (!sso || !sig) {
+      return res.status(400).json({ error: 'Missing SSO parameters' });
+    }
+
+    // Import SSO functions
+    const { validateSSOSignature, decodeSSOPayload, createSSOResponse, extractToken, verifyToken, sanitizeUser } = require('./utils/auth');
+
+    // 1. Validate signature
+    if (!validateSSOSignature(sso, sig)) {
+      return res.status(403).json({ error: 'Invalid SSO signature' });
+    }
+
+    // 2. Decode payload
+    const ssoParams = decodeSSOPayload(sso);
+    
+    // 3. Check if user is authenticated
+    const token = extractToken(req);
+    if (!token) {
+      // Redirect to login with SSO parameters preserved
+      const loginUrl = `/login?sso=${encodeURIComponent(sso)}&sig=${encodeURIComponent(sig)}`;
+      return res.redirect(loginUrl);
+    }
+
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      const loginUrl = `/login?sso=${encodeURIComponent(sso)}&sig=${encodeURIComponent(sig)}`;
+      return res.redirect(loginUrl);
+    }
+
+    // 4. Get user from database
+    const result = await pool.query(
+      'SELECT * FROM smf_members WHERE id_member = $1',
+      [decoded.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = sanitizeUser(result.rows[0]);
+    
+    // 5. Create SSO response
+    const ssoResponse = createSSOResponse(user, ssoParams.nonce);
+    
+    // 6. Redirect back to Discourse
+    const discourseUrl = `${ssoParams.return_sso_url}?sso=${encodeURIComponent(ssoResponse.sso)}&sig=${ssoResponse.sig}`;
+    res.redirect(discourseUrl);
+    
+  } catch (error) {
+    console.error('SSO error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /sso/logout:
+ *   post:
+ *     summary: Discourse SSO Logout
+ *     description: Handles logout from Discourse
+ *     tags: [SSO]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *       401:
+ *         description: Not authenticated
+ */
+app.post('/sso/logout', authMiddleware, (req, res) => {
+  // Log the user out from the main site
+  // Clear any server-side sessions if you use them
+  res.json({ 
+    success: true, 
+    message: 'Logged out from SSO' 
+  });
+});
+
+/**
+ * @swagger
+ * /api/auth/profile:
+ *   get:
+ *     summary: Profil utilisateur connecté
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profil utilisateur
+ *       401:
+ *         description: Token invalide
+ */
+app.get('/api/auth/profile', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM smf_members WHERE id_member = $1', 
+      [req.user.id]
+    );
+    const user = result.rows[0];
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const sanitizedUser = sanitizeUser(user);
+    res.json({ user: sanitizedUser });
+  } catch (error) {
+    console.error('Profile fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/verify:
+ *   get:
+ *     summary: Vérification du token
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Token valide
+ *       401:
+ *         description: Token invalide
+ */
+app.get('/api/auth/verify', authMiddleware, async (req, res) => {
+  try {
+    // Get full user data from database to ensure we have latest info
+    const result = await pool.query(
+      'SELECT * FROM smf_members WHERE id_member = $1', 
+      [req.user.id]
+    );
+    const user = result.rows[0];
+    
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+    
+    // Return sanitized user data with admin status
+    const sanitizedUser = sanitizeUser(user);
+    
+    res.json({ 
+      success: true,
+      user: sanitizedUser
+    });
+  } catch (error) {
+    console.error('Verify endpoint error:', error);
+    res.status(500).json({ error: 'Verification failed' });
   }
 });
 
@@ -646,7 +925,7 @@ app.get('/api/animes', async (req, res) => {
     
     const query = `
       SELECT id_anime, nice_url, titre, titre_orig, annee, nb_ep, studio, 
-             image, nb_reviews, moyennenotes as moyenne_notes, date_ajout
+             image, nb_reviews, moyennenotes as moyenne_notes, date_ajout, synopsis
       FROM ak_animes ${whereClause}
       ORDER BY annee DESC, titre ASC
       LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
@@ -658,9 +937,27 @@ app.get('/api/animes', async (req, res) => {
       pool.query(query, params),
       pool.query(`SELECT COUNT(*) FROM ak_animes ${whereClause}`, params.slice(0, paramCount))
     ]);
+
+    // Get recent reviews for each anime
+    const animesWithReviews = await Promise.all(
+      animes.rows.map(async (anime) => {
+        const reviews = await pool.query(`
+          SELECT titre as review_title, notation as rating
+          FROM ak_critique
+          WHERE id_anime = $1 AND statut = 0
+          ORDER BY date_critique DESC
+          LIMIT 3
+        `, [anime.id_anime]);
+        
+        return {
+          ...anime,
+          recent_reviews: reviews.rows
+        };
+      })
+    );
     
     res.json({
-      data: animes.rows,
+      data: animesWithReviews,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -732,27 +1029,23 @@ app.get('/api/animes/:id', async (req, res) => {
              COUNT(c.id_critique) as review_count,
              AVG(c.notation) as avg_rating
       FROM ak_animes a
-      LEFT JOIN ak_critique c ON a.id_anime = c.id_anime AND c.statut = 1
+      LEFT JOIN ak_critique c ON a.id_anime = c.id_anime AND c.statut = 0
       WHERE a.id_anime = $1 AND a.statut = 1
-      GROUP BY a.id_anime
+      GROUP BY a.id_anime, a.nice_url, a.titre, a.titre_orig, a.annee, a.nb_ep, a.studio, a.image, a.nb_reviews, a.moyennenotes, a.date_ajout, a.synopsis, a.statut
     `, [id]);
     
     if (anime.rows.length === 0) {
       return res.status(404).json({ error: 'Anime not found' });
     }
     
-    // Get episodes
-    const episodes = await pool.query(`
-      SELECT * FROM ak_animes_episodes 
-      WHERE id_anime = $1 
-      ORDER BY numero ASC
-    `, [id]);
+    // Get episodes (table structure doesn't support anime linking)
+    const episodes = { rows: [] };
     
-    // Get screenshots
+    // Get screenshots (using id_titre as anime id)
     const screenshots = await pool.query(`
       SELECT * FROM ak_screenshots 
-      WHERE id_anime = $1 
-      ORDER BY id_screenshot ASC
+      WHERE id_titre = $1 
+      ORDER BY id_screen ASC
     `, [id]);
     
     // Get reviews
@@ -760,7 +1053,7 @@ app.get('/api/animes/:id', async (req, res) => {
       SELECT c.*, u.member_name as author_name
       FROM ak_critique c
       LEFT JOIN smf_members u ON c.id_membre = u.id_member
-      WHERE c.id_anime = $1 AND c.statut = 1
+      WHERE c.id_anime = $1 AND c.statut = 0
       ORDER BY c.date_critique DESC
       LIMIT 5
     `, [id]);
@@ -774,6 +1067,151 @@ app.get('/api/animes/:id', async (req, res) => {
   } catch (error) {
     console.error('Anime fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch anime' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/animes/{id}/business:
+ *   get:
+ *     summary: Récupère les liens business pour un anime
+ *     description: Retourne la liste des entreprises/personnes liées à un anime avec leur rôle
+ *     tags: [Animes]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de l'anime
+ *     responses:
+ *       200:
+ *         description: Liens business récupérés avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id_business:
+ *                         type: integer
+ *                       denomination:
+ *                         type: string
+ *                       type:
+ *                         type: string
+ *                       precisions:
+ *                         type: string
+ *       404:
+ *         description: Anime non trouvé
+ *       500:
+ *         description: Erreur serveur
+ */
+app.get('/api/animes/:id/business', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // First check if anime exists
+    const animeCheck = await pool.query(`
+      SELECT id_anime FROM ak_animes WHERE id_anime = $1 AND statut = 1
+    `, [id]);
+    
+    if (animeCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Anime not found' });
+    }
+    
+    // Get business links
+    const businessLinks = await pool.query(`
+      SELECT 
+        b.id_business,
+        b.denomination,
+        b.type as business_type,
+        b.site_officiel,
+        ba.type,
+        ba.precisions
+      FROM ak_business_to_animes ba
+      INNER JOIN ak_business b ON ba.id_business = b.id_business
+      WHERE ba.id_anime = $1 AND b.statut = 1
+      ORDER BY ba.type ASC, b.denomination ASC
+    `, [id]);
+    
+    res.json({
+      data: businessLinks.rows
+    });
+  } catch (error) {
+    console.error('Business links fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch business links' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/animes/{id}/tags:
+ *   get:
+ *     summary: Récupère les tags pour un anime
+ *     description: Retourne la liste des genres/themes pour un anime spécifique
+ *     tags: [Animes]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de l'anime
+ *     responses:
+ *       200:
+ *         description: Liste des tags récupérée avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id_tag:
+ *                         type: integer
+ *                       tag_name:
+ *                         type: string
+ *                       tag_nice_url:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       categorie:
+ *                         type: string
+ *       404:
+ *         description: Anime non trouvé
+ *       500:
+ *         description: Erreur serveur
+ */
+app.get('/api/animes/:id/tags', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const tags = await pool.query(`
+      SELECT 
+        t.id_tag,
+        t.tag_name,
+        t.tag_nice_url,
+        t.description,
+        t.categorie
+      FROM ak_tags t
+      INNER JOIN ak_tag2fiche t2f ON t.id_tag = t2f.id_tag
+      WHERE t2f.id_fiche = $1 AND t2f.type = 'anime'
+      ORDER BY t.categorie ASC, t.tag_name ASC
+    `, [id]);
+    
+    res.json({
+      data: tags.rows
+    });
+  } catch (error) {
+    console.error('Tags fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch tags' });
   }
 });
 
@@ -943,7 +1381,7 @@ app.get('/api/mangas/:id', async (req, res) => {
              COUNT(c.id_critique) as review_count,
              AVG(c.notation) as avg_rating
       FROM ak_mangas m
-      LEFT JOIN ak_critique c ON m.id_manga = c.id_manga AND c.statut = 1
+      LEFT JOIN ak_critique c ON m.id_manga = c.id_manga AND c.statut = 0
       WHERE m.id_manga = $1 AND m.statut = 1
       GROUP BY m.id_manga
     `, [id]);
@@ -957,7 +1395,7 @@ app.get('/api/mangas/:id', async (req, res) => {
       SELECT c.*, u.member_name as author_name
       FROM ak_critique c
       LEFT JOIN smf_members u ON c.id_membre = u.id_member
-      WHERE c.id_manga = $1 AND c.statut = 1
+      WHERE c.id_manga = $1 AND c.statut = 0
       ORDER BY c.date_critique DESC
       LIMIT 5
     `, [id]);
@@ -1165,7 +1603,7 @@ app.get('/api/reviews', async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-app.post('/api/reviews', authenticateToken, [
+app.post('/api/reviews', authMiddleware, [
   body('title').isLength({ min: 3 }),
   body('content').isLength({ min: 10 }),
   body('rating').isInt({ min: 1, max: 10 })
@@ -1645,7 +2083,7 @@ app.get('/api/webzine/articles/:slug', async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-app.get('/api/admin/dashboard', authenticateToken, requireAdmin, async (req, res) => {
+app.get('/api/admin/dashboard', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const stats = await pool.query(`
       SELECT 
@@ -1653,13 +2091,14 @@ app.get('/api/admin/dashboard', authenticateToken, requireAdmin, async (req, res
         (SELECT COUNT(*) FROM ak_mangas) as total_mangas,
         (SELECT COUNT(*) FROM ak_critique) as total_reviews,
         (SELECT COUNT(*) FROM smf_members) as total_users,
-        (SELECT COUNT(*) FROM ak_webzine_articles) as total_articles
+        (SELECT COUNT(*) FROM ak_webzine_articles) as total_articles,
+        (SELECT COUNT(*) FROM ak_business) as total_business
     `);
     
     const recentActivity = await pool.query(`
       SELECT 'review' as type, date_critique as date, titre as title
       FROM ak_critique 
-      WHERE statut = 1
+      WHERE statut = 0
       UNION ALL
       SELECT 'article' as type, date, titre as title
       FROM ak_webzine_articles
@@ -1675,6 +2114,803 @@ app.get('/api/admin/dashboard', authenticateToken, requireAdmin, async (req, res
   } catch (error) {
     console.error('Admin dashboard error:', error);
     res.status(500).json({ error: 'Failed to fetch dashboard data' });
+  }
+});
+
+// ===== ADMIN ANIME ROUTES =====
+
+/**
+ * @swagger
+ * /api/admin/animes:
+ *   get:
+ *     summary: Liste des animes pour l'administration
+ *     description: Récupère la liste complète des animes avec pagination pour l'interface d'administration
+ *     tags: [Admin - Animes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Numéro de page
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Nombre d'éléments par page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Recherche dans le titre
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [all, active, inactive]
+ *           default: all
+ *         description: Filtrer par statut
+ *     responses:
+ *       200:
+ *         description: Liste des animes récupérée avec succès
+ *       401:
+ *         description: Authentification requise
+ *       403:
+ *         description: Accès admin requis
+ */
+app.get('/api/admin/animes', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { page = 1, limit = 50, search, status = 'all' } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    let whereClause = '';
+    let params = [];
+    let paramCount = 0;
+    
+    if (status !== 'all') {
+      paramCount++;
+      whereClause += ` WHERE statut = $${paramCount}`;
+      params.push(parseInt(status));
+    }
+    
+    if (search) {
+      paramCount++;
+      const searchClause = ` ${whereClause ? 'AND' : 'WHERE'} titre ILIKE $${paramCount}`;
+      whereClause += searchClause;
+      params.push(`%${search}%`);
+    }
+    
+    const query = `
+      SELECT id_anime, nice_url, titre, titre_orig, annee, nb_ep, studio, 
+             image, nb_reviews, moyennenotes, date_ajout, statut
+      FROM ak_animes ${whereClause}
+      ORDER BY date_ajout DESC
+      LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
+    `;
+    
+    params.push(parseInt(limit), offset);
+    
+    const [animes, total] = await Promise.all([
+      pool.query(query, params),
+      pool.query(`SELECT COUNT(*) FROM ak_animes ${whereClause}`, params.slice(0, paramCount))
+    ]);
+    
+    res.json({
+      data: animes.rows,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: parseInt(total.rows[0].count),
+        pages: Math.ceil(total.rows[0].count / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Admin animes fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch animes' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/animes:
+ *   post:
+ *     summary: Créer un nouvel anime
+ *     description: Ajoute un nouvel anime à la base de données
+ *     tags: [Admin - Animes]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - titre
+ *               - annee
+ *             properties:
+ *               titre:
+ *                 type: string
+ *                 description: Titre de l'anime
+ *               titre_orig:
+ *                 type: string
+ *                 description: Titre original
+ *               annee:
+ *                 type: integer
+ *                 description: Année de sortie
+ *               nb_ep:
+ *                 type: integer
+ *                 description: Nombre d'épisodes
+ *               studio:
+ *                 type: string
+ *                 description: Studio d'animation
+ *               synopsis:
+ *                 type: string
+ *                 description: Synopsis
+ *               image:
+ *                 type: string
+ *                 description: URL de l'image
+ *               statut:
+ *                 type: integer
+ *                 default: 1
+ *                 description: Statut (1=actif, 0=inactif)
+ *     responses:
+ *       201:
+ *         description: Anime créé avec succès
+ *       400:
+ *         description: Données invalides
+ *       401:
+ *         description: Authentification requise
+ *       403:
+ *         description: Accès admin requis
+ */
+app.post('/api/admin/animes', upload.single('image'), authMiddleware, adminMiddleware, [
+  body('titre').notEmpty().withMessage('Titre is required'),
+  body('annee').isInt({ min: 1900, max: 2030 }).withMessage('Valid year required')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  try {
+    const { titre, titre_orig, annee, nb_ep, studio, synopsis, statut = 1 } = req.body;
+    
+    // Handle uploaded image
+    let imagePath = null;
+    if (req.file) {
+      imagePath = req.file.filename; // Just store the filename
+    }
+    
+    // Generate nice_url
+    const niceUrl = titre.toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim('-');
+    
+    const result = await pool.query(`
+      INSERT INTO ak_animes (
+        nice_url, titre, titre_orig, annee, nb_ep, studio, synopsis, 
+        image, date_ajout, statut, nb_reviews, moyennenotes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), $9, 0, 0)
+      RETURNING *
+    `, [niceUrl, titre, titre_orig, annee, nb_ep || 0, studio, synopsis, imagePath, statut]);
+    
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Anime creation error:', error);
+    res.status(500).json({ error: 'Failed to create anime' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/animes/{id}:
+ *   put:
+ *     summary: Mettre à jour un anime
+ *     description: Modifie les informations d'un anime existant
+ *     tags: [Admin - Animes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de l'anime
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               titre:
+ *                 type: string
+ *               titre_orig:
+ *                 type: string
+ *               annee:
+ *                 type: integer
+ *               nb_ep:
+ *                 type: integer
+ *               studio:
+ *                 type: string
+ *               synopsis:
+ *                 type: string
+ *               image:
+ *                 type: string
+ *               statut:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Anime mis à jour avec succès
+ *       404:
+ *         description: Anime non trouvé
+ *       401:
+ *         description: Authentification requise
+ *       403:
+ *         description: Accès admin requis
+ */
+app.put('/api/admin/animes/:id', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { titre, titre_orig, annee, nb_ep, studio, synopsis, image, statut } = req.body;
+    
+    // Update nice_url if titre changed
+    let niceUrl;
+    if (titre) {
+      niceUrl = titre.toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim('-');
+    }
+    
+    const result = await pool.query(`
+      UPDATE ak_animes 
+      SET titre = COALESCE($1, titre),
+          titre_orig = COALESCE($2, titre_orig),
+          annee = COALESCE($3, annee),
+          nb_ep = COALESCE($4, nb_ep),
+          studio = COALESCE($5, studio),
+          synopsis = COALESCE($6, synopsis),
+          image = COALESCE($7, image),
+          statut = COALESCE($8, statut),
+          nice_url = COALESCE($9, nice_url)
+      WHERE id_anime = $10
+      RETURNING *
+    `, [titre, titre_orig, annee, nb_ep, studio, synopsis, image, statut, niceUrl, id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Anime not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Anime update error:', error);
+    res.status(500).json({ error: 'Failed to update anime' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/animes/{id}:
+ *   delete:
+ *     summary: Supprimer un anime
+ *     description: Supprime définitivement un anime et ses données associées
+ *     tags: [Admin - Animes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de l'anime
+ *     responses:
+ *       200:
+ *         description: Anime supprimé avec succès
+ *       404:
+ *         description: Anime non trouvé
+ *       401:
+ *         description: Authentification requise
+ *       403:
+ *         description: Accès admin requis
+ */
+app.delete('/api/admin/animes/:id', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Delete associated data first
+    await pool.query('DELETE FROM ak_critique WHERE id_anime = $1', [id]);
+    await pool.query('DELETE FROM ak_screenshots WHERE id_titre = $1', [id]);
+    await pool.query('DELETE FROM ak_tag2fiche WHERE id_fiche = $1 AND type = $2', [id, 'anime']);
+    await pool.query('DELETE FROM ak_business_to_animes WHERE id_anime = $1', [id]);
+    
+    // Delete the anime
+    const result = await pool.query('DELETE FROM ak_animes WHERE id_anime = $1 RETURNING *', [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Anime not found' });
+    }
+    
+    res.json({ message: 'Anime deleted successfully', deleted: result.rows[0] });
+  } catch (error) {
+    console.error('Anime deletion error:', error);
+    res.status(500).json({ error: 'Failed to delete anime' });
+  }
+});
+
+// ===== ADMIN MANGA ROUTES =====
+
+/**
+ * @swagger
+ * /api/admin/mangas:
+ *   get:
+ *     summary: Liste des mangas pour l'administration
+ *     description: Récupère la liste complète des mangas avec pagination pour l'interface d'administration
+ *     tags: [Admin - Mangas]
+ *     security:
+ *       - bearerAuth: []
+ */
+app.get('/api/admin/mangas', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { page = 1, limit = 50, search, status = 'all' } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    let whereClause = '';
+    let params = [];
+    let paramCount = 0;
+    
+    if (status !== 'all') {
+      paramCount++;
+      whereClause += ` WHERE statut = $${paramCount}`;
+      params.push(parseInt(status));
+    }
+    
+    if (search) {
+      paramCount++;
+      const searchClause = ` ${whereClause ? 'AND' : 'WHERE'} titre ILIKE $${paramCount}`;
+      whereClause += searchClause;
+      params.push(`%${search}%`);
+    }
+    
+    const query = `
+      SELECT id_manga, nice_url, titre, auteur, annee, nb_volumes, 
+             image, nb_reviews, moyennenotes, date_ajout, statut
+      FROM ak_mangas ${whereClause}
+      ORDER BY date_ajout DESC
+      LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
+    `;
+    
+    params.push(parseInt(limit), offset);
+    
+    const [mangas, total] = await Promise.all([
+      pool.query(query, params),
+      pool.query(`SELECT COUNT(*) FROM ak_mangas ${whereClause}`, params.slice(0, paramCount))
+    ]);
+    
+    res.json({
+      data: mangas.rows,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: parseInt(total.rows[0].count),
+        pages: Math.ceil(total.rows[0].count / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Admin mangas fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch mangas' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/mangas:
+ *   post:
+ *     summary: Créer un nouveau manga
+ *     description: Ajoute un nouveau manga à la base de données
+ *     tags: [Admin - Mangas]
+ *     security:
+ *       - bearerAuth: []
+ */
+app.post('/api/admin/mangas', upload.single('image'), authMiddleware, adminMiddleware, [
+  body('titre').notEmpty().withMessage('Titre is required'),
+  body('origine').notEmpty().withMessage('Origine is required'),
+  body('titre_orig').notEmpty().withMessage('Titre original is required'),
+  body('annee').isInt({ min: 1900, max: 2030 }).withMessage('Valid year required'),
+  body('nb_volumes').notEmpty().withMessage('Number of volumes is required')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  try {
+    const { titre, origine, annee, titre_orig, titres_alternatifs, licence, titre_fr, nb_volumes, synopsis, topic, commentaire, isbn, statut = 1 } = req.body;
+    
+    // Handle uploaded image
+    let imagePath = null;
+    if (req.file) {
+      imagePath = req.file.filename;
+    }
+    
+    // Generate nice_url
+    const niceUrl = titre.toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim('-');
+    
+    const result = await pool.query(`
+      INSERT INTO ak_mangas (
+        nice_url, titre, origine, annee, titre_orig, titres_alternatifs, licence, titre_fr,
+        nb_volumes, synopsis, topic, commentaire, isbn, image, date_ajout, statut, nb_reviews, moyennenotes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), $15, 0, 0)
+      RETURNING *
+    `, [niceUrl, titre, origine, annee || null, titre_orig, titres_alternatifs, licence || 0, titre_fr, nb_volumes, synopsis, topic || 0, commentaire, isbn, imagePath, statut]);
+    
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Manga creation error:', error);
+    res.status(500).json({ error: 'Failed to create manga' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/mangas/{id}:
+ *   put:
+ *     summary: Mettre à jour un manga
+ *     description: Modifie les informations d'un manga existant
+ *     tags: [Admin - Mangas]
+ *     security:
+ *       - bearerAuth: []
+ */
+app.put('/api/admin/mangas/:id', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { titre, auteur, annee, nb_volumes, synopsis, image, statut } = req.body;
+    
+    // Update nice_url if titre changed
+    let niceUrl;
+    if (titre) {
+      niceUrl = titre.toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim('-');
+    }
+    
+    const result = await pool.query(`
+      UPDATE ak_mangas 
+      SET titre = COALESCE($1, titre),
+          auteur = COALESCE($2, auteur),
+          annee = COALESCE($3, annee),
+          nb_volumes = COALESCE($4, nb_volumes),
+          synopsis = COALESCE($5, synopsis),
+          image = COALESCE($6, image),
+          statut = COALESCE($7, statut),
+          nice_url = COALESCE($8, nice_url)
+      WHERE id_manga = $9
+      RETURNING *
+    `, [titre, auteur, annee, nb_volumes, synopsis, image, statut, niceUrl, id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Manga not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Manga update error:', error);
+    res.status(500).json({ error: 'Failed to update manga' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/mangas/{id}:
+ *   delete:
+ *     summary: Supprimer un manga
+ *     description: Supprime définitivement un manga et ses données associées
+ *     tags: [Admin - Mangas]
+ *     security:
+ *       - bearerAuth: []
+ */
+app.delete('/api/admin/mangas/:id', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Delete associated data first
+    await pool.query('DELETE FROM ak_critique WHERE id_manga = $1', [id]);
+    await pool.query('DELETE FROM ak_tag2fiche WHERE id_fiche = $1 AND type = $2', [id, 'manga']);
+    
+    // Delete the manga
+    const result = await pool.query('DELETE FROM ak_mangas WHERE id_manga = $1 RETURNING *', [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Manga not found' });
+    }
+    
+    res.json({ message: 'Manga deleted successfully', deleted: result.rows[0] });
+  } catch (error) {
+    console.error('Manga deletion error:', error);
+    res.status(500).json({ error: 'Failed to delete manga' });
+  }
+});
+
+// ===== ADMIN BUSINESS ROUTES =====
+
+/**
+ * @swagger
+ * /api/admin/business:
+ *   get:
+ *     summary: Liste des entreprises pour l'administration
+ *     description: Récupère la liste complète des entreprises avec pagination pour l'interface d'administration
+ *     tags: [Admin - Business]
+ *     security:
+ *       - bearerAuth: []
+ */
+app.get('/api/admin/business', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { page = 1, limit = 50, search, status = 'all', type } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    let whereClause = '';
+    let params = [];
+    let paramCount = 0;
+    
+    if (status !== 'all') {
+      paramCount++;
+      whereClause += ` WHERE statut = $${paramCount}`;
+      params.push(status === 'active' ? 1 : 0);
+    }
+    
+    if (type) {
+      paramCount++;
+      const typeClause = ` ${whereClause ? 'AND' : 'WHERE'} type = $${paramCount}`;
+      whereClause += typeClause;
+      params.push(type);
+    }
+    
+    if (search) {
+      paramCount++;
+      const searchClause = ` ${whereClause ? 'AND' : 'WHERE'} denomination ILIKE $${paramCount}`;
+      whereClause += searchClause;
+      params.push(`%${search}%`);
+    }
+    
+    const query = `
+      SELECT id_business, denomination, type, site_officiel, statut
+      FROM ak_business ${whereClause}
+      ORDER BY denomination ASC
+      LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
+    `;
+    
+    params.push(parseInt(limit), offset);
+    
+    const [business, total] = await Promise.all([
+      pool.query(query, params),
+      pool.query(`SELECT COUNT(*) FROM ak_business ${whereClause}`, params.slice(0, paramCount))
+    ]);
+    
+    res.json({
+      data: business.rows,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: parseInt(total.rows[0].count),
+        pages: Math.ceil(total.rows[0].count / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Admin business fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch business entities' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/business:
+ *   post:
+ *     summary: Créer une nouvelle entreprise
+ *     description: Ajoute une nouvelle entreprise à la base de données
+ *     tags: [Admin - Business]
+ *     security:
+ *       - bearerAuth: []
+ */
+app.post('/api/admin/business', authMiddleware, adminMiddleware, [
+  body('denomination').notEmpty().withMessage('Denomination is required'),
+  body('type').notEmpty().withMessage('Type is required')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  try {
+    const { denomination, type, site_officiel, statut = 1 } = req.body;
+    
+    const result = await pool.query(`
+      INSERT INTO ak_business (denomination, type, site_officiel, statut)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `, [denomination, type, site_officiel, statut]);
+    
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Business creation error:', error);
+    res.status(500).json({ error: 'Failed to create business entity' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/business/{id}:
+ *   put:
+ *     summary: Mettre à jour une entreprise
+ *     description: Modifie les informations d'une entreprise existante
+ *     tags: [Admin - Business]
+ *     security:
+ *       - bearerAuth: []
+ */
+app.put('/api/admin/business/:id', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { denomination, type, site_officiel, statut } = req.body;
+    
+    const result = await pool.query(`
+      UPDATE ak_business 
+      SET denomination = COALESCE($1, denomination),
+          type = COALESCE($2, type),
+          site_officiel = COALESCE($3, site_officiel),
+          statut = COALESCE($4, statut)
+      WHERE id_business = $5
+      RETURNING *
+    `, [denomination, type, site_officiel, statut, id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Business entity not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Business update error:', error);
+    res.status(500).json({ error: 'Failed to update business entity' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/business/{id}:
+ *   delete:
+ *     summary: Supprimer une entreprise
+ *     description: Supprime définitivement une entreprise et ses liens associés
+ *     tags: [Admin - Business]
+ *     security:
+ *       - bearerAuth: []
+ */
+app.delete('/api/admin/business/:id', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Delete associated links first
+    await pool.query('DELETE FROM ak_business_to_animes WHERE id_business = $1', [id]);
+    
+    // Delete the business entity
+    const result = await pool.query('DELETE FROM ak_business WHERE id_business = $1 RETURNING *', [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Business entity not found' });
+    }
+    
+    res.json({ message: 'Business entity deleted successfully', deleted: result.rows[0] });
+  } catch (error) {
+    console.error('Business deletion error:', error);
+    res.status(500).json({ error: 'Failed to delete business entity' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/business/{id}/animes:
+ *   get:
+ *     summary: Récupère les liens anime d'une entreprise
+ *     description: Retourne la liste des animes liés à une entreprise
+ *     tags: [Admin - Business]
+ *     security:
+ *       - bearerAuth: []
+ */
+app.get('/api/admin/business/:id/animes', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const links = await pool.query(`
+      SELECT ba.*, a.titre as anime_title, a.id_anime
+      FROM ak_business_to_animes ba
+      INNER JOIN ak_animes a ON ba.id_anime = a.id_anime
+      WHERE ba.id_business = $1
+      ORDER BY a.titre ASC
+    `, [id]);
+    
+    res.json({ data: links.rows });
+  } catch (error) {
+    console.error('Business anime links fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch business anime links' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/business/{id}/animes:
+ *   post:
+ *     summary: Créer un lien entreprise-anime
+ *     description: Associe une entreprise à un anime avec un type de relation
+ *     tags: [Admin - Business]
+ *     security:
+ *       - bearerAuth: []
+ */
+app.post('/api/admin/business/:id/animes', authMiddleware, adminMiddleware, [
+  body('animeId').isInt().withMessage('Valid anime ID required'),
+  body('type').notEmpty().withMessage('Type is required')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  try {
+    const { id } = req.params;
+    const { animeId, type, precisions } = req.body;
+    
+    const result = await pool.query(`
+      INSERT INTO ak_business_to_animes (id_business, id_anime, type, precisions)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `, [id, animeId, type, precisions]);
+    
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Business anime link creation error:', error);
+    res.status(500).json({ error: 'Failed to create business anime link' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/business/{businessId}/animes/{animeId}:
+ *   delete:
+ *     summary: Supprimer un lien entreprise-anime
+ *     description: Supprime l'association entre une entreprise et un anime
+ *     tags: [Admin - Business]
+ *     security:
+ *       - bearerAuth: []
+ */
+app.delete('/api/admin/business/:businessId/animes/:animeId', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { businessId, animeId } = req.params;
+    
+    const result = await pool.query(`
+      DELETE FROM ak_business_to_animes 
+      WHERE id_business = $1 AND id_anime = $2 
+      RETURNING *
+    `, [businessId, animeId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Business anime link not found' });
+    }
+    
+    res.json({ message: 'Business anime link deleted successfully' });
+  } catch (error) {
+    console.error('Business anime link deletion error:', error);
+    res.status(500).json({ error: 'Failed to delete business anime link' });
   }
 });
 

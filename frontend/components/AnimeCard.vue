@@ -1,5 +1,6 @@
 <template>
-  <div class="anime-card">
+  <NuxtLink :to="`/anime/${anime.id_anime}`" class="anime-card-link">
+    <div class="anime-card">
     <div class="anime-image-container">
       <img 
         v-if="getImageUrl(anime.image)"
@@ -11,9 +12,9 @@
       <div v-else class="anime-placeholder">
         <span class="placeholder-text">{{ anime.titre }}</span>
       </div>
-      <div class="anime-rating" v-if="anime.moyennenotes">
+      <div class="anime-rating" v-if="anime.moyenne_notes || anime.moyennenotes">
         <span class="rating-star">★</span>
-        <span>{{ formatRating(anime.moyennenotes) }}</span>
+        <span>{{ formatRating(anime.moyenne_notes || anime.moyennenotes) }}</span>
       </div>
     </div>
     
@@ -21,23 +22,44 @@
       <h3 class="anime-title">{{ anime.titre }}</h3>
       
       <div class="anime-meta">
-        <span v-if="anime.realisateur" class="anime-director">
-          {{ anime.realisateur }}
+        <span v-if="anime.studio" class="anime-studio">
+          {{ anime.studio }}
         </span>
         <span v-if="anime.annee" class="anime-year">{{ anime.annee }}</span>
+        <span v-if="anime.nb_ep" class="anime-episodes">
+          {{ anime.nb_ep }} épisode{{ anime.nb_ep > 1 ? 's' : '' }}
+        </span>
       </div>
       
       <p v-if="anime.synopsis" class="anime-synopsis">
         {{ truncatedSynopsis }}
       </p>
       
-      <div class="anime-stats" v-if="anime.nb_reviews">
-        <span class="reviews-count">
+      <!-- Recent Reviews on one line -->
+      <div v-if="anime.recent_reviews && anime.recent_reviews.length > 0" class="anime-reviews">
+        <div class="reviews-header">
+          <span class="reviews-label">Critiques récentes:</span>
+        </div>
+        <div class="reviews-list">
+          <span 
+            v-for="(review, index) in anime.recent_reviews" 
+            :key="index"
+            class="review-item"
+          >
+            "{{ review.review_title }}"
+            <span v-if="index < anime.recent_reviews.length - 1" class="review-separator"> • </span>
+          </span>
+        </div>
+      </div>
+      
+      <div class="anime-stats">
+        <span v-if="anime.nb_reviews" class="reviews-count">
           {{ anime.nb_reviews }} critique{{ anime.nb_reviews > 1 ? 's' : '' }}
         </span>
       </div>
     </div>
   </div>
+  </NuxtLink>
 </template>
 
 <script setup>
@@ -81,10 +103,7 @@ const hideImage = (event) => {
   cursor: pointer;
 }
 
-.anime-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-}
+/* Hover effect now handled by .anime-card-link:hover .anime-card */
 
 .anime-image-container {
   position: relative;
@@ -169,7 +188,7 @@ const hideImage = (event) => {
   color: var(--text-secondary);
 }
 
-.anime-director {
+.anime-studio {
   font-weight: 500;
 }
 
@@ -177,11 +196,48 @@ const hideImage = (event) => {
   font-weight: 400;
 }
 
+.anime-episodes {
+  font-weight: 400;
+  color: var(--primary-color);
+}
+
 .anime-synopsis {
   font-size: 0.875rem;
   color: var(--text-secondary);
   line-height: 1.5;
   margin: 0 0 12px 0;
+}
+
+.anime-reviews {
+  margin: 12px 0;
+}
+
+.reviews-header {
+  margin-bottom: 6px;
+}
+
+.reviews-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.reviews-list {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.review-item {
+  font-style: italic;
+}
+
+.review-separator {
+  font-style: normal;
+  color: var(--text-muted);
+  margin: 0 4px;
 }
 
 .anime-stats {
@@ -210,5 +266,24 @@ const hideImage = (event) => {
     align-items: flex-start;
     gap: 4px;
   }
+}
+
+/* Link styles */
+.anime-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.anime-card-link:hover .anime-card {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.anime-card-link:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+  border-radius: 12px;
 }
 </style>

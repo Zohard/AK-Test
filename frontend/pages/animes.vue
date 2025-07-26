@@ -56,12 +56,16 @@
             />
             <div class="review-details">
               <h3 class="review-anime-title">{{ review.anime_titre }}</h3>
+              <h4 class="review-title">{{ getReviewTitle(review) }}</h4>
               <div class="review-meta">
                 <span class="review-author">par {{ review.username }}</span>
                 <div class="review-rating">
                   <span class="rating-star">★</span>
                   <span>{{ review.notation }}/10</span>
                 </div>
+              </div>
+              <div v-if="review.critique" class="review-critique">
+                <div class="critique-text" v-html="formatCritiqueText(review.critique)"></div>
               </div>
             </div>
           </div>
@@ -113,7 +117,13 @@ useHead({
 
 // API configuration
 const config = useRuntimeConfig()
-const API_BASE = config.public.apiBase || 'http://localhost:3002'
+const API_BASE = config.public.apiBase || 'http://localhost:3001'
+
+// Debug logging
+console.log('API configuration:', {
+  configValue: config.public.apiBase,
+  finalApiBase: API_BASE
+})
 
 // Reactive data
 const searchQuery = ref('')
@@ -126,7 +136,7 @@ const latestReviews = ref([])
 const searchResults = ref([])
 
 // Methods
-const handleSearch = async (query) => {
+const handleSearch = async (query, searchParams = {}) => {
   if (!query.trim()) {
     searchResults.value = []
     return
@@ -136,12 +146,22 @@ const handleSearch = async (query) => {
   try {
     const response = await $fetch(`${API_BASE}/api/search`, {
       params: {
-        query: query,
+        q: query,
         type: 'anime',
-        limit: 20
+        limit: 20,
+        ...searchParams
       }
     })
-    searchResults.value = response.data || []
+    // Filter only anime results and format them
+    const animeResults = (response.data || []).filter(item => item.type === 'anime').map(item => ({
+      id_anime: item.id,
+      titre: item.titre,
+      image: item.image,
+      annee: item.annee,
+      moyenne_notes: item.moyenne_notes,
+      moyennenotes: item.moyenne_notes
+    }))
+    searchResults.value = animeResults
   } catch (error) {
     console.error('Erreur lors de la recherche:', error)
     searchResults.value = []
@@ -159,8 +179,8 @@ const fetchPopularAnimes = async () => {
   try {
     const response = await $fetch(`${API_BASE}/api/animes`, {
       params: {
-        recent: 'true',
-        limit: 12
+        limit: 12,
+        page: 1
       }
     })
     popularAnimes.value = response.data || []
@@ -174,9 +194,10 @@ const fetchPopularAnimes = async () => {
 
 const fetchLatestReviews = async () => {
   try {
-    const response = await $fetch(`${API_BASE}/api/critiques`, {
+    const response = await $fetch(`${API_BASE}/api/reviews`, {
       params: {
-        limit: 100 // Fetch enough to ensure user diversity
+        limit: 100, // Fetch enough to ensure user diversity
+        type: 'anime' // Only show reviews from anime, not manga
       }
     })
     
@@ -186,9 +207,15 @@ const fetchLatestReviews = async () => {
     const seenUsernames = new Set()
     
     for (const critique of allCritiques) {
-      if (!seenUsernames.has(critique.username)) {
-        uniqueUserCritiques.push(critique)
-        seenUsernames.add(critique.username)
+      const username = critique.author_name || critique.username
+      if (!seenUsernames.has(username)) {
+        uniqueUserCritiques.push({
+          ...critique,
+          username: username,
+          anime_titre: critique.anime_titre,
+          anime_image: critique.anime_image
+        })
+        seenUsernames.add(username)
         
         // Stop when we have 8 unique users
         if (uniqueUserCritiques.length >= 8) {
@@ -214,6 +241,63 @@ const getImageUrl = (imagePath) => {
 
 const hideImage = (event) => {
   event.target.style.display = 'none'
+}
+
+const getReviewTitle = (review) => {
+  // If review has a title and it's not empty, use it
+  if (review.titre && review.titre.trim() !== '') {
+    return review.titre
+  }
+  
+  // Otherwise, create default title with anime name
+  return `Critique animé ${review.anime_titre || 'Unknown'}`
+}
+
+const formatCritiqueText = (text) => {
+  if (!text) return ''
+  
+  // Convert <br/> and <br> tags to actual line breaks
+  let formatted = text.replace(/<br\s*\/?>/gi, '<br>')
+  
+  // Convert BBCode [url] tags - handle both [url]link[/url] and [url=link]text[/url] formats
+  formatted = formatted.replace(/\[url=([^\]]+)\]([^\[]*)\[\/url\]/gi, '<a href="$1" target="_blank" rel="noopener">$2</a>')
+  formatted = formatted.replace(/\[url\]([^\[]*)\[\/url\]/gi, '<a href="$1" target="_blank" rel="noopener">$1</a>')
+  
+  // Convert BBCode [b] tags to bold
+  formatted = formatted.replace(/\[b\]([^\[]*)\[\/b\]/gi, '<strong>$1</strong>')
+  
+  // Convert BBCode [i] tags to italic
+  formatted = formatted.replace(/\[i\]([^\[]*)\[\/i\]/gi, '<em>$1</em>')
+  
+  // Convert BBCode [quote] tags
+  formatted = formatted.replace(/\[quote\]([^\[]*)\[\/quote\]/gi, '<blockquote>$1</blockquote>')
+  
+  // Convert \r\n to <br> for line breaks
+  formatted = formatted.replace(/\r\n/g, '<br>')
+  formatted = formatted.replace(/\n/g, '<br>')
+  
+  // Smart truncation - shorter length and break at word boundaries when possible
+  const maxLength = 150
+  if (formatted.length > maxLength) {
+    let truncated = formatted.substring(0, maxLength)
+    
+    // Try to break at a word boundary (space, period, comma, etc)
+    const lastBreak = Math.max(
+      truncated.lastIndexOf(' '),
+      truncated.lastIndexOf('.'),
+      truncated.lastIndexOf(','),
+      truncated.lastIndexOf('!'),
+      truncated.lastIndexOf('?')
+    )
+    
+    if (lastBreak > maxLength * 0.7) { // Only use word break if it's not too short
+      truncated = truncated.substring(0, lastBreak)
+    }
+    
+    formatted = truncated + '...'
+  }
+  
+  return formatted
 }
 
 
@@ -316,6 +400,19 @@ onMounted(() => {
   overflow: hidden;
 }
 
+.review-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin: 0 0 0.5rem 0;
+  line-height: 1.3;
+  font-style: italic;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .review-meta {
   display: flex;
   justify-content: space-between;
@@ -340,6 +437,42 @@ onMounted(() => {
 
 .rating-star {
   color: #fbbf24;
+}
+
+.review-critique {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.critique-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  font-style: italic;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: 100%;
+}
+
+.critique-text a {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+.critique-text strong {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.critique-text blockquote {
+  margin: 0.5rem 0;
+  padding: 0.5rem 1rem;
+  border-left: 3px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-style: normal;
 }
 
 .loading {
