@@ -1,5 +1,1 @@
-<<<<<<< HEAD
 {"id":"dev","timestamp":1754244684479,"matcher":{"static":{},"wildcard":{},"dynamic":{}},"prerendered":[]}
-=======
-{"id":"dev","timestamp":1754244465318,"matcher":{"static":{},"wildcard":{},"dynamic":{}},"prerendered":[]}
->>>>>>> 15c1bd38 (refacto api layered architecture)
