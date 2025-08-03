@@ -18,7 +18,7 @@ services:
     depends_on:
       - db
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
       - ./api:/app
   frontend:
@@ -28,10 +28,10 @@ services:
     depends_on:
       - api
     ports:
-      - "3001:3000"
+      - "3000:3000"
     volumes:
       - ./frontend:/app
     environment:
-      - API_BASE_URL=http://localhost:3000
+      - API_BASE_URL=http://localhost:3001
 volumes:
   db_data:

@@ -39,7 +39,7 @@ services:
       - PORT=3000
       - FRONTEND_URL=http://localhost
     ports:
-      - "3000:3000"
+      - "3001:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,7 +51,7 @@ services:
       retries: 3
     networks:
       - anime-network
-    command: ["npm", "run", "start:postgresql"]
+    command: ["npm", "start"]
 
   # Frontend
   frontend:
@@ -62,9 +62,39 @@ services:
     environment:
       - API_BASE_URL=http://api:3000
     ports:
-      - "3001:3000"
+      - "3000:3000"
     depends_on:
       - api
+    restart: unless-stopped
+    networks:
+      - anime-network
+
+  # SMF Forum
+  smf-forum:
+    build:
+      context: ./forums
+      dockerfile: ../Dockerfile.smf
+    container_name: anime-kun-smf
+    ports:
+      - "8082:80"
+    volumes:
+      - smf_data:/var/www/html/attachments
+      - smf_avatars:/var/www/html/avatars
+      - ./forums:/var/www/html
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - anime-network
+
+  # Adminer for database management
+  adminer:
+    image: adminer
+    container_name: anime-kun-adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
     restart: unless-stopped
     networks:
       - anime-network
@@ -97,6 +127,10 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  smf_data:
+    driver: local
+  smf_avatars:
     driver: local
 
 networks:

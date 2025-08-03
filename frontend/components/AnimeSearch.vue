@@ -125,12 +125,11 @@ const handleSearch = () => {
   
   // Allow empty search to show all results
   const searchParams = {
-    query: query,
     year: selectedYear.value,
     genre: selectedGenre.value
   }
   
-  emit('search', searchParams.query, searchParams)
+  emit('search', query, searchParams)
 }
 
 const toggleFilters = () => {

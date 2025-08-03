@@ -2,7 +2,7 @@
   <div class="article-card">
     <img 
       v-if="imageAndTitle.image"
-      :src="`/images/${imageAndTitle.image}`" 
+      :src="getImageUrl(imageAndTitle.image, imageAndTitle.type)" 
       :alt="imageAndTitle.title"
       class="article-image"
       @error="hideImage"
@@ -16,12 +16,7 @@
       </div>
       <h3 class="article-title">{{ imageAndTitle.title }}</h3>
       <div v-if="article.critique" class="article-excerpt">
-        <FormattedText 
-          :text="article.critique"
-          :max-length="150"
-          :show-read-more="true"
-          class="text-sm text-gray-600"
-        />
+        <div class="critique-text" v-html="formatCritiqueText(article.critique)"></div>
       </div>
       <div class="article-footer">
         <p class="article-date">
@@ -70,7 +65,98 @@ const imageAndTitle = computed(() => {
   }
 })
 
+const getImageUrl = (imagePath, type) => {
+  if (!imagePath) return null
+  
+  // Return appropriate path based on content type
+  if (type === 'Manga') {
+    return `/images/mangas/${imagePath}`
+  } else if (type === 'Anime') {
+    return `/images/animes/${imagePath}`
+  }
+  
+  // Default fallback
+  return `/images/${imagePath}`
+}
+
 const hideImage = (event) => {
   event.target.style.display = 'none'
 }
+
+const formatCritiqueText = (text) => {
+  if (!text) return ''
+  let formatted = text.replace(/<br\s*\/?>/gi, '<br>')
+  formatted = formatted.replace(/\[url=([^\]]+)\]([^\[]*)\[\/url\]/gi, '<a href="$1" target="_blank" rel="noopener">$2</a>')
+  formatted = formatted.replace(/\[url\]([^\[]*)\[\/url\]/gi, '<a href="$1" target="_blank" rel="noopener">$1</a>')
+  formatted = formatted.replace(/\[b\]([^\[]*)\[\/b\]/gi, '<strong>$1</strong>')
+  formatted = formatted.replace(/\[i\]([^\[]*)\[\/i\]/gi, '<em>$1</em>')
+  formatted = formatted.replace(/\[quote\]([^\[]*)\[\/quote\]/gi, '<blockquote>$1</blockquote>')
+  formatted = formatted.replace(/\r\n/g, '<br>')
+  formatted = formatted.replace(/\n/g, '<br>')
+  // Limit to 300 characters for card display
+  if (formatted.length > 300) {
+    let truncated = formatted.substring(0, 300)
+    const lastBreak = Math.max(
+      truncated.lastIndexOf(' '),
+      truncated.lastIndexOf('.'),
+      truncated.lastIndexOf(',')
+    )
+    if (lastBreak > 200) {
+      truncated = truncated.substring(0, lastBreak)
+    }
+    formatted = truncated + '...'
+  }
+  return formatted
+}
 </script>
+
+<style scoped>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</style>}  /* Your existing styles */.critique-text {}  /* Your existing styles */.article-author {}  /* Your existing styles */.article-date {}  /* Your existing styles */.article-footer {}  /* Your existing styles */.article-excerpt {}  /* Your existing styles */.article-title {}  /* Your existing styles */.article-rating {}  /* Your existing styles */.article-type {}  /* Your existing styles */.article-meta {}  /* Your existing styles */.article-content {}  /* Your existing styles */.article-image {}  /* Your existing styles */.article-card {

@@ -69,3 +69,21 @@ frontend/public/images/
 
 # Zone Identifier files (Windows WSL)
 *.Zone.Identifier
+
+# Migration and backup files
+*migration*
+*report*.txt
+*.sql
+*.sql.gz
+discourse_*.sql
+
+# Nuxt build files
+.nuxt/
+.output/
+
+# API uploads
+api/uploads/*.jpg
+api/uploads/*.jpeg
+api/uploads/*.png
+api/uploads/*.gif
+!api/uploads/.gitkeep
