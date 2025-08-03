@@ -99,8 +99,11 @@ const { user, isAdmin } = storeToRefs(authStore)
 // Redirect if not admin
 if (process.client) {
   watchEffect(() => {
-    if (!authStore.isAuthenticated || !isAdmin.value) {
+    // Only redirect if auth is not loading and user is not authenticated/admin
+    if (!authStore.loading && !authStore.isAuthenticated) {
       navigateTo('/login')
+    } else if (!authStore.loading && authStore.isAuthenticated && !isAdmin.value) {
+      navigateTo('/admin/unauthorized')
     }
   })
 }

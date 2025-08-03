@@ -22,7 +22,11 @@
         
         <!-- Right: Search + User -->
         <div class="mobile-actions">
-          <button class="search-icon" aria-label="Search">
+          <button 
+            class="search-icon" 
+            @click="toggleMobileSearch"
+            aria-label="Search"
+          >
             🔍
           </button>
           
@@ -106,6 +110,37 @@
       </div>
     </div>
     
+    <!-- Mobile Search Overlay -->
+    <div class="mobile-search-overlay" :class="{ 'open': showMobileSearch }">
+      <div class="mobile-search-content">
+        <div class="mobile-search-header">
+          <input 
+            ref="mobileSearchInput"
+            v-model="searchQuery"
+            type="text" 
+            placeholder="Rechercher anime, manga..."
+            class="mobile-search-input"
+            @keyup.enter="performSearch"
+          />
+          <button 
+            class="mobile-search-close" 
+            @click="closeMobileSearch"
+            aria-label="Fermer la recherche"
+          >
+            ✕
+          </button>
+        </div>
+        
+        <div v-if="searchQuery" class="mobile-search-results">
+          <div class="search-suggestions">
+            <div class="search-suggestion" @click="performSearch">
+              🔍 Rechercher "{{ searchQuery }}"
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <!-- Mobile Navigation Menu -->
     <div class="mobile-nav" :class="{ 'open': showMobileMenu }">
       <nav class="mobile-nav-content">
@@ -167,6 +202,11 @@ let menuTimeout = null
 
 // Mobile menu state
 const showMobileMenu = ref(false)
+
+// Mobile search state
+const showMobileSearch = ref(false)
+const searchQuery = ref('')
+const mobileSearchInput = ref(null)
 
 // SSR-safe authentication computed properties
 const authStore = ref(null)
@@ -239,6 +279,37 @@ const closeMobileMenu = () => {
   showMobileMenu.value = false
 }
 
+// Mobile search methods
+const toggleMobileSearch = () => {
+  showMobileSearch.value = !showMobileSearch.value
+  
+  // Close mobile menu if open
+  if (showMobileSearch.value) {
+    closeMobileMenu()
+    closeUserMenuImmediate()
+    
+    // Focus the search input after opening
+    nextTick(() => {
+      if (mobileSearchInput.value) {
+        mobileSearchInput.value.focus()
+      }
+    })
+  }
+}
+
+const closeMobileSearch = () => {
+  showMobileSearch.value = false
+  searchQuery.value = ''
+}
+
+const performSearch = () => {
+  if (searchQuery.value.trim()) {
+    // Navigate to search page with query
+    navigateTo(`/animes?search=${encodeURIComponent(searchQuery.value.trim())}`)
+    closeMobileSearch()
+  }
+}
+
 // Cleanup timeout on unmount
 onUnmounted(() => {
   if (menuTimeout) {
@@ -250,7 +321,14 @@ onUnmounted(() => {
 <style scoped>
 /* Header container */
 .header {
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: var(--surface-color);
+  border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   z-index: 100;
 }
 
@@ -378,6 +456,108 @@ onUnmounted(() => {
 /* Desktop navigation */
 .desktop-nav {
   display: block;
+}
+
+/* Mobile search overlay */
+.mobile-search-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.mobile-search-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.mobile-search-content {
+  background: var(--surface-color);
+  padding: 1rem;
+  margin-top: 80px;
+  border-radius: 0 0 16px 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.mobile-search-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mobile-search-input {
+  flex: 1;
+  padding: 0.875rem 1rem;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.mobile-search-input:focus {
+  border-color: var(--accent-color);
+}
+
+.mobile-search-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.mobile-search-close {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-color);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+}
+
+.mobile-search-close:hover {
+  background: var(--accent-color);
+  color: white;
+}
+
+.mobile-search-results {
+  margin-top: 1rem;
+}
+
+.search-suggestions {
+  background: var(--bg-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.search-suggestion {
+  padding: 0.875rem 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-color);
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.search-suggestion:last-child {
+  border-bottom: none;
+}
+
+.search-suggestion:hover {
+  background: var(--bg-secondary);
 }
 
 /* Mobile navigation */

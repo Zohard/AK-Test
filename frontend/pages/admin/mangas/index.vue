@@ -1,15 +1,15 @@
 <template>
-  <div class="admin-animes">
+  <div class="admin-mangas">
     <!-- Page Header -->
     <div class="page-header">
       <div class="page-header-left">
-        <h1 class="page-title">Gestion des Animes</h1>
-        <p class="page-subtitle">{{ totalAnimes }} anime(s) au total</p>
+        <h1 class="page-title">Gestion des Mangas</h1>
+        <p class="page-subtitle">{{ totalMangas }} manga(s) au total</p>
       </div>
       <div class="page-header-right">
-        <NuxtLink to="/admin/animes/new/edit" class="btn btn-primary">
+        <NuxtLink to="/admin/mangas/new" class="btn btn-primary">
           <span class="btn-icon">➕</span>
-          Ajouter un anime
+          Ajouter un manga
         </NuxtLink>
       </div>
     </div>
@@ -22,14 +22,14 @@
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Titre, studio..."
+            placeholder="Titre, auteur..."
             class="filter-input"
             @input="debouncedSearch"
           />
         </div>
         <div class="filter-group">
           <label class="filter-label">Statut</label>
-          <select v-model="statusFilter" @change="loadAnimes" class="filter-select">
+          <select v-model="statusFilter" @change="loadMangas" class="filter-select">
             <option value="all">Tous</option>
             <option value="1">Actif</option>
             <option value="0">Inactif</option>
@@ -37,7 +37,7 @@
         </div>
         <div class="filter-group">
           <label class="filter-label">Par page</label>
-          <select v-model="itemsPerPage" @change="loadAnimes" class="filter-select">
+          <select v-model="itemsPerPage" @change="loadMangas" class="filter-select">
             <option value="25">25</option>
             <option value="50">50</option>
             <option value="100">100</option>
@@ -49,70 +49,70 @@
     <!-- Loading State -->
     <div v-if="loading" class="loading-state">
       <div class="loading-spinner"></div>
-      <p>Chargement des animes...</p>
+      <p>Chargement des mangas...</p>
     </div>
 
     <!-- Error State -->
     <div v-else-if="error" class="error-state">
       <div class="error-icon">⚠️</div>
       <p>{{ error }}</p>
-      <button @click="loadAnimes" class="retry-btn">Réessayer</button>
+      <button @click="loadMangas" class="retry-btn">Réessayer</button>
     </div>
 
-    <!-- Animes Table -->
-    <div v-else-if="animes.length > 0" class="table-container">
+    <!-- Mangas Table -->
+    <div v-else-if="mangas.length > 0" class="table-container">
       <table class="admin-table">
         <thead>
           <tr>
             <th>Image</th>
             <th>Titre</th>
+            <th>Auteur</th>
             <th>Année</th>
-            <th>Épisodes</th>
-            <th>Studio</th>
+            <th>Volumes</th>
             <th>Note</th>
             <th>Statut</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="anime in animes" :key="anime.id_anime" class="table-row">
+          <tr v-for="manga in mangas" :key="manga.id_manga" class="table-row">
             <td class="image-cell">
-              <img
-                :src="anime.image ? `/images/${anime.image}` : '/placeholder-anime.jpg'"
-                :alt="anime.titre"
-                class="anime-thumbnail"
-                @error="handleImageError"
-              />
-            </td>
-            <td class="title-cell">
-              <div class="title-main">{{ anime.titre }}</div>
-              <div v-if="anime.titre_orig && anime.titre_orig !== anime.titre" class="title-orig">
-                {{ anime.titre_orig }}
+              <div class="thumbnail-container">
+                <img
+                  v-if="manga.image"
+                  :src="`/images/mangas/${manga.image}`"
+                  :alt="manga.titre"
+                  class="manga-thumbnail"
+                  @error="handleImageError"
+                />
+                <div v-else class="thumbnail-placeholder">
+                  <span class="placeholder-icon">📚</span>
+                </div>
               </div>
             </td>
-            <td>{{ anime.annee || '—' }}</td>
-            <td>{{ anime.nb_ep || '—' }}</td>
-            <td>{{ anime.studio || '—' }}</td>
+            <td class="title-cell">
+              <div class="title-main">{{ manga.titre }}</div>
+            </td>
+            <td>{{ manga.auteur || '—' }}</td>
+            <td>{{ manga.annee || '—' }}</td>
+            <td>{{ manga.nb_volumes || '—' }}</td>
             <td class="rating-cell">
-              <div v-if="anime.moyenne_notes" class="rating">
-                <span class="rating-value">{{ anime.moyenne_notes.toFixed(1) }}</span>
-                <span class="rating-count">({{ anime.nb_reviews }})</span>
+              <div v-if="manga.moyenne_notes" class="rating">
+                <span class="rating-value">{{ manga.moyenne_notes.toFixed(1) }}</span>
+                <span class="rating-count">({{ manga.nb_reviews }})</span>
               </div>
               <span v-else class="no-rating">Pas de note</span>
             </td>
             <td>
-              <span :class="['status-badge', anime.statut ? 'status-active' : 'status-inactive']">
-                {{ anime.statut ? 'Actif' : 'Inactif' }}
+              <span :class="['status-badge', manga.statut ? 'status-active' : 'status-inactive']">
+                {{ manga.statut ? 'Actif' : 'Inactif' }}
               </span>
             </td>
             <td class="actions-cell">
-              <NuxtLink :to="`/admin/animes/${anime.id_anime}/edit`" class="action-btn edit-btn">
+              <NuxtLink :to="`/admin/mangas/${manga.id_manga}/edit`" class="action-btn edit-btn">
                 ✏️
               </NuxtLink>
-              <button @click="editAnime(anime)" class="action-btn quick-edit-btn" title="Modification rapide">
-                ⚡
-              </button>
-              <button @click="confirmDelete(anime)" class="action-btn delete-btn">
+              <button @click="confirmDelete(manga)" class="action-btn delete-btn">
                 🗑️
               </button>
             </td>
@@ -123,12 +123,12 @@
 
     <!-- Empty State -->
     <div v-else class="empty-state">
-      <div class="empty-icon">🎬</div>
-      <h3>Aucun anime trouvé</h3>
-      <p>{{ searchQuery ? 'Aucun résultat pour votre recherche' : 'Commencez par ajouter votre premier anime' }}</p>
-      <NuxtLink v-if="!searchQuery" to="/admin/animes/new/edit" class="btn btn-primary">
-        Ajouter un anime
-      </NuxtLink>
+      <div class="empty-icon">📚</div>
+      <h3>Aucun manga trouvé</h3>
+      <p>{{ searchQuery ? 'Aucun résultat pour votre recherche' : 'Commencez par ajouter votre premier manga' }}</p>
+      <button v-if="!searchQuery" @click="showCreateModal = true" class="btn btn-primary">
+        Ajouter un manga
+      </button>
     </div>
 
     <!-- Pagination -->
@@ -152,37 +152,33 @@
       </button>
     </div>
 
-    <!-- Edit Modal -->
-    <div v-if="showEditModal" class="modal-overlay" @click="closeModal">
+    <!-- Create Modal -->
+    <div v-if="showCreateModal" class="modal-overlay" @click="closeModal">
       <div class="modal" @click.stop>
         <div class="modal-header">
-          <h2>Modifier l'anime</h2>
+          <h2>Ajouter un manga</h2>
           <button @click="closeModal" class="modal-close">×</button>
         </div>
         <div class="modal-body">
-          <form @submit.prevent="saveAnime" class="anime-form">
+          <form @submit.prevent="saveManga" class="manga-form">
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label">Titre *</label>
                 <input v-model="formData.titre" type="text" class="form-input" required />
               </div>
               <div class="form-group">
-                <label class="form-label">Titre original</label>
-                <input v-model="formData.titre_orig" type="text" class="form-input" />
+                <label class="form-label">Auteur *</label>
+                <input v-model="formData.auteur" type="text" class="form-input" required />
               </div>
               <div class="form-group">
-                <label class="form-label">Année *</label>
-                <input v-model="formData.annee" type="number" min="1900" max="2030" class="form-input" required />
+                <label class="form-label">Année</label>
+                <input v-model="formData.annee" type="number" min="1900" max="2030" class="form-input" />
               </div>
               <div class="form-group">
-                <label class="form-label">Nombre d'épisodes</label>
-                <input v-model="formData.nb_ep" type="number" min="1" class="form-input" />
+                <label class="form-label">Nombre de volumes</label>
+                <input v-model="formData.nb_volumes" type="number" min="1" class="form-input" />
               </div>
-              <div class="form-group">
-                <label class="form-label">Studio</label>
-                <input v-model="formData.studio" type="text" class="form-input" />
-              </div>
-              <div class="form-group">
+              <div class="form-group full-width">
                 <label class="form-label">Image URL</label>
                 <input v-model="formData.image" type="url" class="form-input" />
               </div>
@@ -194,7 +190,7 @@
             <div class="form-group">
               <label class="form-checkbox">
                 <input v-model="formData.statut" type="checkbox" />
-                <span class="checkbox-label">Anime actif</span>
+                <span class="checkbox-label">Manga actif</span>
               </label>
             </div>
           </form>
@@ -203,8 +199,8 @@
           <button @click="closeModal" type="button" class="btn btn-secondary">
             Annuler
           </button>
-          <button @click="saveAnime" type="submit" class="btn btn-primary" :disabled="saving">
-            {{ saving ? 'Enregistrement...' : (isEditing ? 'Modifier' : 'Créer') }}
+          <button @click="saveManga" type="submit" class="btn btn-primary" :disabled="saving">
+            {{ saving ? 'Enregistrement...' : 'Créer' }}
           </button>
         </div>
       </div>
@@ -218,14 +214,14 @@
           <button @click="showDeleteModal = false" class="modal-close">×</button>
         </div>
         <div class="modal-body">
-          <p>Êtes-vous sûr de vouloir supprimer l'anime <strong>{{ animeToDelete?.titre }}</strong> ?</p>
+          <p>Êtes-vous sûr de vouloir supprimer le manga <strong>{{ mangaToDelete?.titre }}</strong> ?</p>
           <p class="warning-text">Cette action est irréversible et supprimera toutes les critiques associées.</p>
         </div>
         <div class="modal-footer">
           <button @click="showDeleteModal = false" class="btn btn-secondary">
             Annuler
           </button>
-          <button @click="deleteAnime" class="btn btn-danger" :disabled="deleting">
+          <button @click="deleteManga" class="btn btn-danger" :disabled="deleting">
             {{ deleting ? 'Suppression...' : 'Supprimer' }}
           </button>
         </div>
@@ -242,7 +238,7 @@ definePageMeta({
 
 // Head
 useHead({
-  title: 'Gestion des Animes - Administration'
+  title: 'Gestion des Mangas - Administration'
 })
 
 // Auth check
@@ -254,8 +250,8 @@ const config = useRuntimeConfig()
 const API_BASE = config.public.apiBase || 'http://localhost:3001'
 
 // Reactive data
-const animes = ref([])
-const totalAnimes = ref(0)
+const mangas = ref([])
+const totalMangas = ref(0)
 const totalPages = ref(0)
 const currentPage = ref(1)
 const itemsPerPage = ref(50)
@@ -265,20 +261,18 @@ const loading = ref(false)
 const error = ref('')
 
 // Modal states
-const showEditModal = ref(false)
+const showCreateModal = ref(false)
 const showDeleteModal = ref(false)
-const isEditing = ref(false)
 const saving = ref(false)
 const deleting = ref(false)
-const animeToDelete = ref(null)
+const mangaToDelete = ref(null)
 
 // Form data
 const formData = ref({
   titre: '',
-  titre_orig: '',
+  auteur: '',
   annee: new Date().getFullYear(),
-  nb_ep: null,
-  studio: '',
+  nb_volumes: null,
   synopsis: '',
   image: '',
   statut: true
@@ -290,12 +284,12 @@ const debouncedSearch = () => {
   clearTimeout(searchTimeout)
   searchTimeout = setTimeout(() => {
     currentPage.value = 1
-    loadAnimes()
+    loadMangas()
   }, 300)
 }
 
-// Load animes
-const loadAnimes = async () => {
+// Load mangas
+const loadMangas = async () => {
   loading.value = true
   error.value = ''
   
@@ -310,15 +304,15 @@ const loadAnimes = async () => {
       params.append('search', searchQuery.value.trim())
     }
     
-    const response = await $fetch(`${API_BASE}/api/admin/animes?${params}`, {
+    const response = await $fetch(`${API_BASE}/api/admin/mangas?${params}`, {
       headers: authStore.getAuthHeaders()
     })
     
-    animes.value = response.data || []
-    totalAnimes.value = response.pagination?.total || 0
+    mangas.value = response.data || []
+    totalMangas.value = response.pagination?.total || 0
     totalPages.value = response.pagination?.totalPages || Math.ceil(response.pagination?.total / itemsPerPage.value) || 0
   } catch (err) {
-    console.error('Load animes error:', err)
+    console.error('Load mangas error:', err)
     if (err.response?.status === 403) {
       error.value = 'Accès non autorisé'
       await navigateTo('/login')
@@ -327,7 +321,7 @@ const loadAnimes = async () => {
       await authStore.logout()
       await navigateTo('/login')
     } else {
-      error.value = 'Erreur lors du chargement des animes'
+      error.value = 'Erreur lors du chargement des mangas'
     }
   } finally {
     loading.value = false
@@ -338,7 +332,7 @@ const loadAnimes = async () => {
 const changePage = (page) => {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page
-    loadAnimes()
+    loadMangas()
   }
 }
 
@@ -346,67 +340,41 @@ const changePage = (page) => {
 const resetForm = () => {
   formData.value = {
     titre: '',
-    titre_orig: '',
+    auteur: '',
     annee: new Date().getFullYear(),
-    nb_ep: null,
-    studio: '',
+    nb_volumes: null,
     synopsis: '',
     image: '',
     statut: true
   }
 }
 
-// Edit anime
-const editAnime = (anime) => {
-  isEditing.value = true
-  formData.value = {
-    id: anime.id_anime,
-    titre: anime.titre || '',
-    titre_orig: anime.titre_orig || '',
-    annee: anime.annee || new Date().getFullYear(),
-    nb_ep: anime.nb_ep || null,
-    studio: anime.studio || '',
-    synopsis: anime.synopsis || '',
-    image: anime.image || '',
-    statut: Boolean(anime.statut)
-  }
-  showEditModal.value = true
-}
 
-// Save anime
-const saveAnime = async () => {
+// Save manga
+const saveManga = async () => {
   saving.value = true
   
   try {
     const payload = {
       titre: formData.value.titre,
-      titre_orig: formData.value.titre_orig,
-      annee: parseInt(formData.value.annee),
-      nb_ep: formData.value.nb_ep ? parseInt(formData.value.nb_ep) : null,
-      studio: formData.value.studio,
+      auteur: formData.value.auteur,
+      annee: formData.value.annee ? parseInt(formData.value.annee) : null,
+      nb_volumes: formData.value.nb_volumes ? parseInt(formData.value.nb_volumes) : null,
       synopsis: formData.value.synopsis,
       image: formData.value.image,
       statut: formData.value.statut ? 1 : 0
     }
     
-    if (isEditing.value) {
-      await $fetch(`${API_BASE}/api/admin/animes/${formData.value.id}`, {
-        method: 'PUT',
-        headers: authStore.getAuthHeaders(),
-        body: payload
-      })
-    } else {
-      await $fetch(`${API_BASE}/api/admin/animes`, {
-        method: 'POST',
-        headers: authStore.getAuthHeaders(),
-        body: payload
-      })
-    }
+    await $fetch(`${API_BASE}/api/admin/mangas`, {
+      method: 'POST',
+      headers: authStore.getAuthHeaders(),
+      body: payload
+    })
     
     closeModal()
-    await loadAnimes()
+    await loadMangas()
   } catch (err) {
-    console.error('Save anime error:', err)
+    console.error('Save manga error:', err)
     error.value = 'Erreur lors de l\'enregistrement'
   } finally {
     saving.value = false
@@ -414,28 +382,28 @@ const saveAnime = async () => {
 }
 
 // Confirm delete
-const confirmDelete = (anime) => {
-  animeToDelete.value = anime
+const confirmDelete = (manga) => {
+  mangaToDelete.value = manga
   showDeleteModal.value = true
 }
 
-// Delete anime
-const deleteAnime = async () => {
-  if (!animeToDelete.value) return
+// Delete manga
+const deleteManga = async () => {
+  if (!mangaToDelete.value) return
   
   deleting.value = true
   
   try {
-    await $fetch(`${API_BASE}/api/admin/animes/${animeToDelete.value.id_anime}`, {
+    await $fetch(`${API_BASE}/api/admin/mangas/${mangaToDelete.value.id_manga}`, {
       method: 'DELETE',
       headers: authStore.getAuthHeaders()
     })
     
     showDeleteModal.value = false
-    animeToDelete.value = null
-    await loadAnimes()
+    mangaToDelete.value = null
+    await loadMangas()
   } catch (err) {
-    console.error('Delete anime error:', err)
+    console.error('Delete manga error:', err)
     error.value = 'Erreur lors de la suppression'
   } finally {
     deleting.value = false
@@ -444,27 +412,49 @@ const deleteAnime = async () => {
 
 // Close modal
 const closeModal = () => {
-  showEditModal.value = false
-  isEditing.value = false
+  showCreateModal.value = false
   resetForm()
 }
 
 // Handle image error
 const handleImageError = (event) => {
-  event.target.src = '/placeholder-anime.jpg'
+  // Prevent infinite loops by checking if we're already showing a fallback
+  if (event.target.dataset.fallback) return
+  
+  // Mark as fallback and use a different approach
+  event.target.dataset.fallback = 'true'
+  
+  // Try to use the placeholder image from public folder
+  const placeholderPath = '/images/mangas/placeholder-manga.jpg'
+  
+  // Create a temporary image to test if placeholder exists
+  const testImg = new Image()
+  testImg.onload = () => {
+    event.target.src = placeholderPath
+  }
+  testImg.onerror = () => {
+    // If placeholder doesn't exist, use a CSS-based fallback
+    event.target.style.display = 'none'
+    event.target.parentElement.style.background = 'var(--bg-secondary)'
+    event.target.parentElement.style.display = 'flex'
+    event.target.parentElement.style.alignItems = 'center'
+    event.target.parentElement.style.justifyContent = 'center'
+    event.target.parentElement.innerHTML = '<span style="font-size: 1.5rem; color: var(--text-muted);">📚</span>'
+  }
+  testImg.src = placeholderPath
 }
 
 // Load data on mount
 onMounted(() => {
   if (isAdmin.value) {
-    loadAnimes()
+    loadMangas()
   }
 })
 
 // Watch for admin status changes
 watch(isAdmin, (newValue) => {
   if (newValue) {
-    loadAnimes()
+    loadMangas()
   } else {
     navigateTo('/login')
   }
@@ -472,7 +462,7 @@ watch(isAdmin, (newValue) => {
 </script>
 
 <style scoped>
-.admin-animes {
+.admin-mangas {
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -626,11 +616,35 @@ watch(isAdmin, (newValue) => {
   width: 80px;
 }
 
-.anime-thumbnail {
+.thumbnail-container {
   width: 60px;
   height: 80px;
-  object-fit: cover;
   border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.manga-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+}
+
+.placeholder-icon {
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  opacity: 0.6;
 }
 
 .title-cell {
@@ -640,12 +654,6 @@ watch(isAdmin, (newValue) => {
 .title-main {
   font-weight: 600;
   color: var(--text-color);
-  margin-bottom: 0.25rem;
-}
-
-.title-orig {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
 }
 
 .rating-cell {
@@ -687,7 +695,7 @@ watch(isAdmin, (newValue) => {
 }
 
 .actions-cell {
-  width: 120px;
+  width: 100px;
 }
 
 .action-btn {
@@ -695,26 +703,15 @@ watch(isAdmin, (newValue) => {
   border: 1px solid var(--border-color);
   border-radius: 0.375rem;
   padding: 0.5rem;
-  margin-right: 0.25rem;
+  margin-right: 0.5rem;
   cursor: pointer;
   font-size: 1rem;
   transition: all 0.2s ease;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 32px;
-  height: 32px;
 }
 
 .edit-btn:hover {
   background: var(--accent-light);
   border-color: var(--accent-color);
-}
-
-.quick-edit-btn:hover {
-  background: var(--info-light);
-  border-color: var(--info-color);
 }
 
 .delete-btn:hover {
@@ -857,7 +854,7 @@ watch(isAdmin, (newValue) => {
 }
 
 /* Form */
-.anime-form {
+.manga-form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -954,7 +951,7 @@ watch(isAdmin, (newValue) => {
     padding: 0.75rem 0.5rem;
   }
   
-  .anime-thumbnail {
+  .manga-thumbnail {
     width: 50px;
     height: 65px;
   }

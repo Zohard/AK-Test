@@ -2,7 +2,7 @@
   <div class="article-card">
     <img 
       v-if="imageAndTitle.image"
-      :src="`/images/${imageAndTitle.image}`" 
+      :src="getImageUrl(imageAndTitle.image, imageAndTitle.type)" 
       :alt="imageAndTitle.title"
       class="article-image"
       @error="hideImage"
@@ -64,6 +64,20 @@ const imageAndTitle = computed(() => {
     type: 'Critique'
   }
 })
+
+const getImageUrl = (imagePath, type) => {
+  if (!imagePath) return null
+  
+  // Return appropriate path based on content type
+  if (type === 'Manga') {
+    return `/images/mangas/${imagePath}`
+  } else if (type === 'Anime') {
+    return `/images/animes/${imagePath}`
+  }
+  
+  // Default fallback
+  return `/images/${imagePath}`
+}
 
 const hideImage = (event) => {
   event.target.style.display = 'none'

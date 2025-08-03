@@ -1,6 +1,5 @@
 <template>
   <div class="admin-container">
-    <AdminLayout>
       <div class="page-header">
         <div class="header-content">
           <h1>Ajouter un nouveau manga</h1>
@@ -273,13 +272,12 @@
             </div>
         </form>
       </div>
-    </AdminLayout>
   </div>
 </template>
 
 <script setup>
 definePageMeta({
-  layout: false,
+  layout: 'admin',
   middleware: 'admin'
 })
 
