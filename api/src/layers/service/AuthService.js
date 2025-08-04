@@ -1,6 +1,6 @@
 const BaseService = require('./BaseService');
 const repositories = require('../data');
-const { verifyPassword, generateToken, sanitizeUser, validateSSOSignature, decodeSSOPayload, createSSOResponse, generateLogoutToken } = require('../../utils/auth');
+const { verifyPassword, generateToken, sanitizeUser, validateSSOSignature, decodeSSOPayload, createSSOResponse, generateLogoutToken } = require('../../../utils/auth');
 
 class AuthService extends BaseService {
   constructor() {
@@ -111,7 +111,7 @@ class AuthService extends BaseService {
         throw new Error('Token is required');
       }
 
-      const { verifyToken } = require('../../utils/auth');
+      const { verifyToken } = require('../../../utils/auth');
       const decoded = verifyToken(token);
       
       if (!decoded) {

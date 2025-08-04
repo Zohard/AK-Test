@@ -84,7 +84,7 @@ const formatRating = (rating) => {
 const getImageUrl = (imagePath) => {
   if (!imagePath) return null
   // Use the same image path as homepage
-  return `/public/images/anime/${imagePath}`
+  return `/images/anime/${imagePath}`
 }
 
 const hideImage = (event) => {

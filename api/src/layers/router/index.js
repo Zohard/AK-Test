@@ -3,6 +3,7 @@ const animeRouter = require('./anime');
 const mangaRouter = require('./manga');
 const authRouter = require('./auth');
 const reviewRouter = require('./review');
+const businessRouter = require('./business');
 
 const router = express.Router();
 
@@ -122,7 +123,8 @@ router.get('/', (req, res) => {
         animes: '/api/admin/animes',
         mangas: '/api/admin/mangas',
         reviews: '/api/admin/reviews',
-        users: '/api/admin/users'
+        users: '/api/admin/users',
+        business: '/api/admin/business'
       },
       sso: '/sso',
       health: '/health',
@@ -174,6 +176,7 @@ router.use('/api/animes', animeRouter);
 router.use('/api/mangas', mangaRouter);
 router.use('/api/auth', authRouter);
 router.use('/api/reviews', reviewRouter);
+router.use('/api/admin/business', businessRouter);
 
 // Mount auth router for SSO endpoints at root level
 router.use('/', authRouter);

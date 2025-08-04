@@ -83,30 +83,31 @@
                 <button type="button" @click="togglePrecisions('autres')" class="toggle-btn">(précisions)</button>
               </label>
               <div v-if="showPrecisions.autres" class="precisions">
-                - Séparées par une virgule si multiples
+                - Autres noms connus, séparés par des retours à la ligne
               </div>
-              <input 
-                v-model="formData.denomination_orig" 
-                type="text" 
-                class="form-input" 
-                placeholder="Noms alternatifs (séparés par des virgules)"
-              />
+              <textarea 
+                v-model="formData.autres_denominations" 
+                class="form-textarea" 
+                rows="3"
+                placeholder="Autres noms connus..."
+              ></textarea>
             </div>
 
             <!-- Date de création -->
             <div class="form-group">
               <label class="form-label">Date de naissance/création :</label>
               <input 
-                v-model="formData.date_creation" 
-                type="date" 
+                v-model="formData.date" 
+                type="text" 
                 class="form-input"
+                placeholder="ex: 1985"
               />
             </div>
 
             <!-- Origine/Pays -->
             <div class="form-group">
-              <label class="form-label required">Origine :</label>
-              <select v-model="formData.pays" class="form-select" required>
+              <label class="form-label">Origine :</label>
+              <select v-model="formData.origine" class="form-select">
                 <option value="">---</option>
                 <option value="Japon">Japon</option>
                 <option value="Belgique">Belgique</option>
@@ -132,17 +133,6 @@
               </select>
             </div>
 
-            <!-- Ville -->
-            <div class="form-group">
-              <label class="form-label">Ville :</label>
-              <input 
-                v-model="formData.ville" 
-                type="text" 
-                class="form-input" 
-                placeholder="Ville du siège social"
-              />
-            </div>
-
             <!-- Site officiel -->
             <div class="form-group">
               <label class="form-label">
@@ -160,23 +150,67 @@
               />
             </div>
 
-            <!-- Présentation -->
+            <!-- Image -->
             <div class="form-group">
               <label class="form-label">
-                Présentation 
-                <button type="button" @click="togglePrecisions('presentation')" class="toggle-btn">(précisions)</button>
+                Image 
+                <button type="button" @click="togglePrecisions('image')" class="toggle-btn">(précisions)</button>
               </label>
-              <div v-if="showPrecisions.presentation" class="precisions">
-                - BBCode disponibles : URL, B, I<br>
-                - Exemple : [b]Texte en gras[/b], [i]Texte en italique[/i], [url=http://exemple.com]Lien[/url]
+              <div v-if="showPrecisions.image" class="precisions">
+                - Formats acceptés: JPG, PNG, GIF, WebP (max 5MB)
               </div>
-              <textarea 
-                v-model="formData.description" 
-                class="form-textarea" 
-                rows="6"
-                placeholder="Description de l'entreprise..."
-              ></textarea>
+              
+              <!-- Current image preview -->
+              <div v-if="formData.image || imagePreview" class="current-image">
+                <div class="image-preview">
+                  <img 
+                    :src="imagePreview || `/images/business/${formData.image}`" 
+                    :alt="formData.denomination"
+                    class="preview-img"
+                    @error="onImageError"
+                  />
+                  <button 
+                    type="button" 
+                    @click="removeImage" 
+                    class="remove-image-btn"
+                    title="Supprimer l'image"
+                  >
+                    ×
+                  </button>
+                </div>
+                <p class="image-filename">{{ formData.image }}</p>
+              </div>
+
+              <!-- Upload new image -->
+              <div class="image-upload-section">
+                <input
+                  ref="fileInput"
+                  type="file"
+                  accept="image/*"
+                  @change="onFileSelect"
+                  class="file-input"
+                  style="display: none"
+                />
+                <button
+                  type="button"
+                  @click="$refs.fileInput.click()"
+                  class="upload-btn"
+                  :disabled="uploading"
+                >
+                  <span v-if="uploading">Téléchargement...</span>
+                  <span v-else>{{ formData.image ? 'Changer l\'image' : 'Choisir une image' }}</span>
+                </button>
+              </div>
+
+              <!-- Upload progress -->
+              <div v-if="uploading" class="upload-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill"></div>
+                </div>
+                <span class="progress-text">Upload en cours...</span>
+              </div>
             </div>
+
 
             <!-- Form Actions -->
             <div class="form-actions">
@@ -231,16 +265,19 @@ const error = ref(null)
 const message = ref('')
 const messageType = ref('')
 
+// Image upload states
+const uploading = ref(false)
+const imagePreview = ref('')
+
 // Form data
 const formData = ref({
   type: '',
   denomination: '',
-  denomination_orig: '',
-  date_creation: '',
-  pays: '',
-  ville: '',
+  autres_denominations: '',
+  date: '',
+  origine: '',
   site_officiel: '',
-  description: ''
+  image: ''
 })
 
 // Precisions toggles
@@ -248,7 +285,7 @@ const showPrecisions = ref({
   denomination: false,
   autres: false,
   site: false,
-  presentation: false
+  image: false
 })
 
 // Methods
@@ -273,14 +310,13 @@ const fetchBusinessDetails = async () => {
     
     // Populate form data
     formData.value = {
-      type: response.type || '',
-      denomination: response.denomination || '',
-      denomination_orig: response.denomination_orig || '',
-      date_creation: response.date_creation ? formatDateForInput(response.date_creation) : '',
-      pays: response.pays || '',
-      ville: response.ville || '',
-      site_officiel: response.site_officiel || '',
-      description: response.description || ''
+      type: response.data.type || '',
+      denomination: response.data.denomination || '',
+      autres_denominations: response.data.autres_denominations || '',
+      date: response.data.date || '',
+      origine: response.data.origine || '',
+      site_officiel: response.data.site_officiel || '',
+      image: response.data.image || ''
     }
     
   } catch (err) {
@@ -311,12 +347,11 @@ const saveBusiness = async () => {
     const payload = {
       type: formData.value.type,
       denomination: formData.value.denomination,
-      denomination_orig: formData.value.denomination_orig,
-      date_creation: formData.value.date_creation || null,
-      pays: formData.value.pays,
-      ville: formData.value.ville,
+      autres_denominations: formData.value.autres_denominations,
+      date: formData.value.date,
+      origine: formData.value.origine,
       site_officiel: formData.value.site_officiel,
-      description: formData.value.description
+      image: formData.value.image
     }
     
     let response
@@ -331,7 +366,7 @@ const saveBusiness = async () => {
       
       // Redirect to edit page with new ID after a short delay
       setTimeout(() => {
-        navigateTo(`/admin/business/${response.id}/edit`)
+        navigateTo(`/admin/business/${response.data.id_business}/edit`)
       }, 1500)
     } else {
       await $fetch(`${API_BASE}/api/admin/business/${businessId}`, {
@@ -370,6 +405,77 @@ const formatDateForInput = (dateString) => {
   if (!dateString) return ''
   const date = new Date(dateString)
   return date.toISOString().split('T')[0]
+}
+
+// Image upload methods
+const onFileSelect = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  // Validate file size (5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    message.value = 'Le fichier est trop volumineux (max 5MB)'
+    messageType.value = 'error'
+    return
+  }
+
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    message.value = 'Seuls les fichiers image sont acceptés'
+    messageType.value = 'error'
+    return
+  }
+
+  try {
+    uploading.value = true
+    message.value = ''
+
+    // Create form data for upload
+    const uploadFormData = new FormData()
+    uploadFormData.append('image', file)
+
+    // Upload to API
+    const response = await $fetch(`${API_BASE}/api/admin/business/upload-image`, {
+      method: 'POST',
+      headers: authStore.getAuthHeaders(),
+      body: uploadFormData
+    })
+
+    if (response.success) {
+      // Update form data with new filename
+      formData.value.image = response.filename
+      
+      // Create preview URL
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        imagePreview.value = e.target.result
+      }
+      reader.readAsDataURL(file)
+
+      message.value = 'Image téléchargée avec succès'
+      messageType.value = 'success'
+    }
+  } catch (err) {
+    console.error('Upload error:', err)
+    message.value = 'Erreur lors du téléchargement de l\'image'
+    messageType.value = 'error'
+  } finally {
+    uploading.value = false
+    // Reset file input
+    event.target.value = ''
+  }
+}
+
+const removeImage = () => {
+  formData.value.image = ''
+  imagePreview.value = ''
+  message.value = 'Image supprimée'
+  messageType.value = 'success'
+}
+
+const onImageError = () => {
+  // Handle image load errors (e.g., file not found)
+  console.warn('Image not found:', formData.value.image)
 }
 
 // Initialize data on mount
@@ -656,6 +762,126 @@ watch(isAdmin, (newValue) => {
   background: var(--error-light);
   color: var(--error-color);
   border: 1px solid var(--error-color);
+}
+
+/* Image Upload Styles */
+.current-image {
+  margin-bottom: 1rem;
+}
+
+.image-preview {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+
+.preview-img {
+  max-width: 200px;
+  max-height: 200px;
+  width: auto;
+  height: auto;
+  border-radius: 0.5rem;
+  border: 2px solid var(--border-color);
+  object-fit: cover;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--error-color);
+  color: white;
+  border: none;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background 0.2s ease;
+}
+
+.remove-image-btn:hover {
+  background: var(--error-hover);
+}
+
+.image-filename {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0;
+  font-style: italic;
+}
+
+.image-upload-section {
+  margin-top: 1rem;
+}
+
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.upload-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.upload-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.upload-progress {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--border-color);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent-color);
+  width: 100%;
+  animation: progress-fill 2s ease-in-out infinite;
+}
+
+@keyframes progress-fill {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.progress-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-align: center;
 }
 
 /* Responsive */

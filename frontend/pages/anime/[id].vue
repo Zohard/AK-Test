@@ -262,7 +262,7 @@ const formatRating = (rating) => {
 
 const getImageUrl = (imagePath) => {
   if (!imagePath) return null
-  return `/public/images/anime/${imagePath}`
+  return `/images/anime/${imagePath}`
 }
 
 const hideImage = (event) => {

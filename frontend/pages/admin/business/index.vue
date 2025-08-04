@@ -22,7 +22,7 @@
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Nom, type..."
+            placeholder="Nom, autres noms..."
             class="filter-input"
             @input="debouncedSearch"
           />
@@ -31,10 +31,41 @@
           <label class="filter-label">Type</label>
           <select v-model="typeFilter" @change="loadBusiness" class="filter-select">
             <option value="all">Tous</option>
+            <option value="Personnalité">Personnalité</option>
+            <option value="Editeur">Editeur</option>
             <option value="Studio">Studio</option>
-            <option value="Éditeur">Éditeur</option>
-            <option value="Distributeur">Distributeur</option>
-            <option value="Producteur">Producteur</option>
+            <option value="Chaîne TV">Chaîne TV</option>
+            <option value="Association">Association</option>
+            <option value="Magazine">Magazine</option>
+            <option value="Evénement">Evénement</option>
+            <option value="Divers">Divers</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Origine</label>
+          <select v-model="origineFilter" @change="loadBusiness" class="filter-select">
+            <option value="all">Toutes</option>
+            <option value="Japon">Japon</option>
+            <option value="Belgique">Belgique</option>
+            <option value="Chine">Chine</option>
+            <option value="Corée">Corée</option>
+            <option value="Etats-Unis">Etats-Unis</option>
+            <option value="France">France</option>
+            <option value="Grande Bretagne">Grande Bretagne</option>
+            <option value="Italie">Italie</option>
+            <option value="Espagne">Espagne</option>
+            <option value="Allemagne">Allemagne</option>
+            <option value="Hong Kong">Hong Kong</option>
+            <option value="Suisse">Suisse</option>
+            <option value="Benelux">Benelux</option>
+            <option value="Taiwan">Taiwan</option>
+            <option value="Asie">Asie</option>
+            <option value="Europe">Europe</option>
+            <option value="Amérique du Nord">Amérique du Nord</option>
+            <option value="Amérique du Sud">Amérique du Sud</option>
+            <option value="Afrique">Afrique</option>
+            <option value="Océanie">Océanie</option>
+            <option value="Russie">Russie</option>
           </select>
         </div>
         <div class="filter-group">
@@ -68,10 +99,9 @@
           <tr>
             <th>Nom</th>
             <th>Type</th>
-            <th>Pays</th>
-            <th>Ville</th>
-            <th>Année de création</th>
-            <th>Nb Projets</th>
+            <th>Origine</th>
+            <th>Année</th>
+            <th>Site officiel</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -80,8 +110,8 @@
             <td class="name-cell">
               <div class="company-info">
                 <div class="company-name">{{ company.denomination }}</div>
-                <div v-if="company.denomination_orig && company.denomination_orig !== company.denomination" class="company-orig">
-                  {{ company.denomination_orig }}
+                <div v-if="company.autres_denominations" class="company-alt">
+                  {{ company.autres_denominations }}
                 </div>
               </div>
             </td>
@@ -90,11 +120,13 @@
                 {{ company.type || '—' }}
               </span>
             </td>
-            <td>{{ company.pays || '—' }}</td>
-            <td>{{ company.ville || '—' }}</td>
-            <td>{{ company.annee_creation || '—' }}</td>
-            <td class="projects-cell">
-              <span class="projects-count">{{ company.project_count || 0 }}</span>
+            <td>{{ company.origine || '—' }}</td>
+            <td>{{ company.date || '—' }}</td>
+            <td>
+              <a v-if="company.site_officiel" :href="company.site_officiel" target="_blank" class="site-link">
+                {{ company.site_officiel }}
+              </a>
+              <span v-else>—</span>
             </td>
             <td class="actions-cell">
               <NuxtLink :to="`/admin/business/${company.id_business}/edit`" class="action-btn edit-btn">
@@ -158,35 +190,111 @@
                 <input v-model="formData.denomination" type="text" class="form-input" required />
               </div>
               <div class="form-group">
-                <label class="form-label">Nom original</label>
-                <input v-model="formData.denomination_orig" type="text" class="form-input" />
-              </div>
-              <div class="form-group">
                 <label class="form-label">Type *</label>
                 <select v-model="formData.type" class="form-select" required>
                   <option value="">Sélectionner un type</option>
+                  <option value="Personnalité">Personnalité</option>
+                  <option value="Editeur">Editeur</option>
                   <option value="Studio">Studio</option>
-                  <option value="Éditeur">Éditeur</option>
-                  <option value="Distributeur">Distributeur</option>
-                  <option value="Producteur">Producteur</option>
+                  <option value="Chaîne TV">Chaîne TV</option>
+                  <option value="Association">Association</option>
+                  <option value="Magazine">Magazine</option>
+                  <option value="Evénement">Evénement</option>
+                  <option value="Divers">Divers</option>
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">Pays</label>
-                <input v-model="formData.pays" type="text" class="form-input" />
+                <label class="form-label">Origine</label>
+                <select v-model="formData.origine" class="form-select">
+                  <option value="">Sélectionner une origine</option>
+                  <option value="Japon">Japon</option>
+                  <option value="Belgique">Belgique</option>
+                  <option value="Chine">Chine</option>
+                  <option value="Corée">Corée</option>
+                  <option value="Etats-Unis">Etats-Unis</option>
+                  <option value="France">France</option>
+                  <option value="Grande Bretagne">Grande Bretagne</option>
+                  <option value="Italie">Italie</option>
+                  <option value="Espagne">Espagne</option>
+                  <option value="Allemagne">Allemagne</option>
+                  <option value="Hong Kong">Hong Kong</option>
+                  <option value="Suisse">Suisse</option>
+                  <option value="Benelux">Benelux</option>
+                  <option value="Taiwan">Taiwan</option>
+                  <option value="Asie">Asie</option>
+                  <option value="Europe">Europe</option>
+                  <option value="Amérique du Nord">Amérique du Nord</option>
+                  <option value="Amérique du Sud">Amérique du Sud</option>
+                  <option value="Afrique">Afrique</option>
+                  <option value="Océanie">Océanie</option>
+                  <option value="Russie">Russie</option>
+                </select>
               </div>
               <div class="form-group">
-                <label class="form-label">Ville</label>
-                <input v-model="formData.ville" type="text" class="form-input" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Année de création</label>
-                <input v-model="formData.annee_creation" type="number" min="1800" max="2030" class="form-input" />
+                <label class="form-label">Année</label>
+                <input v-model="formData.date" type="text" class="form-input" placeholder="ex: 1985" />
               </div>
             </div>
             <div class="form-group full-width">
-              <label class="form-label">Description</label>
-              <textarea v-model="formData.description" class="form-textarea" rows="4"></textarea>
+              <label class="form-label">Autres noms</label>
+              <textarea v-model="formData.autres_denominations" class="form-textarea" rows="2" placeholder="Autres dénominations connues..."></textarea>
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Site officiel</label>
+              <input v-model="formData.site_officiel" type="url" class="form-input" placeholder="https://..." />
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Image</label>
+              
+              <!-- Current image preview -->
+              <div v-if="formData.image || imagePreview" class="current-image">
+                <div class="image-preview">
+                  <img 
+                    :src="imagePreview || `/images/business/${formData.image}`" 
+                    :alt="formData.denomination"
+                    class="preview-img"
+                    @error="onImageError"
+                  />
+                  <button 
+                    type="button" 
+                    @click="removeImage" 
+                    class="remove-image-btn"
+                    title="Supprimer l'image"
+                  >
+                    ×
+                  </button>
+                </div>
+                <p class="image-filename">{{ formData.image }}</p>
+              </div>
+
+              <!-- Upload new image -->
+              <div class="image-upload-section">
+                <input
+                  ref="fileInput"
+                  type="file"
+                  accept="image/*"
+                  @change="onFileSelect"
+                  class="file-input"
+                  style="display: none"
+                />
+                <button
+                  type="button"
+                  @click="$refs.fileInput.click()"
+                  class="upload-btn"
+                  :disabled="uploading"
+                >
+                  <span v-if="uploading">Téléchargement...</span>
+                  <span v-else>{{ formData.image ? 'Changer l\'image' : 'Choisir une image' }}</span>
+                </button>
+              </div>
+
+              <!-- Upload progress -->
+              <div v-if="uploading" class="upload-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill"></div>
+                </div>
+                <span class="progress-text">Upload en cours...</span>
+              </div>
             </div>
           </form>
         </div>
@@ -252,6 +360,7 @@ const currentPage = ref(1)
 const itemsPerPage = ref(50)
 const searchQuery = ref('')
 const typeFilter = ref('all')
+const origineFilter = ref('all')
 const loading = ref(false)
 const error = ref('')
 
@@ -263,15 +372,19 @@ const saving = ref(false)
 const deleting = ref(false)
 const businessToDelete = ref(null)
 
+// Image upload states
+const uploading = ref(false)
+const imagePreview = ref('')
+
 // Form data
 const formData = ref({
   denomination: '',
-  denomination_orig: '',
+  autres_denominations: '',
   type: '',
-  pays: '',
-  ville: '',
-  annee_creation: null,
-  description: ''
+  origine: '',
+  date: '',
+  site_officiel: '',
+  image: ''
 })
 
 // Debounced search
@@ -297,6 +410,10 @@ const loadBusiness = async () => {
     
     if (typeFilter.value !== 'all') {
       params.append('type', typeFilter.value)
+    }
+    
+    if (origineFilter.value !== 'all') {
+      params.append('origine', origineFilter.value)
     }
     
     if (searchQuery.value.trim()) {
@@ -339,12 +456,12 @@ const changePage = (page) => {
 const resetForm = () => {
   formData.value = {
     denomination: '',
-    denomination_orig: '',
+    autres_denominations: '',
     type: '',
-    pays: '',
-    ville: '',
-    annee_creation: null,
-    description: ''
+    origine: '',
+    date: '',
+    site_officiel: '',
+    image: ''
   }
 }
 
@@ -354,12 +471,12 @@ const editBusiness = (company) => {
   formData.value = {
     id: company.id_business,
     denomination: company.denomination || '',
-    denomination_orig: company.denomination_orig || '',
+    autres_denominations: company.autres_denominations || '',
     type: company.type || '',
-    pays: company.pays || '',
-    ville: company.ville || '',
-    annee_creation: company.annee_creation || null,
-    description: company.description || ''
+    origine: company.origine || '',
+    date: company.date || '',
+    site_officiel: company.site_officiel || '',
+    image: company.image || ''
   }
   showEditModal.value = true
 }
@@ -371,12 +488,12 @@ const saveBusiness = async () => {
   try {
     const payload = {
       denomination: formData.value.denomination,
-      denomination_orig: formData.value.denomination_orig,
+      autres_denominations: formData.value.autres_denominations,
       type: formData.value.type,
-      pays: formData.value.pays,
-      ville: formData.value.ville,
-      annee_creation: formData.value.annee_creation ? parseInt(formData.value.annee_creation) : null,
-      description: formData.value.description
+      origine: formData.value.origine,
+      date: formData.value.date,
+      site_officiel: formData.value.site_officiel,
+      image: formData.value.image
     }
     
     if (isEditing.value) {
@@ -436,7 +553,71 @@ const deleteBusiness = async () => {
 const closeModal = () => {
   showEditModal.value = false
   isEditing.value = false
+  imagePreview.value = ''
   resetForm()
+}
+
+// Image upload methods
+const onFileSelect = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  // Validate file size (5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    error.value = 'Le fichier est trop volumineux (max 5MB)'
+    return
+  }
+
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    error.value = 'Seuls les fichiers image sont acceptés'
+    return
+  }
+
+  try {
+    uploading.value = true
+    error.value = ''
+
+    // Create form data for upload
+    const uploadFormData = new FormData()
+    uploadFormData.append('image', file)
+
+    // Upload to API
+    const response = await $fetch(`${API_BASE}/api/admin/business/upload-image`, {
+      method: 'POST',
+      headers: authStore.getAuthHeaders(),
+      body: uploadFormData
+    })
+
+    if (response.success) {
+      // Update form data with new filename
+      formData.value.image = response.filename
+      
+      // Create preview URL
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        imagePreview.value = e.target.result
+      }
+      reader.readAsDataURL(file)
+    }
+  } catch (err) {
+    console.error('Upload error:', err)
+    error.value = 'Erreur lors du téléchargement de l\'image'
+  } finally {
+    uploading.value = false
+    // Reset file input
+    event.target.value = ''
+  }
+}
+
+const removeImage = () => {
+  formData.value.image = ''
+  imagePreview.value = ''
+}
+
+const onImageError = () => {
+  // Handle image load errors (e.g., file not found)
+  console.warn('Image not found:', formData.value.image)
 }
 
 // Load data on mount
@@ -495,7 +676,7 @@ watch(isAdmin, (newValue) => {
 
 .filters-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
   gap: 1rem;
 }
 
@@ -622,7 +803,7 @@ watch(isAdmin, (newValue) => {
   color: var(--text-color);
 }
 
-.company-orig {
+.company-alt {
   font-size: 0.875rem;
   color: var(--text-secondary);
   font-style: italic;
@@ -656,13 +837,32 @@ watch(isAdmin, (newValue) => {
   color: var(--accent-color);
 }
 
-.projects-cell {
-  text-align: center;
+.site-link {
+  color: var(--accent-color);
+  text-decoration: none;
+  font-size: 0.875rem;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
 }
 
-.projects-count {
+.site-link:hover {
+  text-decoration: underline;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: var(--accent-color);
+  text-transform: uppercase;
+}
+
+.status-ok {
+  background: var(--success-light);
+  color: var(--success-color);
 }
 
 .actions-cell {
@@ -891,6 +1091,126 @@ watch(isAdmin, (newValue) => {
   color: var(--warning-color);
   font-weight: 500;
   margin-top: 0.5rem;
+}
+
+/* Image Upload Styles */
+.current-image {
+  margin-bottom: 1rem;
+}
+
+.image-preview {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+
+.preview-img {
+  max-width: 150px;
+  max-height: 150px;
+  width: auto;
+  height: auto;
+  border-radius: 0.5rem;
+  border: 2px solid var(--border-color);
+  object-fit: cover;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--error-color);
+  color: white;
+  border: none;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background 0.2s ease;
+}
+
+.remove-image-btn:hover {
+  background: var(--error-hover);
+}
+
+.image-filename {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin: 0;
+  font-style: italic;
+}
+
+.image-upload-section {
+  margin-top: 0.5rem;
+}
+
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.75rem;
+}
+
+.upload-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.upload-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.upload-progress {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 3px;
+  background: var(--border-color);
+  border-radius: 1.5px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent-color);
+  width: 100%;
+  animation: progress-fill 2s ease-in-out infinite;
+}
+
+@keyframes progress-fill {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.progress-text {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: center;
 }
 
 /* Responsive */

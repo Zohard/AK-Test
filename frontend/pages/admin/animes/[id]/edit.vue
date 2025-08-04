@@ -781,7 +781,7 @@
                     >
                       <div class="autocomplete-image">
                         <img 
-                          :src="content.image ? `/public/images/anime/${content.image}` : '/placeholder-anime.jpg'" 
+                          :src="content.image ? `/images/anime/${content.image}` : '/placeholder-anime.jpg'" 
                           :alt="content.titre"
                           class="autocomplete-thumbnail"
                           @error="handleImageError"
@@ -950,7 +950,7 @@
                 >
                   <div class="screenshot-image">
                     <img 
-                      :src="`/public/images/anime/${screenshot.filename}`"
+                      :src="`/images/anime/${screenshot.filename}`"
                       :alt="`Screenshot #${screenshot.id_screen}`"
                       class="screenshot-thumbnail"
                       @error="handleScreenshotError"
@@ -1517,7 +1517,7 @@ const getImageSrc = () => {
     if (formData.value.image.startsWith('http')) {
       return formData.value.image
     } else {
-      return `/public/images/anime/${formData.value.image}`
+      return `/images/anime/${formData.value.image}`
     }
   }
   return '/placeholder-anime.jpg'
@@ -2085,7 +2085,7 @@ const handleScreenshotError = (event) => {
 
 const openScreenshotModal = (screenshot) => {
   // TODO: Implement modal for viewing full-size screenshot
-  window.open(`/public/images/anime/${screenshot.filename}`, '_blank')
+  window.open(`/images/anime/${screenshot.filename}`, '_blank')
 }
 
 // Tags management methods

@@ -78,7 +78,7 @@
           <tr v-for="anime in animes" :key="anime.id_anime" class="table-row">
             <td class="image-cell">
               <img
-                :src="anime.image ? `/public/images/anime/${anime.image}` : '/placeholder-anime.jpg'"
+                :src="anime.image ? `/images/anime/${anime.image}` : '/placeholder-anime.jpg'"
                 :alt="anime.titre"
                 class="anime-thumbnail"
                 @error="handleImageError"

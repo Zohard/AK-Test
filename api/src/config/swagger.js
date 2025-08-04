@@ -88,7 +88,7 @@ const swaggerOptions = {
   },
   apis: [
     './src/layers/router/*.js', // Path to the router files
-    './server.js' // Main server file
+    './app.js' // Main server file
   ]
 };
 
