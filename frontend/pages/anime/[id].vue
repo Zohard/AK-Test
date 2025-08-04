@@ -61,6 +61,30 @@
                 <span class="info-value">{{ anime.nb_reviews }} critique{{ anime.nb_reviews > 1 ? 's' : '' }}</span>
               </div>
             </div>
+            
+            <!-- Tags within Important Info -->
+            <div v-if="tags && tags.length > 0" class="tags-in-info">
+              <h4 class="tags-info-title">Genres et Thèmes</h4>
+              <div class="tags-info-grid">
+                <div 
+                  v-for="category in groupedTags" 
+                  :key="category.name"
+                  class="tags-info-category"
+                >
+                  <span class="tags-info-category-title">{{ category.name }}:</span>
+                  <div class="tags-info-list">
+                    <span 
+                      v-for="tag in category.tags" 
+                      :key="tag.id_tag"
+                      class="tag-info-item"
+                      :title="tag.description"
+                    >
+                      {{ tag.tag_name }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Synopsis -->
@@ -95,29 +119,6 @@
         </div>
       </div>
 
-      <!-- Tags Section -->
-      <div v-if="tags && tags.length > 0" class="tags-section">
-        <h3 class="section-title">Genres et Thèmes</h3>
-        <div class="tags-grid">
-          <div 
-            v-for="category in groupedTags" 
-            :key="category.name"
-            class="tags-category"
-          >
-            <h4 class="tags-category-title">{{ category.name }}</h4>
-            <div class="tags-list">
-              <span 
-                v-for="tag in category.tags" 
-                :key="tag.id_tag"
-                class="tag-item"
-                :title="tag.description"
-              >
-                {{ tag.tag_name }}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <!-- Reviews Section -->
       <div v-if="anime.recent_reviews && anime.recent_reviews.length > 0" class="reviews-section">
@@ -261,7 +262,7 @@ const formatRating = (rating) => {
 
 const getImageUrl = (imagePath) => {
   if (!imagePath) return null
-  return `/images/${imagePath}`
+  return `/public/images/anime/${imagePath}`
 }
 
 const hideImage = (event) => {
@@ -637,53 +638,60 @@ onMounted(() => {
   margin: 0 0 2rem 0;
 }
 
-/* Tags Section */
-.tags-section {
-  margin-bottom: 3rem;
+/* Tags within Important Info */
+.tags-in-info {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
 }
 
-.tags-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-}
-
-.tags-category {
-  background: var(--surface-color);
-  border-radius: 8px;
-  padding: 1.5rem;
-  border: 1px solid var(--border-color);
-}
-
-.tags-category-title {
+.tags-info-title {
   font-size: 1rem;
   font-weight: 600;
   color: var(--accent-color);
   margin: 0 0 1rem 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  font-size: 0.875rem;
 }
 
-.tags-list {
+.tags-info-grid {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tags-info-category {
+  display: flex;
+  flex-direction: column;
   gap: 0.5rem;
 }
 
-.tag-item {
+.tags-info-category-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.tags-info-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.tag-info-item {
   background: var(--bg-secondary);
   color: var(--text-color);
-  padding: 0.5rem 0.75rem;
-  border-radius: 16px;
-  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
   border: 1px solid var(--border-color);
   cursor: help;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
-.tag-item:hover {
+.tag-info-item:hover {
   background: var(--accent-color);
   color: white;
   transform: translateY(-1px);

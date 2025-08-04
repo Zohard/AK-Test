@@ -63,12 +63,14 @@ api/
 │   │   │   ├── MangaController.js
 │   │   │   ├── AuthController.js
 │   │   │   ├── ReviewController.js
+│   │   │   ├── BusinessController.js
 │   │   │   └── index.js
 │   │   ├── router/               # Route definitions and middleware
 │   │   │   ├── anime.js
 │   │   │   ├── manga.js
 │   │   │   ├── auth.js
 │   │   │   ├── review.js
+│   │   │   ├── business.js
 │   │   │   └── index.js
 │   │   ├── service/              # Business logic and validation
 │   │   │   ├── BaseService.js
@@ -76,6 +78,7 @@ api/
 │   │   │   ├── MangaService.js
 │   │   │   ├── AuthService.js
 │   │   │   ├── ReviewService.js
+│   │   │   ├── BusinessService.js
 │   │   │   └── index.js
 │   │   └── data/                 # Repository pattern for data access
 │   │       ├── BaseRepository.js
@@ -83,6 +86,7 @@ api/
 │   │       ├── MangaRepository.js
 │   │       ├── UserRepository.js
 │   │       ├── ReviewRepository.js
+│   │       ├── BusinessRepository.js
 │   │       └── index.js
 │   ├── config/                   # Configuration files
 │   │   ├── database.js
@@ -216,6 +220,16 @@ CORS_ORIGIN=http://localhost:3001
 - `GET /api/users/:userId/reviews` - User's reviews
 - `GET /api/reviews/top-rated/:mediaType` - Top rated media
 - `GET /api/reviews/statistics` - Review statistics
+
+### 🏢 Business
+- `GET /api/admin/business` - List businesses with pagination/filters
+- `POST /api/admin/business` - Create business (admin required)
+- `GET /api/admin/business/:id` - Get business by ID (admin required)
+- `PUT /api/admin/business/:id` - Update business (admin required)
+- `DELETE /api/admin/business/:id` - Delete business (admin required)
+- `GET /api/admin/business/types` - Get available business types (admin required)
+- `GET /api/admin/business/countries` - Get available business countries (admin required)
+- `POST /api/admin/business/upload-image` - Upload business image (admin required)
 
 ### 👑 Admin Endpoints
 - `GET /api/admin/animes` - Admin anime management

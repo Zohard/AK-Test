@@ -61,6 +61,30 @@
                 <span class="info-value">{{ manga.nb_reviews }} critique{{ manga.nb_reviews > 1 ? 's' : '' }}</span>
               </div>
             </div>
+            
+            <!-- Tags within Important Info -->
+            <div v-if="tags && tags.length > 0" class="tags-in-info">
+              <h4 class="tags-info-title">Genres et Thèmes</h4>
+              <div class="tags-info-grid">
+                <div 
+                  v-for="category in groupedTags" 
+                  :key="category.name"
+                  class="tags-info-category"
+                >
+                  <span class="tags-info-category-title">{{ category.name }}:</span>
+                  <div class="tags-info-list">
+                    <span 
+                      v-for="tag in category.tags" 
+                      :key="tag.id_tag"
+                      class="tag-info-item"
+                      :title="tag.description"
+                    >
+                      {{ tag.tag_name }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Synopsis -->
@@ -95,29 +119,6 @@
         </div>
       </div>
 
-      <!-- Tags Section -->
-      <div v-if="tags && tags.length > 0" class="tags-section">
-        <h3 class="section-title">Genres et Thèmes</h3>
-        <div class="tags-grid">
-          <div 
-            v-for="category in groupedTags" 
-            :key="category.name"
-            class="tags-category"
-          >
-            <h4 class="tags-category-title">{{ category.name }}</h4>
-            <div class="tags-list">
-              <span 
-                v-for="tag in category.tags" 
-                :key="tag.id_tag"
-                class="tag-item"
-                :title="tag.description"
-              >
-                {{ tag.tag_name }}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <!-- Reviews Section -->
       <div v-if="manga.recent_reviews && manga.recent_reviews.length > 0" class="reviews-section">
@@ -318,11 +319,421 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Copy the CSS from anime/[id].vue and replace .anime- with .manga- where appropriate */
 .manga-details {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
 }
-/* ...copy the rest of the CSS, replacing .anime- with .manga- for relevant classes... */
+
+.loading-container, .error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.manga-header {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.manga-image-section {
+  position: sticky;
+  top: 2rem;
+  height: fit-content;
+}
+
+.manga-poster {
+  width: 100%;
+  aspect-ratio: 3/4;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.manga-poster-placeholder {
+  width: 100%;
+  aspect-ratio: 3/4;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem;
+}
+
+.placeholder-text {
+  color: var(--text-secondary);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.manga-info-section {
+  min-width: 0;
+}
+
+.manga-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--text-color);
+  margin: 0 0 0.5rem 0;
+  line-height: 1.2;
+}
+
+.manga-original-title {
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin: 0 0 2rem 0;
+  font-style: italic;
+}
+
+.important-info-block {
+  background: var(--surface-color);
+  border: 2px solid var(--accent-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.info-block-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--accent-color);
+  margin: 0 0 1rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.info-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 80px;
+}
+
+.info-value {
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.info-value.rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rating-star {
+  color: #fbbf24;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin: 0 0 1.5rem 0;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+.synopsis-section {
+  margin-bottom: 2rem;
+}
+
+.synopsis-text {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.business-section {
+  margin-bottom: 3rem;
+}
+
+.business-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.business-group {
+  background: var(--surface-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.business-type {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--accent-color);
+  margin: 0 0 1rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.875rem;
+}
+
+.business-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.business-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.business-name {
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.business-precisions {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.reviews-section {
+  margin-bottom: 3rem;
+}
+
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.review-item {
+  background: var(--surface-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.review-header {
+  margin-bottom: 1rem;
+}
+
+.review-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 0.5rem 0;
+}
+
+.review-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.review-author {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.review-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.review-content {
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+}
+
+.critique-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.critique-text a {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+.critique-text strong {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.critique-text blockquote {
+  margin: 0.5rem 0;
+  padding: 0.5rem 1rem;
+  border-left: 3px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-style: normal;
+}
+
+.navigation-section {
+  border-top: 1px solid var(--border-color);
+  padding-top: 2rem;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--accent-color);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.back-link:hover {
+  color: var(--accent-color-hover);
+}
+
+.error-container h2 {
+  color: var(--text-color);
+  margin: 0 0 1rem 0;
+}
+
+.error-container p {
+  color: var(--text-secondary);
+  margin: 0 0 2rem 0;
+}
+
+/* Tags within Important Info */
+.tags-in-info {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.tags-info-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--accent-color);
+  margin: 0 0 1rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tags-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tags-info-category {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tags-info-category-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.tags-info-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.tag-info-item {
+  background: var(--bg-secondary);
+  color: var(--text-color);
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid var(--border-color);
+  cursor: help;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.tag-info-item:hover {
+  background: var(--accent-color);
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .manga-details {
+    padding: 1rem;
+  }
+  
+  .manga-header {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .manga-image-section {
+    position: static;
+    max-width: 200px;
+    margin: 0 auto;
+  }
+  
+  .manga-title {
+    font-size: 2rem;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .business-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .review-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .tags-info-grid {
+    gap: 0.5rem;
+  }
+}
 </style>
