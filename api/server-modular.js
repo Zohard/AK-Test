@@ -17,6 +17,10 @@ const port = process.env.PORT || 3000;
 // Import database connection
 const pool = require('./config/database');
 
+// Import middleware configuration
+const { setupSwagger } = require('./config/swagger');
+const { setupMulter } = require('./config/middleware');
+
 // Import routes
 const setupRoutes = require('./routes/index');
 

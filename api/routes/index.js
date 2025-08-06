@@ -7,6 +7,7 @@ const authRoutes = require('./auth');
 const userRoutes = require('./user');
 const adminRoutes = require('./admin');
 const searchRoutes = require('./search');
+const reviewRoutes = require('./reviews');
 const businessRoutes = require('./business');
 
 module.exports = (app) => {
@@ -16,6 +17,7 @@ module.exports = (app) => {
   app.use('/api/users', userRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/search', searchRoutes);
+  app.use('/api/reviews', reviewRoutes);
   app.use('/api/business', businessRoutes);
   
   // Root route
