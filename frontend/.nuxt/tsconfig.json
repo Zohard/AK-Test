@@ -25,9 +25,6 @@
       "@unhead/vue": [
         "../node_modules/@unhead/vue"
       ],
-      "vue": [
-        "../node_modules/vue"
-      ],
       "@vue/runtime-core": [
         "../node_modules/@vue/runtime-core"
       ],
