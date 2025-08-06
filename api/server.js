@@ -47,7 +47,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://localhost:${port}`,
+        url: `http://localhost:${process.env.EXTERNAL_PORT || 3001}`,
         description: 'Development server'
       },
       {
@@ -236,7 +236,7 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     // Explicitly set the server URL to avoid CORS issues
     servers: [
       {
-        url: `http://localhost:${port}`,
+        url: `http://localhost:${process.env.EXTERNAL_PORT || 3001}`,
         description: 'Development server'
       }
     ],
@@ -4873,53 +4873,179 @@ app.delete('/api/admin/mangas/:id/covers/:coverId', authMiddleware, adminMiddlew
  * @swagger
  * /api/admin/business:
  *   get:
- *     summary: Liste des entreprises pour l'administration
- *     description: Récupère la liste complète des entreprises avec pagination pour l'interface d'administration
+ *     summary: Liste des fiches business pour l'administration
+ *     description: Récupère la liste complète des fiches business avec pagination et filtres
  *     tags: [Admin - Business]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Numéro de page
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *           maximum: 100
+ *         description: Nombre d'éléments par page
+ *       - in: query
+ *         name: denomination
+ *         schema:
+ *           type: string
+ *         description: Filtrer par dénomination (recherche partielle)
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [Personnalité, Studio, Editeur, Divers, Chaîne TV, Magazine, Evénement, Association]
+ *         description: Filtrer par type
+ *       - in: query
+ *         name: statut
+ *         schema:
+ *           type: string
+ *           enum: [all, active, inactive, pending]
+ *           default: all
+ *         description: Filtrer par statut (all=tous, active=1, inactive=0, pending=2)
+ *     responses:
+ *       200:
+ *         description: Liste des fiches business récupérée avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id_business:
+ *                         type: integer
+ *                         description: ID de la fiche business
+ *                       denomination:
+ *                         type: string
+ *                         description: Nom de l'entreprise/personne
+ *                       type:
+ *                         type: string
+ *                         description: Type (Studio, Personnalité, etc.)
+ *                       origine:
+ *                         type: string
+ *                         description: Pays d'origine
+ *                       statut:
+ *                         type: integer
+ *                         description: Statut (0=inactif, 1=actif, 2=en attente)
+ *                       date_ajout:
+ *                         type: string
+ *                         format: date-time
+ *                         description: Date d'ajout
+ *                       nb_relations:
+ *                         type: integer
+ *                         description: Nombre de relations avec animes/mangas
+ *                 pagination:
+ *                   $ref: '#/components/schemas/Pagination'
+ *                 filters:
+ *                   type: object
+ *                   properties:
+ *                     types:
+ *                       type: array
+ *                       description: Liste des types disponibles
+ *                     statuts:
+ *                       type: object
+ *                       description: Distribution des statuts
+ *       401:
+ *         description: Authentification requise
+ *       403:
+ *         description: Accès admin requis
+ *       500:
+ *         description: Erreur serveur
  */
 app.get('/api/admin/business', authMiddleware, adminMiddleware, async (req, res) => {
+  console.log('🔧 DEBUG: Business admin route hit! Query params:', req.query);
   try {
-    const { page = 1, limit = 50, search, status = 'all', type } = req.query;
+    const { 
+      page = 1, 
+      limit = 50, 
+      denomination, 
+      type, 
+      statut = 'all' 
+    } = req.query;
+    console.log('🔧 DEBUG: Extracted params - statut:', statut);
+    
     const offset = (parseInt(page) - 1) * parseInt(limit);
     
-    let whereClause = '';
+    // Build WHERE clause
+    let whereClause = 'WHERE 1=1';
     let params = [];
     let paramCount = 0;
     
-    if (status !== 'all') {
+    // Filter by denomination (partial search)
+    if (denomination) {
       paramCount++;
-      whereClause += ` WHERE statut = $${paramCount}`;
-      params.push(status === 'active' ? 1 : 0);
+      whereClause += ` AND denomination ILIKE $${paramCount}`;
+      params.push(`%${denomination}%`);
     }
     
+    // Filter by type
     if (type) {
       paramCount++;
-      const typeClause = ` ${whereClause ? 'AND' : 'WHERE'} type = $${paramCount}`;
-      whereClause += typeClause;
+      whereClause += ` AND type = $${paramCount}`;
       params.push(type);
     }
     
-    if (search) {
+    // Filter by status
+    console.log('🔧 DEBUG: statut parameter:', statut, 'type:', typeof statut);
+    if (statut !== 'all') {
       paramCount++;
-      const searchClause = ` ${whereClause ? 'AND' : 'WHERE'} denomination ILIKE $${paramCount}`;
-      whereClause += searchClause;
-      params.push(`%${search}%`);
+      console.log('🔧 DEBUG: Filtering by status, paramCount:', paramCount);
+      switch (statut) {
+        case 'active':
+          console.log('🔧 DEBUG: Active filter - pushing 1');
+          whereClause += ` AND statut = $${paramCount}`;
+          params.push(1);
+          break;
+        case 'inactive':
+          console.log('🔧 DEBUG: Inactive filter - pushing 0');
+          whereClause += ` AND statut = $${paramCount}`;
+          params.push(0);
+          break;
+        case 'pending':
+          console.log('🔧 DEBUG: Pending filter - pushing 2');
+          whereClause += ` AND statut = $${paramCount}`;
+          params.push(2);
+          break;
+        default:
+          console.log('🔧 DEBUG: Unknown status:', statut);
+      }
     }
+    console.log('🔧 DEBUG: Final whereClause:', whereClause);
+    console.log('🔧 DEBUG: Final params:', params);
     
+    // Main query with relation counts
     const query = `
-      SELECT id_business, denomination, type, site_officiel, statut
-      FROM ak_business ${whereClause}
-      ORDER BY denomination ASC
+      SELECT 
+        b.*,
+        (SELECT COUNT(*) FROM ak_business_to_animes WHERE id_business = b.id_business) +
+        (SELECT COUNT(*) FROM ak_business_to_mangas WHERE id_business = b.id_business) +
+        (SELECT COUNT(*) FROM ak_business_to_jeux WHERE id_business = b.id_business) +
+        (SELECT COUNT(*) FROM ak_business_to_ost WHERE id_business = b.id_business) as nb_relations
+      FROM ak_business b
+      ${whereClause}
+      ORDER BY b.date_ajout DESC, b.denomination ASC
       LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
     `;
     
     params.push(parseInt(limit), offset);
     
-    const [business, total] = await Promise.all([
+    // Execute main query and count query in parallel
+    const [business, total, types, statusDistribution] = await Promise.all([
       pool.query(query, params),
-      pool.query(`SELECT COUNT(*) FROM ak_business ${whereClause}`, params.slice(0, paramCount))
+      pool.query(`SELECT COUNT(*) FROM ak_business b ${whereClause}`, params.slice(0, paramCount)),
+      pool.query('SELECT type, COUNT(*) as count FROM ak_business GROUP BY type ORDER BY count DESC'),
+      pool.query('SELECT statut, COUNT(*) as count FROM ak_business GROUP BY statut ORDER BY statut')
     ]);
     
     res.json({
@@ -4928,47 +5054,111 @@ app.get('/api/admin/business', authMiddleware, adminMiddleware, async (req, res)
         page: parseInt(page),
         limit: parseInt(limit),
         total: parseInt(total.rows[0].count),
-        pages: Math.ceil(total.rows[0].count / limit)
+        pages: Math.ceil(total.rows[0].count / parseInt(limit))
+      },
+      filters: {
+        types: types.rows.map(row => ({ name: row.type, count: parseInt(row.count) })),
+        statuts: statusDistribution.rows.reduce((acc, row) => {
+          const statusName = row.statut == 1 ? 'active' : row.statut == 0 ? 'inactive' : 'pending';
+          acc[statusName] = parseInt(row.count);
+          return acc;
+        }, {})
       }
     });
+    
   } catch (error) {
     console.error('Admin business fetch error:', error);
-    res.status(500).json({ error: 'Failed to fetch business entities' });
+    res.status(500).json({ error: 'Failed to fetch business data' });
   }
 });
 
 /**
  * @swagger
- * /api/admin/business:
- *   post:
- *     summary: Créer une nouvelle entreprise
- *     description: Ajoute une nouvelle entreprise à la base de données
+ * /api/admin/business/{id}:
+ *   get:
+ *     summary: Récupère une fiche business par ID
+ *     description: Retourne les détails complets d'une fiche business avec ses relations
  *     tags: [Admin - Business]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la fiche business
+ *     responses:
+ *       200:
+ *         description: Fiche business récupérée avec succès
+ *       404:
+ *         description: Fiche business non trouvée
+ *       401:
+ *         description: Authentification requise
+ *       403:
+ *         description: Accès admin requis
  */
-app.post('/api/admin/business', authMiddleware, adminMiddleware, [
-  body('denomination').notEmpty().withMessage('Denomination is required'),
-  body('type').notEmpty().withMessage('Type is required')
-], async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
+app.get('/api/admin/business/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const { denomination, type, site_officiel, statut = 1 } = req.body;
+    const { id } = req.params;
     
-    const result = await pool.query(`
-      INSERT INTO ak_business (denomination, type, site_officiel, statut)
-      VALUES ($1, $2, $3, $4)
-      RETURNING *
-    `, [denomination, type, site_officiel, statut]);
+    // Get business details
+    const business = await pool.query(
+      'SELECT * FROM ak_business WHERE id_business = $1',
+      [id]
+    );
     
-    res.status(201).json(result.rows[0]);
+    if (business.rows.length === 0) {
+      return res.status(404).json({ error: 'Business not found' });
+    }
+    
+    // Get relations
+    const [animeRelations, mangaRelations, gameRelations, ostRelations] = await Promise.all([
+      pool.query(`
+        SELECT a.id_anime, a.titre, bta.precisions
+        FROM ak_business_to_animes bta
+        JOIN ak_animes a ON bta.id_anime = a.id_anime
+        WHERE bta.id_business = $1
+        ORDER BY a.titre
+      `, [id]),
+      pool.query(`
+        SELECT m.id_manga, m.titre, btm.precisions
+        FROM ak_business_to_mangas btm
+        JOIN ak_mangas m ON btm.id_manga = m.id_manga
+        WHERE btm.id_business = $1
+        ORDER BY m.titre
+      `, [id]),
+      pool.query(`
+        SELECT j.id_jeu, j.nom, btj.precisions
+        FROM ak_business_to_jeux btj
+        JOIN ak_jeux_video j ON btj.id_jeu = j.id_jeu
+        WHERE btj.id_business = $1
+        ORDER BY j.nom
+      `, [id]),
+      pool.query(`
+        SELECT o.id_ost, o.nom, bto.precisions
+        FROM ak_business_to_ost bto
+        JOIN ak_ost o ON bto.id_ost = o.id_ost
+        WHERE bto.id_business = $1
+        ORDER BY o.nom
+      `, [id])
+    ]);
+    
+    res.json({
+      data: {
+        ...business.rows[0],
+        relations: {
+          animes: animeRelations.rows,
+          mangas: mangaRelations.rows,
+          games: gameRelations.rows,
+          ost: ostRelations.rows
+        }
+      }
+    });
+    
   } catch (error) {
-    console.error('Business creation error:', error);
-    res.status(500).json({ error: 'Failed to create business entity' });
+    console.error('Admin business fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch business data' });
   }
 });
 
@@ -4976,35 +5166,158 @@ app.post('/api/admin/business', authMiddleware, adminMiddleware, [
  * @swagger
  * /api/admin/business/{id}:
  *   put:
- *     summary: Mettre à jour une entreprise
- *     description: Modifie les informations d'une entreprise existante
+ *     summary: Mettre à jour une fiche business
+ *     description: Modifie les informations d'une fiche business existante
  *     tags: [Admin - Business]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la fiche business
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               denomination:
+ *                 type: string
+ *                 description: Nom de l'entreprise/personne
+ *               type:
+ *                 type: string
+ *                 description: Type de business
+ *               origine:
+ *                 type: string
+ *                 description: Pays d'origine
+ *               site_officiel:
+ *                 type: string
+ *                 description: Site web officiel
+ *               statut:
+ *                 type: integer
+ *                 description: Statut (0=inactif, 1=actif, 2=en attente)
+ *               notes:
+ *                 type: string
+ *                 description: Notes additionnelles
+ *     responses:
+ *       200:
+ *         description: Fiche business mise à jour avec succès
+ *       404:
+ *         description: Fiche business non trouvée
+ *       401:
+ *         description: Authentification requise
+ *       403:
+ *         description: Accès admin requis
  */
 app.put('/api/admin/business/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
-    const { denomination, type, site_officiel, statut } = req.body;
+    const { denomination, type, origine, site_officiel, statut, notes } = req.body;
     
     const result = await pool.query(`
       UPDATE ak_business 
-      SET denomination = COALESCE($1, denomination),
-          type = COALESCE($2, type),
-          site_officiel = COALESCE($3, site_officiel),
-          statut = COALESCE($4, statut)
-      WHERE id_business = $5
+      SET denomination = $1, type = $2, origine = $3, site_officiel = $4, 
+          statut = $5, notes = $6, date_modification = extract(epoch from now())::integer
+      WHERE id_business = $7
       RETURNING *
-    `, [denomination, type, site_officiel, statut, id]);
+    `, [denomination, type, origine, site_officiel, statut, notes, id]);
     
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Business entity not found' });
+      return res.status(404).json({ error: 'Business not found' });
     }
     
-    res.json(result.rows[0]);
+    res.json({ 
+      message: 'Business updated successfully', 
+      data: result.rows[0] 
+    });
+    
   } catch (error) {
-    console.error('Business update error:', error);
-    res.status(500).json({ error: 'Failed to update business entity' });
+    console.error('Admin business update error:', error);
+    res.status(500).json({ error: 'Failed to update business' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/business:
+ *   post:
+ *     summary: Créer une nouvelle fiche business
+ *     description: Ajoute une nouvelle fiche business à la base de données
+ *     tags: [Admin - Business]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [denomination, type]
+ *             properties:
+ *               denomination:
+ *                 type: string
+ *                 description: Nom de l'entreprise/personne
+ *               type:
+ *                 type: string
+ *                 description: Type de business
+ *               origine:
+ *                 type: string
+ *                 description: Pays d'origine
+ *               site_officiel:
+ *                 type: string
+ *                 description: Site web officiel
+ *               autres_denominations:
+ *                 type: string
+ *                 description: Autres noms/dénominations
+ *               notes:
+ *                 type: string
+ *                 description: Notes additionnelles
+ *               statut:
+ *                 type: integer
+ *                 default: 1
+ *                 description: Statut (0=inactif, 1=actif, 2=en attente)
+ *     responses:
+ *       201:
+ *         description: Fiche business créée avec succès
+ *       400:
+ *         description: Données invalides
+ *       401:
+ *         description: Authentification requise
+ *       403:
+ *         description: Accès admin requis
+ */
+app.post('/api/admin/business', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { denomination, type, origine, site_officiel, autres_denominations, notes, statut = 1 } = req.body;
+    
+    if (!denomination || !type) {
+      return res.status(400).json({ error: 'Denomination and type are required' });
+    }
+    
+    // Generate nice URL
+    const nice_url = denomination.toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    
+    const result = await pool.query(`
+      INSERT INTO ak_business (denomination, type, origine, site_officiel, autres_denominations, notes, statut, nice_url, date_ajout)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+      RETURNING *
+    `, [denomination, type, origine, site_officiel, autres_denominations, notes, statut, nice_url]);
+    
+    res.status(201).json({ 
+      message: 'Business created successfully', 
+      data: result.rows[0] 
+    });
+    
+  } catch (error) {
+    console.error('Admin business creation error:', error);
+    res.status(500).json({ error: 'Failed to create business' });
   }
 });
 
@@ -5012,126 +5325,55 @@ app.put('/api/admin/business/:id', authMiddleware, adminMiddleware, async (req, 
  * @swagger
  * /api/admin/business/{id}:
  *   delete:
- *     summary: Supprimer une entreprise
- *     description: Supprime définitivement une entreprise et ses liens associés
+ *     summary: Supprimer une fiche business
+ *     description: Supprime définitivement une fiche business et ses relations
  *     tags: [Admin - Business]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la fiche business
+ *     responses:
+ *       200:
+ *         description: Fiche business supprimée avec succès
+ *       404:
+ *         description: Fiche business non trouvée
+ *       401:
+ *         description: Authentification requise
+ *       403:
+ *         description: Accès admin requis
  */
 app.delete('/api/admin/business/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Delete associated links first
-    await pool.query('DELETE FROM ak_business_to_animes WHERE id_business = $1', [id]);
+    // Delete relations first
+    await Promise.all([
+      pool.query('DELETE FROM ak_business_to_animes WHERE id_business = $1', [id]),
+      pool.query('DELETE FROM ak_business_to_mangas WHERE id_business = $1', [id]),
+      pool.query('DELETE FROM ak_business_to_jeux WHERE id_business = $1', [id]),
+      pool.query('DELETE FROM ak_business_to_ost WHERE id_business = $1', [id])
+    ]);
     
-    // Delete the business entity
-    const result = await pool.query('DELETE FROM ak_business WHERE id_business = $1 RETURNING *', [id]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Business entity not found' });
-    }
-    
-    res.json({ message: 'Business entity deleted successfully', deleted: result.rows[0] });
-  } catch (error) {
-    console.error('Business deletion error:', error);
-    res.status(500).json({ error: 'Failed to delete business entity' });
-  }
-});
-
-/**
- * @swagger
- * /api/admin/business/{id}/animes:
- *   get:
- *     summary: Récupère les liens anime d'une entreprise
- *     description: Retourne la liste des animes liés à une entreprise
- *     tags: [Admin - Business]
- *     security:
- *       - bearerAuth: []
- */
-app.get('/api/admin/business/:id/animes', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const links = await pool.query(`
-      SELECT ba.*, a.titre as anime_title, a.id_anime
-      FROM ak_business_to_animes ba
-      INNER JOIN ak_animes a ON ba.id_anime = a.id_anime
-      WHERE ba.id_business = $1
-      ORDER BY a.titre ASC
-    `, [id]);
-    
-    res.json({ data: links.rows });
-  } catch (error) {
-    console.error('Business anime links fetch error:', error);
-    res.status(500).json({ error: 'Failed to fetch business anime links' });
-  }
-});
-
-/**
- * @swagger
- * /api/admin/business/{id}/animes:
- *   post:
- *     summary: Créer un lien entreprise-anime
- *     description: Associe une entreprise à un anime avec un type de relation
- *     tags: [Admin - Business]
- *     security:
- *       - bearerAuth: []
- */
-app.post('/api/admin/business/:id/animes', authMiddleware, adminMiddleware, [
-  body('animeId').isInt().withMessage('Valid anime ID required'),
-  body('type').notEmpty().withMessage('Type is required')
-], async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  try {
-    const { id } = req.params;
-    const { animeId, type, precisions } = req.body;
-    
-    const result = await pool.query(`
-      INSERT INTO ak_business_to_animes (id_business, id_anime, type, precisions)
-      VALUES ($1, $2, $3, $4)
-      RETURNING *
-    `, [id, animeId, type, precisions]);
-    
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('Business anime link creation error:', error);
-    res.status(500).json({ error: 'Failed to create business anime link' });
-  }
-});
-
-/**
- * @swagger
- * /api/admin/business/{businessId}/animes/{animeId}:
- *   delete:
- *     summary: Supprimer un lien entreprise-anime
- *     description: Supprime l'association entre une entreprise et un anime
- *     tags: [Admin - Business]
- *     security:
- *       - bearerAuth: []
- */
-app.delete('/api/admin/business/:businessId/animes/:animeId', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const { businessId, animeId } = req.params;
-    
-    const result = await pool.query(`
-      DELETE FROM ak_business_to_animes 
-      WHERE id_business = $1 AND id_anime = $2 
-      RETURNING *
-    `, [businessId, animeId]);
+    // Delete the business record
+    const result = await pool.query(
+      'DELETE FROM ak_business WHERE id_business = $1 RETURNING *',
+      [id]
+    );
     
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Business anime link not found' });
+      return res.status(404).json({ error: 'Business not found' });
     }
     
-    res.json({ message: 'Business anime link deleted successfully' });
+    res.json({ message: 'Business deleted successfully' });
+    
   } catch (error) {
-    console.error('Business anime link deletion error:', error);
-    res.status(500).json({ error: 'Failed to delete business anime link' });
+    console.error('Admin business deletion error:', error);
+    res.status(500).json({ error: 'Failed to delete business' });
   }
 });
 
