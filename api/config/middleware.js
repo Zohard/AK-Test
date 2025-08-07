@@ -12,12 +12,14 @@ const setupMiddleware = (app) => {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
   }));
 
-  // Rate limiting
-  const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: process.env.NODE_ENV === 'production' ? 100 : 1000
-  });
-  app.use('/api/', limiter);
+  // Rate limiting - disabled in development, enabled in production
+  if (process.env.NODE_ENV === 'production') {
+    const limiter = rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 100
+    });
+    app.use('/api/', limiter);
+  }
 
   // Static files
   app.use('/public', express.static(path.join(__dirname, '../../frontend/public')));

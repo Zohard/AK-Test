@@ -196,7 +196,7 @@ const handleLogin = async () => {
       })
     })
     
-    if (response.success && response.token) {
+    if (response.token && response.user) {
       // Store authentication data
       const authStore = useAuthStore()
       await authStore.login(response.token, response.user)

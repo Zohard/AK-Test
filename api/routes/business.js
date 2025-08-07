@@ -4,7 +4,84 @@ const router = express.Router();
 const pool = require('../config/database');
 const { authenticateToken: authMiddleware, requireAdmin: adminMiddleware } = require('../middleware/auth');
 
-// Apply auth middleware to all business routes
+/**
+ * @swagger
+ * /api/business/search:
+ *   get:
+ *     summary: Search business entities (no auth required)
+ *     tags: [Business]
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *           minLength: 1
+ *         description: Search query
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Maximum number of results
+ *     responses:
+ *       200:
+ *         description: Business search results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       denomination:
+ *                         type: string
+ *                       type:
+ *                         type: string
+ *                       origine:
+ *                         type: string
+ *                       site_officiel:
+ *                         type: string
+ *       500:
+ *         description: Server error
+ */
+router.get('/search', async (req, res) => {
+  try {
+    const { q, limit = 10 } = req.query;
+    
+    if (!q || q.trim().length === 0) {
+      return res.json({ data: [] });
+    }
+    
+    const searchTerm = `%${q.trim()}%`;
+    
+    const businesses = await pool.query(`
+      SELECT 
+        id_business as id,
+        denomination,
+        type,
+        origine,
+        site_officiel
+      FROM ak_business 
+      WHERE statut = 1 
+        AND denomination ILIKE $1
+      ORDER BY denomination ASC
+      LIMIT $2
+    `, [searchTerm, parseInt(limit)]);
+    
+    res.json({ data: businesses.rows });
+  } catch (error) {
+    console.error('Business search error:', error);
+    res.status(500).json({ error: 'Erreur lors de la recherche de fiches business' });
+  }
+});
+
+// Apply auth middleware to all other business routes (but not search)
 router.use(authMiddleware);
 router.use(adminMiddleware);
 
@@ -207,9 +284,181 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// TODO: Add CRUD operations for business data:
-// - POST / (create business data)
-// - PUT /:id (update business data)
-// - DELETE /:id (delete business data)
+/**
+ * @swagger
+ * /api/business:
+ *   post:
+ *     summary: Create new business data
+ *     tags: [Business]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - id_anime
+ *               - annee
+ *             properties:
+ *               id_anime:
+ *                 type: integer
+ *               annee:
+ *                 type: integer
+ *               prix_total:
+ *                 type: number
+ *               cout_revient:
+ *                 type: number
+ *               benefice:
+ *                 type: number
+ *     responses:
+ *       201:
+ *         description: Business data created successfully
+ *       400:
+ *         description: Invalid data
+ *       500:
+ *         description: Server error
+ */
+router.post('/', async (req, res) => {
+  try {
+    const { id_anime, annee, prix_total, cout_revient, benefice } = req.body;
+    
+    if (!id_anime || !annee) {
+      return res.status(400).json({ error: 'L\'ID de l\'anime et l\'année sont obligatoires' });
+    }
+    
+    // Check if anime exists
+    const animeCheck = await pool.query(
+      'SELECT id_anime FROM ak_animes WHERE id_anime = $1 AND statut = 1',
+      [id_anime]
+    );
+    
+    if (animeCheck.rows.length === 0) {
+      return res.status(400).json({ error: 'Anime introuvable' });
+    }
+    
+    const result = await pool.query(`
+      INSERT INTO ak_business (id_anime, annee, prix_total, cout_revient, benefice)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [id_anime, annee, prix_total || 0, cout_revient || 0, benefice || 0]);
+    
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Business create error:', error);
+    res.status(500).json({ error: 'Erreur lors de la création des données business' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/business/{id}:
+ *   put:
+ *     summary: Update business data
+ *     tags: [Business]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Business data ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id_anime:
+ *                 type: integer
+ *               annee:
+ *                 type: integer
+ *               prix_total:
+ *                 type: number
+ *               cout_revient:
+ *                 type: number
+ *               benefice:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Business data updated successfully
+ *       404:
+ *         description: Business data not found
+ *       500:
+ *         description: Server error
+ */
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { id_anime, annee, prix_total, cout_revient, benefice } = req.body;
+    
+    const result = await pool.query(`
+      UPDATE ak_business 
+      SET id_anime = COALESCE($1, id_anime),
+          annee = COALESCE($2, annee),
+          prix_total = COALESCE($3, prix_total),
+          cout_revient = COALESCE($4, cout_revient),
+          benefice = COALESCE($5, benefice)
+      WHERE id_business = $6
+      RETURNING *
+    `, [id_anime, annee, prix_total, cout_revient, benefice, id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Données business introuvables' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Business update error:', error);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour des données business' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/business/{id}:
+ *   delete:
+ *     summary: Delete business data
+ *     tags: [Business]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Business data ID
+ *     responses:
+ *       200:
+ *         description: Business data deleted successfully
+ *       404:
+ *         description: Business data not found
+ *       500:
+ *         description: Server error
+ */
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(
+      'DELETE FROM ak_business WHERE id_business = $1 RETURNING id_business',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Données business introuvables' });
+    }
+    
+    res.json({ message: 'Données business supprimées avec succès' });
+  } catch (error) {
+    console.error('Business delete error:', error);
+    res.status(500).json({ error: 'Erreur lors de la suppression des données business' });
+  }
+});
 
 module.exports = router;

@@ -478,7 +478,7 @@
                     class="business-card"
                     :class="{ 'selected': selectedBusiness?.id === business.id }"
                   >
-                    <div class="business-name">{{ business.nom }}</div>
+                    <div class="business-name">{{ business.denomination }}</div>
                     <div class="business-meta">
                       <span class="business-id">ID: {{ business.id }}</span>
                       <span class="business-type">{{ business.type || 'N/A' }}</span>
@@ -497,7 +497,7 @@
             <div class="selected-business-info">
               <div class="business-details">
                 <span class="label">Fiche business:</span>
-                <span class="value selected">{{ selectedBusiness.nom }}</span>
+                <span class="value selected">{{ selectedBusiness.denomination }}</span>
               </div>
               <div class="business-details">
                 <span class="label">ID:</span>
@@ -759,53 +759,53 @@
                       ✕
                     </div>
                   </div>
-                </div>
-
-                <!-- Autocomplete Results -->
-                <div v-if="relationSearchResults.length > 0 && showAutocomplete" class="autocomplete-dropdown">
-                  <div class="autocomplete-header">
-                    <span class="results-count">{{ relationSearchResults.length }} résultat{{ relationSearchResults.length > 1 ? 's' : '' }}</span>
-                    <span class="keyboard-hint">↑↓ pour naviguer, Entrée pour sélectionner</span>
-                  </div>
-                  <div class="autocomplete-results">
-                    <div 
-                      v-for="(content, index) in relationSearchResults" 
-                      :key="`${selectedRelationType}-${content.id}`"
-                      @click="selectRelationTarget(content)"
-                      @mouseenter="highlightedIndex = index"
-                      class="autocomplete-item"
-                      :class="{ 
-                        'selected': selectedRelationTarget?.id === content.id,
-                        'highlighted': index === highlightedIndex
-                      }"
-                    >
-                      <div class="autocomplete-image">
-                        <img 
-                          :src="content.image ? `/images/${content.image}` : '/placeholder-anime.jpg'" 
-                          :alt="content.titre"
-                          class="autocomplete-thumbnail"
-                          @error="handleImageError"
-                        />
-                      </div>
-                      <div class="autocomplete-content">
-                        <div class="autocomplete-title">{{ content.titre }}</div>
-                        <div class="autocomplete-meta">
-                          <span class="autocomplete-id">ID: {{ content.id }}</span>
-                          <span v-if="content.annee" class="autocomplete-year">{{ content.annee }}</span>
-                          <span class="autocomplete-type">{{ selectedRelationType === 'anime' ? 'Anime' : 'Manga' }}</span>
+                  
+                  <!-- Autocomplete Results -->
+                  <div v-if="relationSearchResults.length > 0 && showAutocomplete" class="autocomplete-dropdown">
+                    <div class="autocomplete-header">
+                      <span class="results-count">{{ relationSearchResults.length }} résultat{{ relationSearchResults.length > 1 ? 's' : '' }}</span>
+                      <span class="keyboard-hint">↑↓ pour naviguer, Entrée pour sélectionner</span>
+                    </div>
+                    <div class="autocomplete-results">
+                      <div 
+                        v-for="(content, index) in relationSearchResults" 
+                        :key="`${selectedRelationType}-${content.id}`"
+                        @click="selectRelationTarget(content)"
+                        @mouseenter="highlightedIndex = index"
+                        class="autocomplete-item"
+                        :class="{ 
+                          'selected': selectedRelationTarget?.id === content.id,
+                          'highlighted': index === highlightedIndex
+                        }"
+                      >
+                        <div class="autocomplete-image">
+                          <img 
+                            :src="content.image ? `/images/anime/${content.image}` : '/placeholder-anime.jpg'" 
+                            :alt="content.titre"
+                            class="autocomplete-thumbnail"
+                            @error="handleImageError"
+                          />
                         </div>
-                      </div>
-                      <div class="autocomplete-select-icon">
-                        <span>→</span>
+                        <div class="autocomplete-content">
+                          <div class="autocomplete-title">{{ content.titre }}</div>
+                          <div class="autocomplete-meta">
+                            <span class="autocomplete-id">ID: {{ content.id }}</span>
+                            <span v-if="content.annee" class="autocomplete-year">{{ content.annee }}</span>
+                            <span class="autocomplete-type">{{ selectedRelationType === 'anime' ? 'Anime' : 'Manga' }}</span>
+                          </div>
+                        </div>
+                        <div class="autocomplete-select-icon">
+                          <span>→</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-                
-                <!-- No Results Message -->
-                <div v-else-if="relationSearchQuery.trim() && !relationSearchLoading && searchAttempted" class="no-results">
-                  <div class="no-results-icon">🔍</div>
-                  <p>Aucun {{ selectedRelationType === 'anime' ? 'anime' : 'manga' }} trouvé pour "{{ relationSearchQuery }}"</p>
+                  
+                  <!-- No Results Message -->
+                  <div v-if="relationSearchQuery.trim() && !relationSearchLoading && searchAttempted && relationSearchResults.length === 0" class="no-results">
+                    <div class="no-results-icon">🔍</div>
+                    <p>Aucun {{ selectedRelationType === 'anime' ? 'anime' : 'manga' }} trouvé pour "{{ relationSearchQuery }}"</p>
+                  </div>
                 </div>
               </section>
 
@@ -950,7 +950,7 @@
                 >
                   <div class="screenshot-image">
                     <img 
-                      :src="`/images/${screenshot.filename}`"
+                      :src="`/images/${screenshot.url_screen}`"
                       :alt="`Screenshot #${screenshot.id_screen}`"
                       class="screenshot-thumbnail"
                       @error="handleScreenshotError"
@@ -1517,7 +1517,7 @@ const getImageSrc = () => {
     if (formData.value.image.startsWith('http')) {
       return formData.value.image
     } else {
-      return `/images/${formData.value.image}`
+      return `/images/anime/${formData.value.image}`
     }
   }
   return '/placeholder-anime.jpg'
@@ -1562,7 +1562,7 @@ const searchBusiness = () => {
 
 const selectBusiness = (business) => {
   selectedBusiness.value = business
-  businessSearchQuery.value = business.nom
+  businessSearchQuery.value = business.denomination
   businessSearchResults.value = []
 }
 
@@ -1607,7 +1607,7 @@ const addStaffMember = async () => {
   if (isCreating) {
     staffList.value.push({
       business_id: selectedBusiness.value.id,
-      business_name: selectedBusiness.value.nom,
+      business_name: selectedBusiness.value.denomination,
       fonction: selectedRole.value,
       precisions: staffPrecisions.value
     })
@@ -1643,7 +1643,7 @@ const addStaffMember = async () => {
     // Add to local list
     staffList.value.push({
       business_id: selectedBusiness.value.id,
-      business_name: selectedBusiness.value.nom,
+      business_name: selectedBusiness.value.denomination,
       fonction: selectedRole.value,
       precisions: staffPrecisions.value
     })
@@ -1715,7 +1715,7 @@ const loadStaffList = async () => {
     const response = await $fetch(`${API_BASE}/api/admin/animes/${animeId}/staff`, {
       headers: authStore.getAuthHeaders()
     })
-    staffList.value = response.data || []
+    staffList.value = response.staff || []
   } catch (err) {
     console.error('Load staff error:', err)
   }
@@ -1840,22 +1840,24 @@ const addRelation = async () => {
   
   addingRelation.value = true
   try {
+    const requestBody = selectedRelationType.value === 'anime' 
+      ? { id_anime: selectedRelationTarget.value.id }
+      : { id_manga: selectedRelationTarget.value.id }
+
     const response = await $fetch(`${API_BASE}/api/admin/animes/${animeId}/relations`, {
       method: 'POST',
       headers: authStore.getAuthHeaders(),
-      body: {
-        target_type: selectedRelationType.value,
-        target_id: selectedRelationTarget.value.id
-      }
+      body: requestBody
     })
     
     // Add to local list with the expected structure
     relationsList.value.push({
       id_relation: response.id_relation || Date.now(),
-      type: selectedRelationType.value,
-      titre: selectedRelationTarget.value.titre,
-      image: selectedRelationTarget.value.image,
-      [selectedRelationType.value === 'anime' ? 'id_anime' : 'id_manga']: selectedRelationTarget.value.id
+      target_type: selectedRelationType.value,
+      target_title: selectedRelationTarget.value.titre,
+      target_id: selectedRelationTarget.value.id,
+      id_anime: selectedRelationType.value === 'anime' ? selectedRelationTarget.value.id : 0,
+      id_manga: selectedRelationType.value === 'manga' ? selectedRelationTarget.value.id : 0
     })
     
     // Reset form
@@ -1913,14 +1915,31 @@ const loadRelationsList = async () => {
     })
     
     // Transform API response to match frontend expectations
-    relationsList.value = (response.data || []).map(relation => ({
-      id_relation: relation.id_relation,
-      target_type: relation.type,
-      target_title: relation.titre,
-      target_id: relation.type === 'anime' ? relation.id_anime : relation.id_manga,
-      id_anime: relation.id_anime,
-      id_manga: relation.id_manga
-    }))
+    relationsList.value = (response.relations || []).map(relation => {
+      // Determine the target type based on non-zero IDs
+      let target_type = null
+      let target_id = null
+      let target_title = null
+      
+      if (relation.id_anime > 0) {
+        target_type = 'anime'
+        target_id = relation.id_anime
+        target_title = relation.anime_titre || `Anime #${relation.id_anime}`
+      } else if (relation.id_manga > 0) {
+        target_type = 'manga'
+        target_id = relation.id_manga
+        target_title = relation.manga_titre || `Manga #${relation.id_manga}`
+      }
+      
+      return {
+        id_relation: relation.id_relation,
+        target_type: target_type,
+        target_title: target_title,
+        target_id: target_id,
+        id_anime: relation.id_anime,
+        id_manga: relation.id_manga
+      }
+    }).filter(relation => relation.target_type !== null)
   } catch (err) {
     console.error('Load relations error:', err)
   }
@@ -2085,7 +2104,7 @@ const handleScreenshotError = (event) => {
 
 const openScreenshotModal = (screenshot) => {
   // TODO: Implement modal for viewing full-size screenshot
-  window.open(`/images/${screenshot.filename}`, '_blank')
+  window.open(`/images/${screenshot.url_screen}`, '_blank')
 }
 
 // Tags management methods
@@ -2101,7 +2120,6 @@ const searchTags = () => {
   tagCategories.value.forEach(category => {
     const filteredTags = category.tags.filter(tag => 
       tag.tag_name.toLowerCase().includes(tagSearchQuery.value.toLowerCase())
-
     )
     if (filteredTags.length > 0) {
       filteredCategories.push({
@@ -2169,12 +2187,14 @@ const loadTagCategories = async () => {
     
     // Convert object to array format for easier handling
     const categories = []
-    Object.keys(response.data).forEach(categoryName => {
-      categories.push({
-        name: categoryName,
-        tags: response.data[categoryName]
+    if (response && response.data && typeof response.data === 'object') {
+      Object.keys(response.data).forEach(categoryName => {
+        categories.push({
+          name: categoryName,
+          tags: response.data[categoryName]
+        })
       })
-    })
+    }
     
     tagCategories.value = categories
   } catch (err) {
@@ -2235,3 +2255,5 @@ watch(isAdmin, (newValue) => {
   }
 })
 </script>
+
+<style scoped src="~/assets/css/admin-anime-edit.css"></style>

@@ -134,8 +134,7 @@ router.get('/', async (req, res) => {
     }
     
     const query = `
-      SELECT id_anime, nice_url, titre, titre_orig, annee, nb_ep, studio, 
-             image, nb_reviews, moyenne_notes, date_ajout
+      SELECT id_anime, nice_url, titre, image, titre_orig, annee, nb_ep, studio, date_ajout
       FROM ak_animes ${whereClause}
       ORDER BY annee DESC, titre ASC
       LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
@@ -351,8 +350,8 @@ router.get('/:id/tags', async (req, res) => {
         t.description,
         t.categorie
       FROM ak_tags t
-      INNER JOIN ak_tags_anime ta ON t.id_tag = ta.id_tag
-      WHERE ta.id_anime = $1
+      INNER JOIN ak_tag2fiche tf ON t.id_tag = tf.id_tag
+      WHERE tf.id_fiche = $1 AND tf.type = 'anime'
       ORDER BY t.categorie, t.tag_name
     `, [id]);
     
@@ -362,7 +361,10 @@ router.get('/:id/tags', async (req, res) => {
     });
   } catch (error) {
     console.error('Tags fetch error:', error);
-    res.status(500).json({ error: 'Erreur lors de la récupération des tags' });
+    res.status(500).json({ 
+      error: 'Erreur lors de la récupération des tags',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -456,26 +458,13 @@ router.get('/:id/relations', async (req, res) => {
   try {
     const { id } = req.params;
     
+    // Test basic query first
     const relations = await pool.query(`
-      SELECT 
-        r.id_relation,
-        r.id_fiche_depart,
-        r.id_anime,
-        r.id_manga,
-        CASE 
-          WHEN r.id_anime > 0 THEN 'anime'
-          WHEN r.id_manga > 0 THEN 'manga'
-          ELSE 'unknown'
-        END as type,
-        COALESCE(a.titre, m.titre) as titre,
-        COALESCE(a.image, m.image) as image,
-        COALESCE(a.annee, m.annee) as annee
-      FROM ak_relations r
-      LEFT JOIN ak_animes a ON r.id_anime = a.id_anime AND a.statut = 1
-      LEFT JOIN ak_mangas m ON r.id_manga = m.id_manga AND m.statut = 1
-      WHERE r.id_fiche_depart = $1
-      ORDER BY COALESCE(a.titre, m.titre)
-    `, [id]);
+      SELECT COUNT(*) as count, id_fiche_depart
+      FROM ak_fiche_to_fiche 
+      WHERE id_fiche_depart = $1
+      GROUP BY id_fiche_depart
+    `, [`anime${id}`]);
     
     res.json({
       anime_id: parseInt(id),

@@ -101,11 +101,7 @@ router.post('/register', [
     `, [username, realName || username, email, hashedPassword]);
     
     const user = result.rows[0];
-    const token = generateToken({
-      userId: user.id_member,
-      username: user.member_name,
-      role: 'user'
-    });
+    const token = generateToken(user);
     
     res.status(201).json({ 
       token, 
@@ -122,17 +118,30 @@ router.post('/register', [
  * @swagger
  * /api/auth/login:
  *   post:
- *     summary: User login
+ *     summary: Connexion utilisateur
+ *     description: Authentifie un utilisateur et retourne un token JWT
  *     tags: [Authentication]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/AuthRequest'
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: Nom d'utilisateur ou adresse email
+ *                 example: "zohard"
+ *               password:
+ *                 type: string
+ *                 description: Mot de passe
+ *                 example: "motdepasse123"
  *     responses:
  *       200:
- *         description: Login successful
+ *         description: Connexion réussie
  *         content:
  *           application/json:
  *             schema:
@@ -140,16 +149,46 @@ router.post('/register', [
  *               properties:
  *                 token:
  *                   type: string
+ *                   description: Token JWT pour l'authentification
  *                 user:
- *                   $ref: '#/components/schemas/User'
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     username:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *       400:
+ *         description: Données invalides
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
- *         description: Invalid credentials
+ *         description: Identifiants incorrects
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
- *         description: Login failed
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/login', [
-  body('email').isEmail().withMessage('Email invalide'),
-  body('password').notEmpty().withMessage('Mot de passe requis')
+  body('password').notEmpty().withMessage('Mot de passe requis'),
+  body().custom((value, { req }) => {
+    if (!req.body.email && !req.body.username) {
+      throw new Error('Email ou nom d\'utilisateur requis');
+    }
+    if (req.body.email && !req.body.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      throw new Error('Format d\'email invalide');
+    }
+    return true;
+  })
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -157,11 +196,11 @@ router.post('/login', [
   }
 
   try {
-    const { email, password } = req.body;
+    const { email, username, password } = req.body;
     
     const result = await pool.query(
-      'SELECT * FROM smf_members WHERE email_address = $1',
-      [email]
+      'SELECT * FROM smf_members WHERE email_address = $1 OR member_name = $2',
+      [email, username]
     );
     const user = result.rows[0];
     
@@ -169,9 +208,16 @@ router.post('/login', [
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
-    const isValidPassword = await verifyPassword(password, user.passwd);
-    if (!isValidPassword) {
-      return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
+    // Verify SMF password
+    const isPasswordValid = verifyPassword(
+      password, 
+      user.passwd, 
+      user.member_name, 
+      user.password_salt
+    );
+    
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
     
     // Update last login
@@ -180,11 +226,7 @@ router.post('/login', [
       [user.id_member]
     );
     
-    const token = generateToken({
-      userId: user.id_member,
-      username: user.member_name,
-      role: user.id_group === 1 ? 'admin' : 'user'
-    });
+    const token = generateToken(user);
     
     res.json({ 
       token, 
