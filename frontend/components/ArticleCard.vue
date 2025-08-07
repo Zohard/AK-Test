@@ -72,11 +72,11 @@ const getImageUrl = (imagePath, type) => {
   if (type === 'Manga') {
     return `/images/mangas/${imagePath}`
   } else if (type === 'Anime') {
-    return `/images/animes/${imagePath}`
+    return `/images/anime/${imagePath}`
   }
   
   // Default fallback
-  return `/images/${imagePath}`
+  return `/images/anime/${imagePath}`
 }
 
 const hideImage = (event) => {

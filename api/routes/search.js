@@ -85,10 +85,10 @@ router.get('/', async (req, res) => {
     
     if (type === 'all' || type === 'anime') {
       const animes = await pool.query(`
-        SELECT 'anime' as type, id_anime as id, titre, image, annee, moyenne_notes
+        SELECT 'anime' as type, id_anime as id, titre, image, annee, moyennenotes as moyenne_notes
         FROM ak_animes 
         WHERE statut = 1 AND (titre ILIKE $1 OR synopsis ILIKE $1)
-        ORDER BY moyenne_notes DESC NULLS LAST
+        ORDER BY moyennenotes DESC NULLS LAST
         LIMIT $2
       `, [searchTerm, limit]);
       results = results.concat(animes.rows);
@@ -96,10 +96,10 @@ router.get('/', async (req, res) => {
     
     if (type === 'all' || type === 'manga') {
       const mangas = await pool.query(`
-        SELECT 'manga' as type, id_manga as id, titre, image, annee, moyenne_notes
+        SELECT 'manga' as type, id_manga as id, titre, image, annee, moyennenotes as moyenne_notes
         FROM ak_mangas 
         WHERE statut = 1 AND (titre ILIKE $1 OR synopsis ILIKE $1)
-        ORDER BY moyenne_notes DESC NULLS LAST
+        ORDER BY moyennenotes DESC NULLS LAST
         LIMIT $2
       `, [searchTerm, limit]);
       results = results.concat(mangas.rows);

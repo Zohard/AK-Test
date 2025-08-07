@@ -40,7 +40,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://localhost:${process.env.EXTERNAL_PORT || 3001}`,
+        url: `http://localhost:${port}`,
         description: 'Development server'
       },
       {
@@ -77,12 +77,14 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-// Rate limiting - more permissive for development
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000 // 1000 requests for dev, 100 for production
-});
-app.use('/api/', limiter);
+// Rate limiting - disabled in development, enabled in production
+if (process.env.NODE_ENV === 'production') {
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100 // 100 requests per window for production
+  });
+  app.use('/api/', limiter);
+}
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
@@ -95,6 +97,10 @@ const storage = multer.diskStorage({
     let uploadDir;
     if (req.route && req.route.path && req.route.path.includes('screenshots')) {
       uploadDir = path.join(__dirname, '../frontend/public/images/screenshots');
+    } else if (req.originalUrl && req.originalUrl.includes('/admin/animes')) {
+      uploadDir = path.join(__dirname, '../frontend/public/images/anime');
+    } else if (req.originalUrl && req.originalUrl.includes('/admin/mangas')) {
+      uploadDir = path.join(__dirname, '../frontend/public/images/mangas');
     } else {
       uploadDir = path.join(__dirname, '../frontend/public/images');
     }

@@ -13,7 +13,7 @@
       <div class="carousel-slide">
         <img 
           v-if="currentAnime.image"
-          :src="`/images/${currentAnime.image}`" 
+          :src="`/images/anime/${currentAnime.image}`" 
           :alt="currentAnime.titre"
           class="hero-image"
           @error="hideImage"
@@ -76,7 +76,7 @@
         >
           <img 
             v-if="anime.image"
-            :src="`/images/${anime.image}`" 
+            :src="`/images/anime/${anime.image}`" 
             :alt="anime.titre"
             @error="hideImage"
           />

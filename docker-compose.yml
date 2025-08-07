@@ -1,16 +1,16 @@
 version: '3.8'
 services:
   db:
-    image: mysql:8.0
-    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    image: postgres:15-alpine
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: anime_kun
+      POSTGRES_USER: anime_user
+      POSTGRES_PASSWORD: anime_password
+      POSTGRES_DB: anime_kun
     volumes:
-      - db_data:/var/lib/mysql
+      - db_data:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
     ports:
-      - "3306:3306"
+      - "5432:5432"
   api:
     build:
       context: .
@@ -32,6 +32,6 @@ services:
     volumes:
       - ./frontend:/app
     environment:
-      - API_BASE_URL=http://localhost:3001
+      - API_BASE_URL=http://api:3000
 volumes:
   db_data:
