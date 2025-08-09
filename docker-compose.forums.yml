@@ -1,0 +1,68 @@
+services:
+  # PostgreSQL Database for Forums
+  postgres-forums:
+    image: postgres:15-alpine
+    container_name: smf-postgres
+    environment:
+      POSTGRES_DB: smf_forum
+      POSTGRES_USER: smf_user
+      POSTGRES_PASSWORD: smf_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_forums_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smf_user -d smf_forum"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - forums-network
+
+  # SMF Forum
+  smf-forum:
+    build:
+      context: .
+      dockerfile: Dockerfile.smf
+    container_name: smf-forum
+    ports:
+      - "8082:80"
+    volumes:
+      - smf_attachments:/var/www/html/attachments
+      - smf_avatars:/var/www/html/avatars
+      - smf_cache:/var/www/html/cache
+      - ./forums:/var/www/html
+    depends_on:
+      postgres-forums:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - forums-network
+
+  # Adminer for database management
+  adminer-forums:
+    image: adminer
+    container_name: smf-adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres-forums
+    restart: unless-stopped
+    networks:
+      - forums-network
+
+volumes:
+  postgres_forums_data:
+    driver: local
+  smf_attachments:
+    driver: local
+  smf_avatars:
+    driver: local
+  smf_cache:
+    driver: local
+
+networks:
+  forums-network:
+    driver: bridge

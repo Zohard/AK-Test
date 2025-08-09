@@ -368,29 +368,6 @@
       <!-- Staff Management Tab -->
       <div v-show="activeTab === 'staff'" class="tab-content">
         <div class="staff-management">
-          <!-- Current Anime Info -->
-          <div class="anime-info-banner">
-            <h3 class="anime-banner-title">
-              {{ formData.titre || 'Nouvel anime' }}
-              <span v-if="!isCreating" class="anime-id">ID: {{ animeId }}</span>
-            </h3>
-          </div>
-
-          <!-- Important Notice -->
-          <div class="info-notice">
-            <div class="notice-header">
-              <span class="notice-icon">⚠️</span>
-              <span class="notice-title">Important</span>
-            </div>
-            <div class="notice-content">
-              <ul class="notice-list">
-                <li>N'entrez qu'une ID à chaque fois puis validez</li>
-                <li>Vous pouvez ajouter des précisions à chaque relation (épisode 4, OP, etc.)</li>
-                <li>Ne pas mettre de parenthèses, elles sont automatiques</li>
-                <li>Si vous n'êtes pas sûr d'une fonction, demandez!</li>
-              </ul>
-            </div>
-          </div>
 
           <!-- Two Column Layout -->
           <div class="staff-two-column">
@@ -449,6 +426,13 @@
               <!-- Business Search Section -->
               <section class="staff-section">
                 <h2 class="section-title">Recherche de fiches business</h2>
+                
+                <!-- Important Notice -->
+                <div class="info-notice small">
+                  <div class="notice-content">
+                    <p><strong>⚠️ Important:</strong> N'entrez qu'une ID à chaque fois puis validez. Vous pouvez ajouter des précisions (épisode 4, OP, etc.). Ne pas mettre de parenthèses, elles sont automatiques.</p>
+                  </div>
+                </div>
             <div class="business-search">
               <div class="form-group">
                 <label class="form-label">Nom de la fiche business</label>
@@ -658,13 +642,6 @@
       <!-- Relations Tab -->
       <div v-show="activeTab === 'relations'" class="tab-content">
         <div class="relations-management">
-          <!-- Current Anime Info -->
-          <div class="anime-info-banner">
-            <h3 class="anime-banner-title">
-              {{ formData.titre || 'Nouvel anime' }}
-              <span v-if="!isCreating" class="anime-id">ID: {{ animeId }}</span>
-            </h3>
-          </div>
 
           <!-- Two Column Layout -->
           <div class="relations-two-column">
@@ -758,45 +735,17 @@
                     <div v-if="relationSearchQuery && !relationSearchLoading" class="clear-search-btn" @click="clearSearch">
                       ✕
                     </div>
-                  </div>
-                  
-                  <!-- Autocomplete Results -->
-                  <div v-if="relationSearchResults.length > 0 && showAutocomplete" class="autocomplete-dropdown">
-                    <div class="autocomplete-header">
-                      <span class="results-count">{{ relationSearchResults.length }} résultat{{ relationSearchResults.length > 1 ? 's' : '' }}</span>
-                      <span class="keyboard-hint">↑↓ pour naviguer, Entrée pour sélectionner</span>
-                    </div>
-                    <div class="autocomplete-results">
+                    
+                    <!-- Autocomplete Results -->
+                    <div v-if="relationSearchResults.length > 0 && showAutocomplete" class="autocomplete-dropdown">
                       <div 
                         v-for="(content, index) in relationSearchResults" 
                         :key="`${selectedRelationType}-${content.id}`"
-                        @click="selectRelationTarget(content)"
+                        @mousedown="selectRelationTarget(content)"
                         @mouseenter="highlightedIndex = index"
-                        class="autocomplete-item"
-                        :class="{ 
-                          'selected': selectedRelationTarget?.id === content.id,
-                          'highlighted': index === highlightedIndex
-                        }"
+                        :class="['autocomplete-item', { 'highlighted': index === highlightedIndex }]"
                       >
-                        <div class="autocomplete-image">
-                          <img 
-                            :src="content.image ? `/images/anime/${content.image}` : '/placeholder-anime.jpg'" 
-                            :alt="content.titre"
-                            class="autocomplete-thumbnail"
-                            @error="handleImageError"
-                          />
-                        </div>
-                        <div class="autocomplete-content">
-                          <div class="autocomplete-title">{{ content.titre }}</div>
-                          <div class="autocomplete-meta">
-                            <span class="autocomplete-id">ID: {{ content.id }}</span>
-                            <span v-if="content.annee" class="autocomplete-year">{{ content.annee }}</span>
-                            <span class="autocomplete-type">{{ selectedRelationType === 'anime' ? 'Anime' : 'Manga' }}</span>
-                          </div>
-                        </div>
-                        <div class="autocomplete-select-icon">
-                          <span>→</span>
-                        </div>
+                        {{ content.titre }} <small>(ID: {{ content.id }}{{ content.annee ? ', ' + content.annee : '' }})</small>
                       </div>
                     </div>
                   </div>
@@ -860,7 +809,7 @@
           <div class="screenshots-header">
             <h2 class="section-title">Gestion des Screenshots</h2>
             <p class="section-description">
-              Uploadez et gérez les captures d'écran de l'anime. Formats acceptés : JPG, JPEG, GIF, PNG. Poids max : 200Ko par image.
+              Uploadez et gérez les captures d'écran de l'anime. Formats acceptés : JPG, JPEG, GIF, PNG, WebP. Poids max : 3Mo par image.
             </p>
           </div>
 
@@ -869,20 +818,28 @@
             <section class="upload-section">
               <h3 class="subsection-title">Uploader des screenshots</h3>
               
-              <div class="upload-form">
-                <div class="upload-drop-zone" @click="triggerFileInput" @dragover.prevent @drop.prevent="handleDrop">
+              <!-- Creation notice for screenshots -->
+              <div v-if="isCreating" class="creation-notice">
+                <div class="notice-icon">ℹ️</div>
+                <div class="notice-text">
+                  <strong>Nouvel anime :</strong> Vous devez d'abord créer l'anime depuis l'onglet "Informations de base" avant de pouvoir uploader des screenshots.
+                </div>
+              </div>
+              
+              <div class="upload-form" :class="{ 'disabled': isCreating }">
+                <div class="upload-drop-zone" @click="triggerFileInput" @dragover.prevent @drop.prevent="handleDrop" :class="{ 'disabled': isCreating }">
                   <input 
                     ref="screenshotFileInput"
                     type="file" 
                     multiple
-                    accept="image/jpeg,image/jpg,image/gif,image/png"
+                    accept="image/jpeg,image/jpg,image/gif,image/png,image/webp"
                     @change="handleScreenshotSelection"
                     style="display: none"
                   />
                   <div class="upload-icon">📸</div>
                   <div class="upload-text">
-                    <p>Cliquez pour sélectionner des images ou glissez-déposez</p>
-                    <small>Maximum 1.6Mo total, 200Ko par image</small>
+                    <p>{{ isCreating ? 'Créez l\'anime avant d\'uploader' : 'Cliquez pour sélectionner des images ou glissez-déposez' }}</p>
+                    <small v-if="!isCreating">Maximum 1.6Mo total, 200Ko par image</small>
                   </div>
                 </div>
 
@@ -915,7 +872,7 @@
                       class="btn btn-primary upload-btn"
                     >
                       <span class="btn-icon">📤</span>
-                      {{ uploadingScreenshots ? 'Upload en cours...' : 'Uploader les screenshots' }}
+                      {{ isCreating ? 'Créez l\'anime avant d\'uploader' : (uploadingScreenshots ? 'Upload en cours...' : 'Uploader les screenshots') }}
                     </button>
                     <button 
                       @click="clearSelectedFiles"
@@ -1214,6 +1171,7 @@ const screenshotFileInput = ref(null)
 const showTagsInfo = ref(false)
 const tagSearchQuery = ref('')
 const tagCategories = ref([])
+const originalTagCategories = ref([]) // Store original categories to avoid repeated API calls
 const selectedTags = ref([])
 const relatedAnimeTags = ref([])
 const relatedMangaTags = ref([])
@@ -1743,7 +1701,7 @@ const searchRelations = () => {
         params: { 
           q: relationSearchQuery.value.trim(),
           type: selectedRelationType.value,
-          limit: 10 // Limit autocomplete results
+          limit: 15 // Limit autocomplete results - increased for better visibility
         }
       })
       
@@ -1947,33 +1905,46 @@ const loadRelationsList = async () => {
 
 // Screenshots management methods
 const triggerFileInput = () => {
+  if (isCreating) return
   screenshotFileInput.value?.click()
 }
 
 const handleScreenshotSelection = (event) => {
+  console.log('handleScreenshotSelection called', event.target.files)
+  if (isCreating) {
+    console.log('Blocked: currently creating new anime')
+    return
+  }
   const files = Array.from(event.target.files || [])
+  console.log('Processing files:', files)
   processSelectedFiles(files)
 }
 
 const handleDrop = (event) => {
+  if (isCreating) return
   const files = Array.from(event.dataTransfer.files || [])
   processSelectedFiles(files)
 }
 
 const processSelectedFiles = (files) => {
+  console.log('processSelectedFiles called with:', files.length, 'files')
   const validFiles = []
   let totalSize = 0
   
   for (const file of files) {
     // Check file type
-    if (!file.type.match(/^image\/(jpeg|jpg|gif|png)$/i)) {
+    if (!file.type.match(/^image\/(jpeg|gif|png|webp)$/i)) {
       error.value = `Format non supporté: ${file.name}`
       continue
     }
     
-    // Check file size (200KB max)
-    if (file.size > 200 * 1024) {
-      error.value = `Fichier trop lourd: ${file.name} (max 200Ko)`
+    // Check file size (3MB max)
+    if (file.size > 3 * 1024 * 1024) {
+      const fileSizeKB = Math.round(file.size / 1024)
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1)
+      const errorMsg = `Fichier trop lourd: ${file.name} (${fileSizeMB}Mo, max 3Mo)`
+      console.log('File too large:', errorMsg)
+      error.value = errorMsg
       continue
     }
     
@@ -1984,8 +1955,11 @@ const processSelectedFiles = (files) => {
   // Check total size (1.6MB max)
   if (totalSize > 1.6 * 1024 * 1024) {
     error.value = 'Taille totale dépassée (max 1.6Mo)'
+    console.log('Total size exceeded:', totalSize)
     return
   }
+  
+  console.log('Valid files to process:', validFiles.length)
   
   // Create previews
   validFiles.forEach(file => {
@@ -2031,28 +2005,45 @@ const uploadScreenshots = async () => {
     const formData = new FormData()
     
     selectedScreenshots.value.forEach((screenshot, index) => {
-      formData.append(`screenshots`, screenshot.file)
+      formData.append('screenshots', screenshot.file)
     })
+    
+    console.log('Uploading screenshots:', selectedScreenshots.value.length)
+    console.log('FormData entries:', Array.from(formData.entries()).map(([key, value]) => ({ key, fileName: value.name, size: value.size })))
+    console.log('API_BASE:', API_BASE)
+    console.log('animeId:', animeId)
+    console.log('Upload URL:', `${API_BASE}/api/admin/animes/${animeId}/screenshots`)
+    console.log('Auth headers:', authStore.getAuthHeaders())
     
     const response = await $fetch(`${API_BASE}/api/admin/animes/${animeId}/screenshots`, {
       method: 'POST',
-      headers: authStore.getAuthHeaders(),
+      headers: {
+        ...authStore.getAuthHeaders(),
+        // Remove Content-Type header to let browser set it with boundary for FormData
+      },
       body: formData
     })
     
+    console.log('Upload response:', response)
+    
     // Add uploaded screenshots to local list
     if (response.data) {
+      console.log('Adding screenshots to list:', response.data)
       screenshotsList.value.push(...response.data)
+      console.log('Screenshots list after push:', screenshotsList.value.length, screenshotsList.value)
     }
     
     // Clear selection
     clearSelectedFiles()
-    
-    // Refresh screenshots list
-    await loadScreenshotsList()
   } catch (err) {
     console.error('Upload screenshots error:', err)
-    error.value = 'Erreur lors de l\'upload des screenshots'
+    console.error('Error details:', {
+      status: err.response?.status,
+      statusText: err.response?.statusText,
+      data: err.response?.data || err.data,
+      message: err.message
+    })
+    error.value = err.response?.data?.error || err.data?.error || 'Erreur lors de l\'upload des screenshots'
   } finally {
     uploadingScreenshots.value = false
   }
@@ -2092,7 +2083,7 @@ const loadScreenshotsList = async () => {
     const response = await $fetch(`${API_BASE}/api/admin/animes/${animeId}/screenshots`, {
       headers: authStore.getAuthHeaders()
     })
-    screenshotsList.value = response.data || []
+    screenshotsList.value = response.screenshots || []
   } catch (err) {
     console.error('Load screenshots error:', err)
   }
@@ -2110,14 +2101,14 @@ const openScreenshotModal = (screenshot) => {
 // Tags management methods
 const searchTags = () => {
   if (!tagSearchQuery.value.trim()) {
-    // Reset to all categories
-    loadTagCategories()
+    // Reset to original categories without making API call
+    tagCategories.value = [...originalTagCategories.value]
     return
   }
   
-  // Filter tags based on search query
+  // Filter tags based on search query from original categories
   const filteredCategories = []
-  tagCategories.value.forEach(category => {
+  originalTagCategories.value.forEach(category => {
     const filteredTags = category.tags.filter(tag => 
       tag.tag_name.toLowerCase().includes(tagSearchQuery.value.toLowerCase())
     )
@@ -2185,18 +2176,20 @@ const loadTagCategories = async () => {
   try {
     const response = await $fetch(`${API_BASE}/api/tags`)
     
-    // Convert object to array format for easier handling
+    // Convert API response to format expected by the frontend
     const categories = []
-    if (response && response.data && typeof response.data === 'object') {
-      Object.keys(response.data).forEach(categoryName => {
+    if (response && response.categories && Array.isArray(response.categories)) {
+      response.categories.forEach(category => {
         categories.push({
-          name: categoryName,
-          tags: response.data[categoryName]
+          name: category.categorie,
+          tags: category.tags || []
         })
       })
     }
     
-    tagCategories.value = categories
+    // Store both original and current categories
+    originalTagCategories.value = categories
+    tagCategories.value = [...categories] // Create a copy
   } catch (err) {
     console.error('Load tag categories error:', err)
   }
@@ -2207,7 +2200,7 @@ const loadAnimeTags = async () => {
   
   try {
     const response = await $fetch(`${API_BASE}/api/animes/${animeId}/tags`)
-    selectedTags.value = response.data || []
+    selectedTags.value = response.tags || []
   } catch (err) {
     console.error('Load anime tags error:', err)
   }
@@ -2220,6 +2213,8 @@ const loadRelatedTags = async () => {
     const response = await $fetch(`${API_BASE}/api/admin/animes/${animeId}/related-tags`, {
       headers: authStore.getAuthHeaders()
     })
+    // Current API returns tags, not related animes/mangas
+    // You may want to update this to fetch actual related content
     relatedAnimeTags.value = response.animes || []
     relatedMangaTags.value = response.mangas || []
   } catch (err) {

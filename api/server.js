@@ -84,6 +84,8 @@ if (process.env.NODE_ENV === 'production') {
     max: 100 // 100 requests per window for production
   });
   app.use('/api/', limiter);
+} else {
+  console.log('🔓 Rate limiting disabled in development mode');
 }
 
 // Body parsing
@@ -93,44 +95,95 @@ app.use(express.urlencoded({ extended: true }));
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // Determine upload directory based on the route
+    // Determine the base path - works for both Docker and local development
+    const isDocker = fs.existsSync('/.dockerenv');
+    const projectRoot = isDocker ? '/app' : path.resolve(process.cwd(), '..');
+    
+    // Determine upload directory based on the URL - use originalUrl for most reliable detection
     let uploadDir;
-    if (req.route && req.route.path && req.route.path.includes('screenshots')) {
-      uploadDir = path.join(__dirname, '../frontend/public/images/screenshots');
+    console.log('=== MULTER DESTINATION DEBUG ===');
+    console.log('Multer destination - originalUrl:', req.originalUrl);
+    console.log('Multer destination - route.path:', req.route?.path);
+    console.log('Multer destination - method:', req.method);
+    console.log('Multer destination - isDocker:', isDocker);
+    console.log('Multer destination - projectRoot:', projectRoot);
+    
+    if (req.originalUrl && req.originalUrl.includes('/screenshots')) {
+      uploadDir = path.join(projectRoot, 'frontend/public/images/screenshots');
+      console.log('Detected screenshots upload - URL:', req.originalUrl);
     } else if (req.originalUrl && req.originalUrl.includes('/admin/animes')) {
-      uploadDir = path.join(__dirname, '../frontend/public/images/anime');
+      uploadDir = path.join(projectRoot, 'frontend/public/images/anime');
+      console.log('Detected anime upload - URL:', req.originalUrl);
     } else if (req.originalUrl && req.originalUrl.includes('/admin/mangas')) {
-      uploadDir = path.join(__dirname, '../frontend/public/images/mangas');
+      uploadDir = path.join(projectRoot, 'frontend/public/images/mangas');
+      console.log('Detected manga upload - URL:', req.originalUrl);
     } else {
-      uploadDir = path.join(__dirname, '../frontend/public/images');
+      uploadDir = path.join(projectRoot, 'frontend/public/images');
+      console.log('Default upload directory - URL:', req.originalUrl);
     }
     
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    // Verify path exists and create if it doesn't
+    try {
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+        console.log('Created upload directory:', uploadDir);
+      }
+      
+      console.log('Final upload directory:', uploadDir);
+      console.log('Directory exists:', fs.existsSync(uploadDir));
+      
+      // Test write permissions
+      try {
+        fs.accessSync(uploadDir, fs.constants.W_OK);
+        console.log('Directory is writable: YES');
+      } catch (accessError) {
+        console.log('Directory is writable: NO -', accessError.message);
+      }
+      
+      cb(null, uploadDir);
+    } catch (error) {
+      console.error('Error setting up upload directory:', error);
+      cb(error);
     }
-    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     // Generate unique filename with original extension
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const extension = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + extension);
+    const filename = file.fieldname + '-' + uniqueSuffix + extension;
+    
+    console.log('Generated filename:', filename);
+    console.log('Original filename:', file.originalname);
+    console.log('File field name:', file.fieldname);
+    
+    cb(null, filename);
   }
 });
 
 const fileFilter = (req, file, cb) => {
   // Check file type
-  const allowedTypes = /jpeg|jpg|gif/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
+  const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/gif', 'image/png', 'image/webp'];
+  const allowedExtensions = /\.(jpeg|jpg|gif|png|webp)$/i;
+  
+  const extname = allowedExtensions.test(file.originalname.toLowerCase());
+  const mimetype = allowedMimeTypes.includes(file.mimetype.toLowerCase());
+
+  console.log('File validation:', {
+    originalname: file.originalname,
+    mimetype: file.mimetype,
+    extname: extname,
+    mimetypeValid: mimetype
+  });
 
   if (mimetype && extname) {
     return cb(null, true);
   } else {
-    cb(new Error('Only JPEG, JPG and GIF images are allowed'));
+    cb(new Error(`Only JPEG, JPG, GIF and PNG images are allowed. Received: ${file.mimetype}`));
   }
 };
+
+// Create memory storage as fallback
+const memoryStorage = multer.memoryStorage();
 
 const upload = multer({
   storage: storage,
@@ -140,8 +193,29 @@ const upload = multer({
   }
 });
 
+// Also create a memory upload for debugging
+const memoryUpload = multer({
+  storage: memoryStorage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+  }
+});
+
 // Make upload middleware available globally
 app.locals.upload = upload;
+app.locals.memoryUpload = memoryUpload;
+
+// Serve static files (images) with CORS support
+const isDocker = fs.existsSync('/.dockerenv');
+const projectRoot = isDocker ? '/app' : path.resolve(process.cwd(), '..');
+const publicPath = path.join(projectRoot, 'frontend/public');
+
+console.log('Setting up static file serving from:', publicPath);
+app.use('/images', cors({
+  origin: true,
+  credentials: false
+}), express.static(path.join(publicPath, 'images')));
 
 // Swagger documentation
 app.get('/docs.json', (req, res) => {
@@ -225,8 +299,8 @@ app.use((req, res) => {
   }
 });
 
-// Start server
-app.listen(port, () => {
+// Start server - bind to 0.0.0.0 for Docker compatibility
+app.listen(port, '0.0.0.0', () => {
   console.log(`🚀 Anime-Kun API v2.0 running on http://localhost:${port}`);
   console.log(`📊 Health check at http://localhost:${port}/health`);
   console.log(`📚 API documentation at http://localhost:${port}/docs`);

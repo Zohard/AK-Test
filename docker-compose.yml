@@ -21,6 +21,7 @@ services:
       - "3001:3000"
     volumes:
       - ./api:/app
+      - ./frontend/public/images:/app/frontend/public/images
   frontend:
     build:
       context: .
