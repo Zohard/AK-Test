@@ -1793,10 +1793,10 @@ const loadTagCategories = async () => {
   try {
     const response = await $fetch(`${API_BASE}/api/tags`)
     
-    if (response && response.data && typeof response.data === 'object') {
-      tagCategories.value = Object.keys(response.data).map(categoryName => ({
-        name: categoryName,
-        tags: response.data[categoryName]
+    if (response && response.categories && Array.isArray(response.categories)) {
+      tagCategories.value = response.categories.map(category => ({
+        name: category.categorie,
+        tags: category.tags || []
       }))
     } else {
       tagCategories.value = []
@@ -1811,7 +1811,7 @@ const loadMangaTags = async () => {
   
   try {
     const response = await $fetch(`${API_BASE}/api/mangas/${mangaId}/tags`)
-    selectedTags.value = response.data || []
+    selectedTags.value = response.tags || []
   } catch (err) {
     console.error('Load manga tags error:', err)
   }

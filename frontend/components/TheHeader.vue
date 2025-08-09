@@ -59,7 +59,7 @@
             <li><NuxtLink to="/mangas">Manga</NuxtLink></li>
             <li><NuxtLink to="/critiques">Critiques</NuxtLink></li>
             <li><NuxtLink to="/articles">Webzine</NuxtLink></li>
-            <li><NuxtLink to="/forum">Forum</NuxtLink></li>
+            <li><a href="http://localhost:8083" target="_blank">Forum</a></li>
           </ul>
         </nav>
 
@@ -150,7 +150,7 @@
           <li><NuxtLink to="/mangas" @click="closeMobileMenu">Manga</NuxtLink></li>
           <li><NuxtLink to="/critiques" @click="closeMobileMenu">Critiques</NuxtLink></li>
           <li><NuxtLink to="/articles" @click="closeMobileMenu">Webzine</NuxtLink></li>
-          <li><NuxtLink to="/forum" @click="closeMobileMenu">Forum</NuxtLink></li>
+          <li><a href="http://localhost:8083" target="_blank" @click="closeMobileMenu">Forum</a></li>
         </ul>
         
         <!-- Mobile Auth Section -->
