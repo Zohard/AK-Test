@@ -5,8 +5,17 @@ export default defineNuxtConfig({
   css: ['~/assets/css/globals.css'],
   runtimeConfig: {
     public: {
-      apiBase: process.env.API_BASE_URL || 'http://localhost:3001'
+      apiBase: process.env.API_BASE_URL || 'http://localhost:3001',
+      forumUrl: process.env.FORUM_URL || 'http://localhost:8083'
     }
   },
-  ssr: true
+  ssr: true,
+  nitro: {
+    devProxy: {
+      '/api/images': {
+        target: process.env.API_BASE_URL || 'http://localhost:3001',
+        changeOrigin: true
+      }
+    }
+  }
 })

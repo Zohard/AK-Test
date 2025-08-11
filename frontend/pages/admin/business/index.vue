@@ -89,7 +89,7 @@
           <tr v-for="item in business" :key="item.id_business" class="table-row">
             <td class="image-cell">
               <img
-                :src="item.image ? `/images/business/${item.image}` : '/placeholder-business.jpg'"
+                :src="item.image ? getImageUrl(`business/${item.image}`) : '/placeholder-business.jpg'"
                 :alt="item.denomination"
                 class="business-thumbnail"
                 @error="handleImageError"
@@ -334,6 +334,7 @@
 import { ref, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '~/stores/auth'
+import { useImageUrl } from '~/composables/useImageUrl'
 
 // Layout
 definePageMeta({
@@ -351,7 +352,8 @@ const { isAdmin } = storeToRefs(authStore)
 
 // API config
 const config = useRuntimeConfig()
-const API_BASE = config.public.apiBase || 'http://localhost:3001'
+const API_BASE = config.public.apiBase
+const { getImageUrl } = useImageUrl()
 
 // Reactive data
 const business = ref([])

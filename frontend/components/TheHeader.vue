@@ -59,7 +59,7 @@
             <li><NuxtLink to="/mangas">Manga</NuxtLink></li>
             <li><NuxtLink to="/critiques">Critiques</NuxtLink></li>
             <li><NuxtLink to="/articles">Webzine</NuxtLink></li>
-            <li><a href="http://localhost:8083" target="_blank">Forum</a></li>
+            <li><a :href="config.public.forumUrl" target="_blank">Forum</a></li>
           </ul>
         </nav>
 
@@ -150,7 +150,7 @@
           <li><NuxtLink to="/mangas" @click="closeMobileMenu">Manga</NuxtLink></li>
           <li><NuxtLink to="/critiques" @click="closeMobileMenu">Critiques</NuxtLink></li>
           <li><NuxtLink to="/articles" @click="closeMobileMenu">Webzine</NuxtLink></li>
-          <li><a href="http://localhost:8083" target="_blank" @click="closeMobileMenu">Forum</a></li>
+          <li><a :href="config.public.forumUrl" target="_blank" @click="closeMobileMenu">Forum</a></li>
         </ul>
         
         <!-- Mobile Auth Section -->
@@ -195,6 +195,9 @@
 <script setup>
 // Import auth store
 import { useAuthStore } from '~/stores/auth'
+
+// Get runtime config
+const config = useRuntimeConfig()
 
 // User menu state
 const showUserMenu = ref(false)

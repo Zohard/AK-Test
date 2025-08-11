@@ -10,6 +10,7 @@ const searchRoutes = require('./search');
 const reviewRoutes = require('./reviews');
 const businessRoutes = require('./business');
 const tagsRoutes = require('./tags');
+const imagesRoutes = require('./images');
 
 module.exports = (app) => {
   app.use('/api/animes', animeRoutes);
@@ -21,6 +22,7 @@ module.exports = (app) => {
   app.use('/api/reviews', reviewRoutes);
   app.use('/api/business', businessRoutes);
   app.use('/api/tags', tagsRoutes);
+  app.use('/api/images', imagesRoutes);
   
   // Root route
   app.get('/', (req, res) => {

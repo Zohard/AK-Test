@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 
 const pool = require('../config/database');
 const { authenticateToken: authMiddleware, requireAdmin: adminMiddleware } = require('../middleware/auth');
@@ -2130,8 +2132,12 @@ router.post('/animes/:id/screenshots', (req, res, next) => {
       }
       
       // Save the file manually to the screenshots directory
-      const projectRoot = path.resolve(process.cwd(), '..');
-      const screenshotsDir = path.join(projectRoot, 'frontend/public/images/screenshots');
+      // Use frontend/public/images/screenshots directory to match database URLs
+      const isDocker = fs.existsSync('/.dockerenv');
+      const uploadsRoot = isDocker 
+        ? '/app/uploads' 
+        : path.resolve(__dirname, '../uploads');
+      const screenshotsDir = path.join(uploadsRoot, 'screenshots');
       const filePath = path.join(screenshotsDir, file.filename);
       
       if (file.buffer) {
@@ -2281,6 +2287,7 @@ router.delete('/animes/:id/relations/:relationId', async (req, res) => {
     res.status(500).json({ error: 'Erreur lors de la suppression de la relation' });
   }
 });
+
 
 // TODO: Add more admin routes like:
 // - PUT /reviews/:id/approve (approve review)

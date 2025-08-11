@@ -661,7 +661,7 @@
                       >
                         <div class="autocomplete-image">
                           <img 
-                            :src="content.image ? `/images/${selectedRelationType}s/${content.image}` : '/placeholder-anime.jpg'" 
+                            :src="content.image ? getImageUrl(`${selectedRelationType}s/${content.image}`) : '/placeholder-anime.jpg'" 
                             :alt="content.titre"
                             class="autocomplete-thumbnail"
                             @error="handleImageError"
@@ -741,7 +741,7 @@
                     >
                       <div class="cover-image">
                         <img 
-                          :src="`/images/mangas/${cover.url_screen}`" 
+                          :src="getImageUrl(`mangas/${cover.url_screen}`)" 
                           :alt="`Couverture ${cover.id_screen}`"
                           class="cover-thumbnail"
                           @error="handleCoverImageError"
@@ -952,6 +952,8 @@
 </template>
 
 <script setup>
+import { useImageUrl } from '~/composables/useImageUrl'
+
 // Layout
 definePageMeta({
   layout: 'admin',
@@ -974,7 +976,8 @@ const mangaId = route.params.id
 
 // API config
 const config = useRuntimeConfig()
-const API_BASE = config.public.apiBase || 'http://localhost:3001'
+const API_BASE = config.public.apiBase
+const { getImageUrl } = useImageUrl()
 
 // Reactive data
 const manga = ref(null)
@@ -1867,7 +1870,7 @@ const getImageSrc = () => {
     if (formData.value.image.startsWith('http')) {
       return formData.value.image
     } else {
-      return `/images/mangas/${formData.value.image}`
+      return getImageUrl(`mangas/${formData.value.image}`)
     }
   }
   return '/placeholder-manga.jpg'

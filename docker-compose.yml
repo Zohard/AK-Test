@@ -1,6 +1,6 @@
 version: '3.8'
 services:
-  db:
+  anime-kun-postgres:
     image: postgres:15-alpine
     environment:
       POSTGRES_USER: anime_user
@@ -8,7 +8,7 @@ services:
       POSTGRES_DB: anime_kun
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      # - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
     ports:
       - "5432:5432"
   api:
@@ -16,12 +16,20 @@ services:
       context: .
       dockerfile: Dockerfile.api
     depends_on:
-      - db
+      - anime-kun-postgres
     ports:
       - "3001:3000"
     volumes:
       - ./api:/app
-      - ./frontend/public/images:/app/frontend/public/images
+      - ./api/uploads:/app/uploads
+    environment:
+      - DB_HOST=anime-kun-postgres
+      - DB_USER=anime_user
+      - DB_PASSWORD=anime_password
+      - DB_NAME=anime_kun
+      - DB_PORT=5432
+      - PORT=3000
+      - NODE_ENV=development
   frontend:
     build:
       context: .
@@ -36,3 +44,4 @@ services:
       - API_BASE_URL=http://api:3000
 volumes:
   db_data:
+  uploaded_images:

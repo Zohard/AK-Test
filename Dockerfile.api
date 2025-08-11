@@ -8,6 +8,8 @@ RUN npm install
 
 COPY api/ .
 
+RUN mkdir -p /app/uploads/screenshots /app/uploads/anime /app/uploads/manga
+
 EXPOSE 3000
 
 CMD ["node", "server.js"]
