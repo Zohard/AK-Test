@@ -31,6 +31,7 @@ export { setInterval } from '#app/compat/interval';
 export { useAnimeAPI } from '../composables/useAnimeAPI';
 export { THEME_MODES, useDarkMode } from '../composables/useDarkMode';
 export { useFormState } from '../composables/useFormState';
+export { useImageUrl } from '../composables/useImageUrl';
 export { useAuthStore } from '../stores/auth';
 export { defineStore, acceptHMRUpdate, usePinia, storeToRefs } from '../node_modules/@pinia/nuxt/dist/runtime/composables';
 export { useNuxtDevTools } from '../node_modules/@nuxt/devtools/dist/runtime/use-nuxt-devtools';

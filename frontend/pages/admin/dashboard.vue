@@ -152,7 +152,7 @@ const { isAdmin } = storeToRefs(authStore)
 
 // API config
 const config = useRuntimeConfig()
-const API_BASE = config.public.apiBase || 'http://localhost:3001'
+const API_BASE = config.public.apiBase
 
 // Reactive data
 const stats = ref(null)

@@ -77,6 +77,13 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
+// Override helmet's restrictive CORS policy for images
+app.use('/api/images', (req, res, next) => {
+  res.removeHeader('Cross-Origin-Resource-Policy');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+});
+
 // Rate limiting - disabled in development, enabled in production
 if (process.env.NODE_ENV === 'production') {
   const limiter = rateLimit({
@@ -88,6 +95,12 @@ if (process.env.NODE_ENV === 'production') {
   console.log('🔓 Rate limiting disabled in development mode');
 }
 
+// Static file serving for uploads 
+// Serve uploaded images from the persistent volume
+const isDocker = fs.existsSync('/.dockerenv');
+const imagesPath = isDocker ? '/app/uploads' : path.resolve(__dirname, './uploads');
+app.use('/images', express.static(imagesPath));
+
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -95,30 +108,27 @@ app.use(express.urlencoded({ extended: true }));
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // Determine the base path - works for both Docker and local development
-    const isDocker = fs.existsSync('/.dockerenv');
-    const projectRoot = isDocker ? '/app' : path.resolve(process.cwd(), '..');
+    // Use portable path - works in both dev and production
+    const uploadsRoot = isDocker 
+      ? '/app/uploads' 
+      : path.resolve(__dirname, './uploads');
     
-    // Determine upload directory based on the URL - use originalUrl for most reliable detection
+    // Determine upload directory based on the URL
     let uploadDir;
     console.log('=== MULTER DESTINATION DEBUG ===');
     console.log('Multer destination - originalUrl:', req.originalUrl);
-    console.log('Multer destination - route.path:', req.route?.path);
-    console.log('Multer destination - method:', req.method);
-    console.log('Multer destination - isDocker:', isDocker);
-    console.log('Multer destination - projectRoot:', projectRoot);
     
     if (req.originalUrl && req.originalUrl.includes('/screenshots')) {
-      uploadDir = path.join(projectRoot, 'frontend/public/images/screenshots');
+      uploadDir = path.join(uploadsRoot, 'screenshots');
       console.log('Detected screenshots upload - URL:', req.originalUrl);
-    } else if (req.originalUrl && req.originalUrl.includes('/admin/animes')) {
-      uploadDir = path.join(projectRoot, 'frontend/public/images/anime');
+    } else if (req.originalUrl && (req.originalUrl.includes('/admin/animes') || req.originalUrl.includes('/animes'))) {
+      uploadDir = path.join(uploadsRoot, 'anime');
       console.log('Detected anime upload - URL:', req.originalUrl);
-    } else if (req.originalUrl && req.originalUrl.includes('/admin/mangas')) {
-      uploadDir = path.join(projectRoot, 'frontend/public/images/mangas');
+    } else if (req.originalUrl && (req.originalUrl.includes('/admin/mangas') || req.originalUrl.includes('/mangas'))) {
+      uploadDir = path.join(uploadsRoot, 'manga');
       console.log('Detected manga upload - URL:', req.originalUrl);
     } else {
-      uploadDir = path.join(projectRoot, 'frontend/public/images');
+      uploadDir = uploadsRoot;
       console.log('Default upload directory - URL:', req.originalUrl);
     }
     
@@ -206,16 +216,11 @@ const memoryUpload = multer({
 app.locals.upload = upload;
 app.locals.memoryUpload = memoryUpload;
 
-// Serve static files (images) with CORS support
-const isDocker = fs.existsSync('/.dockerenv');
-const projectRoot = isDocker ? '/app' : path.resolve(process.cwd(), '..');
-const publicPath = path.join(projectRoot, 'frontend/public');
-
-console.log('Setting up static file serving from:', publicPath);
+// CORS support for images endpoint (handled by the images route)
 app.use('/images', cors({
   origin: true,
   credentials: false
-}), express.static(path.join(publicPath, 'images')));
+}));
 
 // Swagger documentation
 app.get('/docs.json', (req, res) => {

@@ -168,7 +168,7 @@ useHead({
 
 // API configuration
 const config = useRuntimeConfig()
-const API_BASE = config.public.apiBase || 'http://localhost:3001'
+const API_BASE = config.public.apiBase
 
 // Reactive data
 const anime = ref(null)
@@ -259,9 +259,11 @@ const formatRating = (rating) => {
   return parseFloat(rating).toFixed(1)
 }
 
+const { getDirectApiUrl } = useImageUrl()
+
 const getImageUrl = (imagePath) => {
   if (!imagePath) return null
-  return `/images/anime/${imagePath}`
+  return getDirectApiUrl(`anime/${imagePath}`)
 }
 
 const hideImage = (event) => {

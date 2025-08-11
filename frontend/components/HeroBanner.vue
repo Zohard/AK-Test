@@ -13,7 +13,7 @@
       <div class="carousel-slide">
         <img 
           v-if="currentAnime.image"
-          :src="`/images/anime/${currentAnime.image}`" 
+          :src="getDirectApiUrl(`anime/${currentAnime.image}`)" 
           :alt="currentAnime.titre"
           class="hero-image"
           @error="hideImage"
@@ -76,7 +76,7 @@
         >
           <img 
             v-if="anime.image"
-            :src="`/images/anime/${anime.image}`" 
+            :src="getDirectApiUrl(`anime/${anime.image}`)" 
             :alt="anime.titre"
             @error="hideImage"
           />
@@ -90,7 +90,10 @@
 </template>
 
 <script setup>
+import { useImageUrl } from '~/composables/useImageUrl'
+
 const config = useRuntimeConfig()
+const { getDirectApiUrl } = useImageUrl()
 
 const animes = ref([])
 const currentSlide = ref(0)

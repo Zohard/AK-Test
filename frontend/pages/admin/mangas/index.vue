@@ -80,7 +80,7 @@
               <div class="thumbnail-container">
                 <img
                   v-if="manga.image"
-                  :src="`/images/mangas/${manga.image}`"
+                  :src="getImageUrl(`mangas/${manga.image}`)"
                   :alt="manga.titre"
                   class="manga-thumbnail"
                   @error="handleImageError"
@@ -231,6 +231,8 @@
 </template>
 
 <script setup>
+import { useImageUrl } from '~/composables/useImageUrl'
+
 // Layout
 definePageMeta({
   layout: 'admin'
@@ -244,10 +246,11 @@ useHead({
 // Auth check
 const authStore = useAuthStore()
 const { isAdmin } = storeToRefs(authStore)
+const { getImageUrl } = useImageUrl()
 
 // API config
 const config = useRuntimeConfig()
-const API_BASE = config.public.apiBase || 'http://localhost:3001'
+const API_BASE = config.public.apiBase
 
 // Reactive data
 const mangas = ref([])

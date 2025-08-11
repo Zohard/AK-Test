@@ -3,8 +3,9 @@ import { ref } from 'vue'
 export function useAnimeAPI() {
   const loading = ref(false)
   const error = ref(null)
+  const config = useRuntimeConfig()
   
-  const API_BASE = 'http://localhost:3001'
+  const API_BASE = config.public.apiBase
   
   const fetchAnime = async (id) => {
     loading.value = true

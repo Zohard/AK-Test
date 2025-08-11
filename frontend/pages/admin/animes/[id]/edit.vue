@@ -259,6 +259,9 @@
             <div class="image-section">
               <div class="image-upload-group">
                 <label class="form-label">Image de couverture</label>
+                <p class="section-description">
+                  Uploadez l'image de couverture de l'anime. Formats acceptés : JPG, JPEG, PNG, WebP. Poids max : 3Mo.
+                </p>
                 <div class="image-upload">
                   <div class="image-preview">
                     <img 
@@ -281,20 +284,44 @@
                       placeholder="URL de l'image de couverture"
                       @input="updateImagePreview"
                     />
-                    <input 
-                      ref="fileInput"
-                      type="file" 
-                      accept="image/*" 
-                      class="file-input"
-                      @change="handleFileUpload"
-                    />
-                    <button 
-                      type="button" 
-                      @click="$refs.fileInput.click()" 
-                      class="btn btn-secondary"
-                    >
-                      📁 Choisir un fichier
-                    </button>
+                    <div class="upload-actions">
+                      <input 
+                        ref="fileInput"
+                        type="file" 
+                        accept="image/jpeg,image/jpg,image/png,image/webp" 
+                        class="file-input"
+                        @change="handleFileUpload"
+                      />
+                      <button 
+                        type="button" 
+                        @click="$refs.fileInput.click()" 
+                        class="btn btn-secondary"
+                      >
+                        📁 Choisir un fichier
+                      </button>
+                      <button 
+                        v-if="uploadedFile"
+                        @click="uploadCoverImage"
+                        type="button" 
+                        :disabled="uploadingCoverImage"
+                        class="btn btn-primary"
+                      >
+                        <span class="btn-icon">📤</span>
+                        {{ uploadingCoverImage ? 'Upload en cours...' : 'Uploader l\'image' }}
+                      </button>
+                      <button 
+                        v-if="uploadedFile"
+                        @click="cancelCoverUpload"
+                        type="button" 
+                        class="btn btn-secondary"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                    <div v-if="uploadedFile" class="selected-file-info">
+                      <span class="file-name">{{ uploadedFile.name }}</span>
+                      <span class="file-size">{{ formatFileSize(uploadedFile.size) }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -907,11 +934,15 @@
                 >
                   <div class="screenshot-image">
                     <img 
-                      :src="`/images/${screenshot.url_screen}`"
+                      :src="getImageUrl(screenshot.url_screen)"
+                      :data-original-url="screenshot.url_screen"
+                      :data-screenshot-id="screenshot.id_screen"
+                      :data-constructed-url="getImageUrl(screenshot.url_screen)"
                       :alt="`Screenshot #${screenshot.id_screen}`"
                       class="screenshot-thumbnail"
                       @error="handleScreenshotError"
                       @click="openScreenshotModal(screenshot)"
+                      @load="() => console.log('Screenshot loaded successfully:', screenshot.url_screen, 'Full URL:', getImageUrl(screenshot.url_screen))"
                     />
                   </div>
                   <div class="screenshot-actions">
@@ -1090,6 +1121,8 @@
 </template>
 
 <script setup>
+import { useImageUrl } from '~/composables/useImageUrl'
+
 // Layout
 definePageMeta({
   layout: 'admin'
@@ -1099,6 +1132,9 @@ definePageMeta({
 useHead({
   title: 'Édition Anime - Administration'
 })
+
+// Image URL composable
+const { getImageUrl } = useImageUrl()
 
 // Route params
 const route = useRoute()
@@ -1111,7 +1147,7 @@ const { isAdmin } = storeToRefs(authStore)
 
 // API config
 const config = useRuntimeConfig()
-const API_BASE = config.public.apiBase || 'http://localhost:3001'
+const API_BASE = config.public.apiBase
 
 // Reactive data
 const anime = ref(null)
@@ -1160,6 +1196,9 @@ const showAutocomplete = ref(false)
 watch(selectedRelationType, () => {
   clearSearch()
 })
+
+// Cover image upload data
+const uploadingCoverImage = ref(false)
 
 // Screenshots management data
 const screenshotsList = ref([])
@@ -1445,14 +1484,15 @@ const handleFileUpload = async (event) => {
   if (!file) return
   
   // Validate file type
-  if (!file.type.startsWith('image/')) {
-    alert('Veuillez sélectionner un fichier image valide')
+  if (!file.type.match(/^image\/(jpeg|jpg|png|webp)$/i)) {
+    error.value = `Format non supporté. Utilisez JPG, JPEG, PNG ou WebP.`
     return
   }
   
-  // Validate file size (max 200KB)
-  if (file.size > 200 * 1024) {
-    alert('Le fichier image ne doit pas dépasser 200KB')
+  // Validate file size (max 3MB)
+  if (file.size > 3 * 1024 * 1024) {
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1)
+    error.value = `Fichier trop lourd: ${file.name} (${fileSizeMB}Mo, max 3Mo)`
     return
   }
   
@@ -1463,7 +1503,84 @@ const handleFileUpload = async (event) => {
     imagePreview.value = e.target.result
   }
   reader.readAsDataURL(file)
+  
+  // Clear any previous errors
+  error.value = ''
 }
+
+// Upload cover image
+const uploadCoverImage = async () => {
+  if (!uploadedFile.value) return
+  
+  uploadingCoverImage.value = true
+  try {
+    if (isCreating) {
+      // For new anime, we'll handle the upload when saving the anime
+      // Just keep the file for later use and clear URL field
+      formData.value.image = '' // Clear URL field since we're using file upload
+      uploadingCoverImage.value = false
+      return
+    } else {
+      // For existing anime, upload immediately using the PUT endpoint
+      const formDataToSend = new FormData()
+      
+      // Add all existing form fields to preserve them
+      formDataToSend.append('titre', formData.value.titre)
+      formDataToSend.append('titre_orig', formData.value.titre_orig || '')
+      formDataToSend.append('titres_alternatifs', formData.value.titres_alternatifs || '')
+      formDataToSend.append('annee', parseInt(formData.value.annee))
+      formDataToSend.append('format', formData.value.format || '')
+      formDataToSend.append('nb_ep', formData.value.nb_ep ? parseInt(formData.value.nb_ep) : '')
+      formDataToSend.append('studio', formData.value.studio || '')
+      formDataToSend.append('licence', parseInt(formData.value.licence))
+      formDataToSend.append('titre_fr', formData.value.licence == 1 ? formData.value.titre_fr : '')
+      formDataToSend.append('official_site', formData.value.official_site || '')
+      formDataToSend.append('doubleurs', formData.value.doubleurs || '')
+      formDataToSend.append('synopsis', formData.value.synopsis || '')
+      formDataToSend.append('commentaire', formData.value.commentaire || '')
+      formDataToSend.append('statut', formData.value.statut ? 1 : 0)
+      
+      // Add the uploaded image file
+      formDataToSend.append('image', uploadedFile.value)
+      
+      const response = await $fetch(`${API_BASE}/api/admin/animes/${animeId}`, {
+        method: 'PUT',
+        headers: {
+          ...authStore.getAuthHeaders(),
+        },
+        body: formDataToSend
+      })
+      
+      if (response) {
+        // Update the form data with the response
+        if (response.image) {
+          formData.value.image = response.image
+        }
+        // Clear the uploaded file reference and preview since we now have the uploaded image
+        uploadedFile.value = null
+        imagePreview.value = ''
+        // Reload anime data to get updated info
+        await loadAnime()
+      }
+    }
+  } catch (err) {
+    console.error('Upload cover image error:', err)
+    error.value = err.response?.data?.error || 'Erreur lors de l\'upload de l\'image'
+  } finally {
+    uploadingCoverImage.value = false
+  }
+}
+
+// Cancel cover image upload
+const cancelCoverUpload = () => {
+  uploadedFile.value = null
+  imagePreview.value = ''
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+}
+
+const { getDirectApiUrl } = useImageUrl()
 
 // Get image source with proper fallback
 const getImageSrc = () => {
@@ -1475,7 +1592,13 @@ const getImageSrc = () => {
     if (formData.value.image.startsWith('http')) {
       return formData.value.image
     } else {
-      return `/images/anime/${formData.value.image}`
+      // Check if the image path already includes a directory (like "screenshots/filename.jpg")
+      if (formData.value.image.includes('/')) {
+        return getDirectApiUrl(`${formData.value.image}`)
+      } else {
+        // Legacy images without directory prefix, assume anime directory
+        return getDirectApiUrl(`anime/${formData.value.image}`)
+      }
     }
   }
   return '/placeholder-anime.jpg'
@@ -2029,6 +2152,12 @@ const uploadScreenshots = async () => {
     // Add uploaded screenshots to local list
     if (response.data) {
       console.log('Adding screenshots to list:', response.data)
+      response.data.forEach(screenshot => {
+        console.log('Screenshot data:', screenshot)
+        console.log('Screenshot url_screen:', screenshot.url_screen)
+        const constructedUrl = getImageUrl(screenshot.url_screen)
+        console.log('Constructed URL:', constructedUrl)
+      })
       screenshotsList.value.push(...response.data)
       console.log('Screenshots list after push:', screenshotsList.value.length, screenshotsList.value)
     }
@@ -2090,12 +2219,30 @@ const loadScreenshotsList = async () => {
 }
 
 const handleScreenshotError = (event) => {
+  console.error('Screenshot failed to load:', {
+    failedSrc: event.target.src,
+    originalUrl: event.target.getAttribute('data-original-url'),
+    constructedUrl: event.target.getAttribute('data-constructed-url'),
+    screenshotId: event.target.getAttribute('data-screenshot-id'),
+    event: event
+  })
+  
+  // Try to find the screenshot object that failed
+  const failedScreenshot = screenshotsList.value.find(screenshot => 
+    event.target.src.includes(screenshot.url_screen)
+  )
+  
+  if (failedScreenshot) {
+    console.error('Failed screenshot object:', failedScreenshot)
+  }
+  
+  // Fallback to placeholder image
   event.target.src = '/placeholder-anime.jpg'
 }
 
 const openScreenshotModal = (screenshot) => {
-  // TODO: Implement modal for viewing full-size screenshot
-  window.open(`/images/${screenshot.url_screen}`, '_blank')
+  // Open full-size screenshot in new tab
+  window.open(getImageUrl(screenshot.url_screen), '_blank')
 }
 
 // Tags management methods

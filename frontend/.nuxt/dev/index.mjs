@@ -1,5 +1,5 @@
 import process from 'node:process';globalThis._importMeta_={url:import.meta.url,env:process.env};import { tmpdir } from 'node:os';
-import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, removeResponseHeader, createError, getQuery as getQuery$1, readBody, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, getRouterParam, getResponseStatusText } from 'file:///home/zohardus/www/ak9project/frontend/node_modules/h3/dist/index.mjs';
+import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, removeResponseHeader, createError, getQuery as getQuery$1, readBody, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, getRouterParam, setHeader, getResponseStatusText } from 'file:///home/zohardus/www/ak9project/frontend/node_modules/h3/dist/index.mjs';
 import { Server } from 'node:http';
 import { resolve, dirname, join } from 'node:path';
 import nodeCrypto from 'node:crypto';
@@ -648,7 +648,8 @@ const _inlineRuntimeConfig = {
     }
   },
   "public": {
-    "apiBase": "http://localhost:3001"
+    "apiBase": "http://localhost:3001",
+    "forumUrl": "http://localhost:8083"
   }
 };
 const envOptions = {
@@ -1118,22 +1119,7 @@ const plugins = [
 _6lmaa1ytQcWsM2Zgruawymwc9fRAJ_bP74iZTrGjJE
 ];
 
-const assets = {
-  "/index.mjs": {
-    "type": "text/javascript; charset=utf-8",
-    "etag": "\"12283-+1ozr9fW7YmgVvi4Ez0kuKttmFs\"",
-    "mtime": "2025-08-09T07:43:26.468Z",
-    "size": 74371,
-    "path": "index.mjs"
-  },
-  "/index.mjs.map": {
-    "type": "application/json",
-    "etag": "\"450a1-2Xu1rm51glNd/L4y9YrdL+bxwmw\"",
-    "mtime": "2025-08-09T07:43:26.468Z",
-    "size": 282785,
-    "path": "index.mjs.map"
-  }
-};
+const assets = {};
 
 function readAsset (id) {
   const serverDir = dirname$1(fileURLToPath(globalThis._importMeta_.url));
@@ -1540,10 +1526,12 @@ async function getIslandContext(event) {
   return ctx;
 }
 
+const _lazy_xWMiDy = () => Promise.resolve().then(function () { return ____path_$1; });
 const _lazy_YOz9HF = () => Promise.resolve().then(function () { return renderer$1; });
 
 const handlers = [
   { route: '', handler: _8iwdGR, lazy: false, middleware: true, method: undefined },
+  { route: '/api/images/**:path', handler: _lazy_xWMiDy, lazy: true, middleware: false, method: undefined },
   { route: '/__nuxt_error', handler: _lazy_YOz9HF, lazy: true, middleware: false, method: undefined },
   { route: '/__nuxt_island/**', handler: _SxA8c9, lazy: false, middleware: false, method: undefined },
   { route: '/**', handler: _lazy_YOz9HF, lazy: true, middleware: false, method: undefined }
@@ -1872,6 +1860,41 @@ const styles = {};
 const styles$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: styles
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const ____path_ = defineEventHandler(async (event) => {
+  const path = getRouterParam(event, "path");
+  if (!path) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: "Path not found"
+    });
+  }
+  const config = useRuntimeConfig();
+  const apiUrl = `${config.public.apiBase}/images/${path}`;
+  try {
+    const response = await $fetch(apiUrl, {
+      method: "GET",
+      responseType: "stream"
+    });
+    const headers = response.headers || {};
+    Object.entries(headers).forEach(([key, value]) => {
+      if (typeof value === "string") {
+        setHeader(event, key, value);
+      }
+    });
+    return response;
+  } catch (error) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: "Image not found"
+    });
+  }
+});
+
+const ____path_$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: ____path_
 }, Symbol.toStringTag, { value: 'Module' }));
 
 function renderPayloadResponse(ssrContext) {

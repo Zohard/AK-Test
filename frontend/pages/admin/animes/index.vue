@@ -251,7 +251,7 @@ const { isAdmin } = storeToRefs(authStore)
 
 // API config
 const config = useRuntimeConfig()
-const API_BASE = config.public.apiBase || 'http://localhost:3001'
+const API_BASE = config.public.apiBase
 
 // Reactive data
 const animes = ref([])
@@ -449,6 +449,8 @@ const closeModal = () => {
   resetForm()
 }
 
+const { getDirectApiUrl } = useImageUrl()
+
 // Get image source with proper fallback handling
 const getImageSource = (anime) => {
   if (!anime.image) {
@@ -460,11 +462,11 @@ const getImageSource = (anime) => {
     // Full URL
     return anime.image
   } else if (anime.image.startsWith('/')) {
-    // Absolute path
-    return anime.image
+    // Absolute path - use fallback routing
+    return getDirectApiUrl(anime.image.slice(1))
   } else {
     // Relative path - add anime directory
-    return `/images/anime/${anime.image}`
+    return getDirectApiUrl(`anime/${anime.image}`)
   }
 }
 

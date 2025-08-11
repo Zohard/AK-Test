@@ -130,7 +130,7 @@ useHead({
 
 // API configuration
 const config = useRuntimeConfig()
-const API_BASE = config.public.apiBase || 'http://localhost:3001'
+const API_BASE = config.public.apiBase
 
 // Reactive data
 const credentials = ref({

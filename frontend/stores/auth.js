@@ -11,8 +11,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   // API configuration - only on client side
   const API_BASE = process.client 
-    ? (useRuntimeConfig()?.public?.apiBase || 'http://localhost:3001')
-    : 'http://localhost:3001'
+    ? (useRuntimeConfig()?.public?.apiBase || 'http://localhost:3002')
+    : 'http://localhost:3002'
 
   // Initialize from localStorage on client side
   const initializeAuth = () => {
