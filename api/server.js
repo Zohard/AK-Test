@@ -78,9 +78,12 @@ app.use(cors({
 }));
 
 // Override helmet's restrictive CORS policy for images
-app.use('/api/images', (req, res, next) => {
+app.use(['/images', '/anime', '/screenshots'], (req, res, next) => {
   res.removeHeader('Cross-Origin-Resource-Policy');
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   next();
 });
 
@@ -100,6 +103,12 @@ if (process.env.NODE_ENV === 'production') {
 const isDocker = fs.existsSync('/.dockerenv');
 const imagesPath = isDocker ? '/app/uploads' : path.resolve(__dirname, './uploads');
 app.use('/images', express.static(imagesPath));
+
+// Serve anime images specifically
+app.use('/anime', express.static(path.join(imagesPath, 'anime')));
+
+// Serve screenshots specifically
+app.use('/screenshots', express.static(path.join(imagesPath, 'screenshots')));
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
@@ -217,9 +226,10 @@ app.locals.upload = upload;
 app.locals.memoryUpload = memoryUpload;
 
 // CORS support for images endpoint (handled by the images route)
-app.use('/images', cors({
+app.use(['/images', '/anime', '/screenshots'], cors({
   origin: true,
-  credentials: false
+  credentials: false,
+  methods: ['GET', 'HEAD', 'OPTIONS']
 }));
 
 // Swagger documentation

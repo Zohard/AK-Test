@@ -5,3 +5,7 @@
 .env
 node_modules/
 .DS_Store
+/uploads/anime/
+/uploads/mangas/
+/uploads/screenshots/
+/uploads/animes/
