@@ -1363,6 +1363,71 @@ router.post('/animes/:id/relations', async (req, res) => {
 /**
  * @swagger
  * /api/admin/mangas/{id}/relations:
+ *   get:
+ *     summary: Get relations for a specific manga
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Manga ID
+ *     responses:
+ *       200:
+ *         description: Relations list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 manga_id:
+ *                   type: integer
+ *                 relations:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id_relation:
+ *                         type: integer
+ *                       anime_titre:
+ *                         type: string
+ *                       manga_titre:
+ *                         type: string
+ *       500:
+ *         description: Server error
+ */
+router.get('/mangas/:id/relations', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const relations = await pool.query(`
+      SELECT 
+        r.*,
+        a.titre as anime_titre,
+        m.titre as manga_titre
+      FROM ak_fiche_to_fiche r
+      LEFT JOIN ak_animes a ON r.id_anime = a.id_anime AND r.id_anime > 0
+      LEFT JOIN ak_mangas m ON r.id_manga = m.id_manga AND r.id_manga > 0
+      WHERE r.id_fiche_depart = $1
+      ORDER BY r.id_relation ASC
+    `, [`manga${id}`]);
+    
+    res.json({
+      manga_id: parseInt(id),
+      relations: relations.rows
+    });
+  } catch (error) {
+    console.error('Relations fetch error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des relations' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/mangas/{id}/relations:
  *   post:
  *     summary: Add a new relation to a manga
  *     tags: [Admin]
@@ -1478,6 +1543,843 @@ router.post('/mangas/:id/relations', async (req, res) => {
   } catch (error) {
     console.error('Add manga relation error:', error);
     res.status(500).json({ error: 'Erreur lors de l\'ajout de la relation' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/mangas/{id}/relations/{relationId}:
+ *   delete:
+ *     summary: Remove a relation from a manga
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Manga ID
+ *       - in: path
+ *         name: relationId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Relation ID
+ *     responses:
+ *       200:
+ *         description: Relation deleted successfully
+ *       404:
+ *         description: Relation not found
+ *       500:
+ *         description: Server error
+ */
+router.delete('/mangas/:id/relations/:relationId', async (req, res) => {
+  try {
+    const { id, relationId } = req.params;
+    
+    const result = await pool.query(
+      'DELETE FROM ak_fiche_to_fiche WHERE id_relation = $1 AND id_fiche_depart = $2 RETURNING *',
+      [relationId, `manga${id}`]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Relation introuvable' });
+    }
+    
+    res.json({
+      message: 'Relation supprimée avec succès',
+      id_relation: parseInt(relationId),
+      manga_id: parseInt(id)
+    });
+    
+  } catch (error) {
+    console.error('Delete manga relation error:', error);
+    res.status(500).json({ error: 'Erreur lors de la suppression de la relation' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/mangas/{id}/covers:
+ *   get:
+ *     summary: Get covers for a specific manga
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Manga ID
+ *     responses:
+ *       200:
+ *         description: Covers list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 manga_id:
+ *                   type: integer
+ *                 covers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id_screen:
+ *                         type: integer
+ *                       url_screen:
+ *                         type: string
+ *       500:
+ *         description: Server error
+ */
+router.get('/mangas/:id/covers', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const covers = await pool.query(`
+      SELECT * FROM ak_screenshots 
+      WHERE id_titre = $1 AND type = 2
+      ORDER BY id_screen ASC
+    `, [id]);
+    
+    res.json({
+      manga_id: parseInt(id),
+      covers: covers.rows
+    });
+  } catch (error) {
+    console.error('Covers fetch error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des covers' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/mangas/{id}/covers:
+ *   post:
+ *     summary: Upload new covers for a manga
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Manga ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               covers:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       201:
+ *         description: Covers uploaded successfully
+ *       400:
+ *         description: No files provided
+ *       404:
+ *         description: Manga not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/mangas/:id/covers', (req, res, next) => {
+  console.log('=== Manga Cover Upload Route Debug ===');
+  console.log('Request URL:', req.originalUrl);
+  console.log('Route path:', req.route?.path);
+  console.log('Method:', req.method);
+  console.log('Params:', req.params);
+  
+  // Use memory upload for better debugging
+  const memoryUpload = req.app.locals.memoryUpload;
+  memoryUpload.array('covers', 10)(req, res, next); // Allow up to 10 covers
+}, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log('=== After Multer Processing ===');
+    console.log('Files received:', req.files?.length || 0);
+    console.log('Files details:', req.files?.map(f => ({ filename: f.filename, originalname: f.originalname, path: f.path, size: f.size })));
+    
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'Aucun fichier reçu' });
+    }
+    
+    // Check if manga exists
+    const manga = await pool.query(
+      'SELECT id_manga FROM ak_mangas WHERE id_manga = $1',
+      [id]
+    );
+    
+    if (manga.rows.length === 0) {
+      return res.status(404).json({ error: 'Manga introuvable' });
+    }
+    
+    const uploadedCovers = [];
+    const errors = [];
+    
+    for (const file of req.files) {
+      try {
+        // Generate unique filename
+        const timestamp = Date.now();
+        const randomSuffix = Math.round(Math.random() * 1E9);
+        const extension = path.extname(file.originalname) || '.jpg';
+        const filename = `manga-cover-${id}-${timestamp}-${randomSuffix}${extension}`;
+        
+        // Save file to disk
+        const isDocker = fs.existsSync('/.dockerenv');
+        const uploadsRoot = isDocker ? '/app/uploads' : path.resolve(__dirname, '../uploads');
+        const screenshotsDir = path.join(uploadsRoot, 'screenshots');
+        
+        // Ensure directory exists
+        if (!fs.existsSync(screenshotsDir)) {
+          fs.mkdirSync(screenshotsDir, { recursive: true });
+        }
+        
+        const filePath = path.join(screenshotsDir, filename);
+        fs.writeFileSync(filePath, file.buffer);
+        
+        console.log('File saved to:', filePath);
+        
+        // Insert into database
+        const result = await pool.query(
+          'INSERT INTO ak_screenshots (id_titre, url_screen, type) VALUES ($1, $2, 2) RETURNING *',
+          [id, filename]
+        );
+        
+        uploadedCovers.push({
+          id_screen: result.rows[0].id_screen,
+          url_screen: filename,
+          original_name: file.originalname
+        });
+        
+      } catch (fileError) {
+        console.error('Error processing file:', file.originalname, fileError);
+        errors.push({
+          filename: file.originalname,
+          error: fileError.message
+        });
+      }
+    }
+    
+    res.status(201).json({
+      message: `${uploadedCovers.length} cover(s) uploadé(s) avec succès`,
+      covers: uploadedCovers,
+      errors: errors.length > 0 ? errors : undefined
+    });
+    
+  } catch (error) {
+    console.error('Manga cover upload error:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'upload des covers' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/mangas/{id}/covers/{coverId}:
+ *   delete:
+ *     summary: Delete a cover from a manga
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Manga ID
+ *       - in: path
+ *         name: coverId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Cover ID
+ *     responses:
+ *       200:
+ *         description: Cover deleted successfully
+ *       404:
+ *         description: Cover not found
+ *       500:
+ *         description: Server error
+ */
+router.delete('/mangas/:id/covers/:coverId', async (req, res) => {
+  try {
+    const { id, coverId } = req.params;
+    
+    const result = await pool.query(
+      'DELETE FROM ak_screenshots WHERE id_screen = $1 AND id_titre = $2 AND type = 2 RETURNING *',
+      [coverId, id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Cover introuvable' });
+    }
+    
+    res.json({
+      message: 'Cover supprimé avec succès',
+      cover: result.rows[0]
+    });
+    
+  } catch (error) {
+    console.error('Cover delete error:', error);
+    res.status(500).json({ error: 'Erreur lors de la suppression du cover' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/business:
+ *   get:
+ *     summary: Get paginated list of business entities
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Items per page
+ *       - in: query
+ *         name: statut
+ *         schema:
+ *           type: string
+ *           enum: [all, active, inactive]
+ *           default: all
+ *         description: Filter by status
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term
+ *     responses:
+ *       200:
+ *         description: Business entities list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id_business:
+ *                         type: integer
+ *                       denomination:
+ *                         type: string
+ *                       type:
+ *                         type: string
+ *                       origine:
+ *                         type: string
+ *                       site_officiel:
+ *                         type: string
+ *                       statut:
+ *                         type: integer
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                     pages:
+ *                       type: integer
+ *       500:
+ *         description: Server error
+ */
+router.get('/business', async (req, res) => {
+  try {
+    const { page = 1, limit = 50, statut = 'all', search, type } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    let whereClause = '';
+    let params = [];
+    let paramCount = 0;
+    
+    // Filter by status
+    if (statut !== 'all') {
+      paramCount++;
+      const statutValue = statut === 'active' ? 1 : (statut === 'pending' ? 2 : 0);
+      whereClause = `WHERE statut = $${paramCount}`;
+      params.push(statutValue);
+    }
+    
+    // Add type filter
+    if (type && type.trim()) {
+      paramCount++;
+      const typeCondition = `type = $${paramCount}`;
+      whereClause = whereClause 
+        ? `${whereClause} AND ${typeCondition}`
+        : `WHERE ${typeCondition}`;
+      params.push(type.trim());
+    }
+    
+    // Add search filter
+    if (search && search.trim()) {
+      paramCount++;
+      const searchCondition = `denomination ILIKE $${paramCount}`;
+      whereClause = whereClause 
+        ? `${whereClause} AND ${searchCondition}`
+        : `WHERE ${searchCondition}`;
+      params.push(`%${search.trim()}%`);
+    }
+    
+    // Get total count
+    const countQuery = `SELECT COUNT(*) as total FROM ak_business ${whereClause}`;
+    const countResult = await pool.query(countQuery, params);
+    const total = parseInt(countResult.rows[0].total);
+    
+    // Get paginated data
+    paramCount++;
+    params.push(parseInt(limit));
+    paramCount++;
+    params.push(offset);
+    
+    const dataQuery = `
+      SELECT 
+        id_business,
+        denomination,
+        type,
+        origine,
+        site_officiel,
+        statut,
+        date_ajout,
+        date_modification
+      FROM ak_business 
+      ${whereClause}
+      ORDER BY denomination ASC
+      LIMIT $${paramCount - 1} OFFSET $${paramCount}
+    `;
+    
+    const dataResult = await pool.query(dataQuery, params);
+    
+    // Get filter metadata
+    const [typesResult, statusResult] = await Promise.all([
+      // Get available types with counts
+      pool.query(`
+        SELECT type, COUNT(*) as count 
+        FROM ak_business 
+        WHERE type IS NOT NULL AND type != ''
+        GROUP BY type 
+        ORDER BY type ASC
+      `),
+      // Get status counts
+      pool.query(`
+        SELECT 
+          SUM(CASE WHEN statut = 1 THEN 1 ELSE 0 END) as active,
+          SUM(CASE WHEN statut = 0 THEN 1 ELSE 0 END) as inactive,
+          SUM(CASE WHEN statut = 2 THEN 1 ELSE 0 END) as pending
+        FROM ak_business
+      `)
+    ]);
+    
+    // Format types for frontend
+    const availableTypes = typesResult.rows.map(row => ({
+      name: row.type,
+      count: parseInt(row.count)
+    }));
+    
+    // Format status counts for frontend
+    const statusCounts = {
+      active: parseInt(statusResult.rows[0].active || 0),
+      inactive: parseInt(statusResult.rows[0].inactive || 0),
+      pending: parseInt(statusResult.rows[0].pending || 0)
+    };
+    
+    res.json({
+      data: dataResult.rows,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: total,
+        pages: Math.ceil(total / parseInt(limit))
+      },
+      filters: {
+        types: availableTypes,
+        statuts: statusCounts
+      }
+    });
+    
+  } catch (error) {
+    console.error('Admin business list error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des business' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/business/{id}:
+ *   get:
+ *     summary: Get specific business by ID
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Business ID
+ *     responses:
+ *       200:
+ *         description: Business details
+ *       404:
+ *         description: Business not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/business/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const business = await pool.query(`
+      SELECT *
+      FROM ak_business 
+      WHERE id_business = $1
+    `, [id]);
+    
+    if (business.rows.length === 0) {
+      return res.status(404).json({ error: 'Fiche business introuvable' });
+    }
+    
+    res.json(business.rows[0]);
+    
+  } catch (error) {
+    console.error('Business fetch error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération de la fiche business' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/business:
+ *   post:
+ *     summary: Create new business
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - denomination
+ *               - type
+ *             properties:
+ *               denomination:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *               origine:
+ *                 type: string
+ *               site_officiel:
+ *                 type: string
+ *               image:
+ *                 type: string
+ *               autres_denominations:
+ *                 type: string
+ *               notes:
+ *                 type: string
+ *               statut:
+ *                 type: integer
+ *     responses:
+ *       201:
+ *         description: Business created successfully
+ *       400:
+ *         description: Invalid data
+ *       500:
+ *         description: Server error
+ */
+router.post('/business', async (req, res) => {
+  try {
+    const { 
+      denomination, 
+      type, 
+      origine, 
+      site_officiel, 
+      image, 
+      autres_denominations, 
+      notes, 
+      statut = 1 
+    } = req.body;
+    
+    if (!denomination?.trim() || !type?.trim()) {
+      return res.status(400).json({ error: 'La dénomination et le type sont obligatoires' });
+    }
+    
+    const result = await pool.query(`
+      INSERT INTO ak_business (
+        denomination, type, origine, site_officiel, image, 
+        autres_denominations, notes, statut, date_ajout
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) 
+      RETURNING *
+    `, [
+      denomination.trim(), 
+      type.trim(), 
+      origine?.trim() || null, 
+      site_officiel?.trim() || null, 
+      image?.trim() || null,
+      autres_denominations?.trim() || null,
+      notes?.trim() || null,
+      parseInt(statut) || 1
+    ]);
+    
+    res.status(201).json(result.rows[0]);
+    
+  } catch (error) {
+    console.error('Business create error:', error);
+    res.status(500).json({ error: 'Erreur lors de la création de la fiche business' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/business/{id}:
+ *   put:
+ *     summary: Update business
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Business ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               denomination:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *               origine:
+ *                 type: string
+ *               site_officiel:
+ *                 type: string
+ *               image:
+ *                 type: string
+ *               autres_denominations:
+ *                 type: string
+ *               notes:
+ *                 type: string
+ *               statut:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Business updated successfully
+ *       404:
+ *         description: Business not found
+ *       500:
+ *         description: Server error
+ */
+router.put('/business/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      denomination, 
+      type, 
+      origine, 
+      site_officiel, 
+      image, 
+      autres_denominations, 
+      notes, 
+      statut 
+    } = req.body;
+    
+    if (!denomination?.trim() || !type?.trim()) {
+      return res.status(400).json({ error: 'La dénomination et le type sont obligatoires' });
+    }
+    
+    const result = await pool.query(`
+      UPDATE ak_business 
+      SET denomination = $1, type = $2, origine = $3, site_officiel = $4, 
+          image = $5, autres_denominations = $6, notes = $7, statut = $8,
+          date_modification = NOW()
+      WHERE id_business = $9 
+      RETURNING *
+    `, [
+      denomination.trim(), 
+      type.trim(), 
+      origine?.trim() || null, 
+      site_officiel?.trim() || null, 
+      image?.trim() || null,
+      autres_denominations?.trim() || null,
+      notes?.trim() || null,
+      parseInt(statut) || 1,
+      id
+    ]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Fiche business introuvable' });
+    }
+    
+    res.json(result.rows[0]);
+    
+  } catch (error) {
+    console.error('Business update error:', error);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour de la fiche business' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/business/{id}:
+ *   delete:
+ *     summary: Delete business
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Business ID
+ *     responses:
+ *       200:
+ *         description: Business deleted successfully
+ *       404:
+ *         description: Business not found
+ *       500:
+ *         description: Server error
+ */
+router.delete('/business/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(
+      'DELETE FROM ak_business WHERE id_business = $1 RETURNING id_business',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Fiche business introuvable' });
+    }
+    
+    res.json({ message: 'Fiche business supprimée avec succès' });
+    
+  } catch (error) {
+    console.error('Business delete error:', error);
+    res.status(500).json({ error: 'Erreur lors de la suppression de la fiche business' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/business/{id}/upload-image:
+ *   post:
+ *     summary: Upload image for business entity
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Business ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file to upload
+ *             required:
+ *               - image
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 filename:
+ *                   type: string
+ *       400:
+ *         description: No file uploaded or invalid file
+ *       404:
+ *         description: Business not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/business/:id/upload-image', (req, res, next) => {
+  // Access upload middleware from app.locals
+  const upload = req.app.locals.upload;
+  upload.single('image')(req, res, next);
+}, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if business exists
+    const business = await pool.query(
+      'SELECT id_business, denomination FROM ak_business WHERE id_business = $1',
+      [id]
+    );
+
+    if (business.rows.length === 0) {
+      return res.status(404).json({ error: 'Fiche business introuvable' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucun fichier fourni' });
+    }
+
+    // Update business with new image filename
+    await pool.query(
+      'UPDATE ak_business SET image = $1, date_modification = NOW() WHERE id_business = $2',
+      [req.file.filename, id]
+    );
+
+    res.json({
+      message: 'Image téléchargée avec succès',
+      filename: req.file.filename
+    });
+
+  } catch (error) {
+    console.error('Business image upload error:', error);
+    res.status(500).json({ error: 'Erreur lors du téléchargement de l\'image' });
   }
 });
 
@@ -1824,6 +2726,298 @@ router.delete('/animes/:id', async (req, res) => {
   } catch (error) {
     console.error('Anime delete error:', error);
     res.status(500).json({ error: 'Erreur lors de la suppression de l\'anime' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/mangas/{id}:
+ *   get:
+ *     summary: Get a single manga for editing
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Manga ID
+ *     responses:
+ *       200:
+ *         description: Manga data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id_manga:
+ *                   type: integer
+ *                 titre:
+ *                   type: string
+ *                 auteur:
+ *                   type: string
+ *                 annee:
+ *                   type: string
+ *                 origine:
+ *                   type: string
+ *                 synopsis:
+ *                   type: string
+ *                 image:
+ *                   type: string
+ *                 nb_volumes:
+ *                   type: string
+ *                 statut:
+ *                   type: integer
+ *       404:
+ *         description: Manga not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/mangas/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(
+      'SELECT * FROM ak_mangas WHERE id_manga = $1',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Manga introuvable' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Get manga error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération du manga' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/mangas/{id}/staff:
+ *   get:
+ *     summary: Get staff members for a manga
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Manga ID
+ *     responses:
+ *       200:
+ *         description: Staff list
+ *       404:
+ *         description: Manga not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/mangas/:id/staff', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const staff = await pool.query(`
+      SELECT 
+        btm.id_business as business_id,
+        b.denomination as business_name,
+        btm.type as fonction,
+        btm.precisions,
+        b.type as business_type,
+        b.site_officiel
+      FROM ak_business_to_mangas btm
+      JOIN ak_business b ON btm.id_business = b.id_business
+      WHERE btm.id_manga = $1 AND b.statut = 1
+      ORDER BY btm.type, b.denomination
+    `, [id]);
+    
+    res.json({
+      manga_id: parseInt(id),
+      staff: staff.rows
+    });
+  } catch (error) {
+    console.error('Staff fetch error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération du staff' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/mangas/{id}/staff:
+ *   post:
+ *     summary: Add staff member to a manga
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Manga ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - business_id
+ *               - fonction
+ *             properties:
+ *               business_id:
+ *                 type: integer
+ *                 description: Business ID
+ *               fonction:
+ *                 type: string
+ *                 description: Staff function/role
+ *               precisions:
+ *                 type: string
+ *                 description: Optional precisions
+ *     responses:
+ *       201:
+ *         description: Staff member added successfully
+ *       400:
+ *         description: Bad request
+ *       409:
+ *         description: Staff member already exists
+ *       500:
+ *         description: Server error
+ */
+router.post('/mangas/:id/staff', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { business_id, fonction, precisions } = req.body;
+    
+    if (!business_id || !fonction) {
+      return res.status(400).json({ error: 'Business ID et fonction sont requis' });
+    }
+    
+    // Check if manga exists
+    const manga = await pool.query(
+      'SELECT id_manga FROM ak_mangas WHERE id_manga = $1',
+      [id]
+    );
+    
+    if (manga.rows.length === 0) {
+      return res.status(404).json({ error: 'Manga introuvable' });
+    }
+    
+    // Check if business exists and is active
+    const business = await pool.query(
+      'SELECT id_business, denomination FROM ak_business WHERE id_business = $1 AND statut = 1',
+      [business_id]
+    );
+    
+    if (business.rows.length === 0) {
+      return res.status(404).json({ error: 'Fiche business introuvable' });
+    }
+    
+    // Check if this combination already exists
+    const existing = await pool.query(
+      'SELECT id_business FROM ak_business_to_mangas WHERE id_manga = $1 AND id_business = $2 AND type = $3',
+      [id, business_id, fonction]
+    );
+    
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: 'Cette combinaison business/fonction existe déjà' });
+    }
+    
+    // Insert the staff relationship
+    await pool.query(
+      'INSERT INTO ak_business_to_mangas (id_manga, id_business, type, precisions) VALUES ($1, $2, $3, $4)',
+      [id, business_id, fonction, precisions || null]
+    );
+    
+    res.status(201).json({
+      message: 'Staff ajouté avec succès',
+      manga_id: parseInt(id),
+      business_id: parseInt(business_id),
+      fonction: fonction,
+      precisions: precisions || null,
+      business_name: business.rows[0].denomination
+    });
+    
+  } catch (error) {
+    console.error('Add staff error:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'ajout du staff' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/mangas/{id}/staff:
+ *   delete:
+ *     summary: Remove staff member from a manga
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Manga ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - business_id
+ *               - fonction
+ *             properties:
+ *               business_id:
+ *                 type: integer
+ *                 description: Business ID
+ *               fonction:
+ *                 type: string
+ *                 description: Staff function/role
+ *     responses:
+ *       200:
+ *         description: Staff member removed successfully
+ *       404:
+ *         description: Staff member not found
+ *       500:
+ *         description: Server error
+ */
+router.delete('/mangas/:id/staff', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { business_id, fonction } = req.body;
+    
+    if (!business_id || !fonction) {
+      return res.status(400).json({ error: 'Business ID et fonction sont requis' });
+    }
+    
+    // Delete the staff relationship
+    const result = await pool.query(
+      'DELETE FROM ak_business_to_mangas WHERE id_manga = $1 AND id_business = $2 AND type = $3 RETURNING *',
+      [id, business_id, fonction]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Relation staff introuvable' });
+    }
+    
+    res.json({
+      message: 'Staff supprimé avec succès',
+      manga_id: parseInt(id),
+      business_id: parseInt(business_id),
+      fonction: fonction
+    });
+    
+  } catch (error) {
+    console.error('Remove staff error:', error);
+    res.status(500).json({ error: 'Erreur lors de la suppression du staff' });
   }
 });
 

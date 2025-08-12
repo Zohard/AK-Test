@@ -7,10 +7,10 @@
         <p class="page-subtitle">{{ totalBusiness }} fiche(s) business au total</p>
       </div>
       <div class="page-header-right">
-        <button @click="addBusiness" class="btn btn-primary">
+        <NuxtLink to="/admin/business/new" class="btn btn-primary">
           <span class="btn-icon">➕</span>
           Ajouter une fiche business
-        </button>
+        </NuxtLink>
       </div>
     </div>
 
@@ -122,15 +122,14 @@
               <div class="date-main">{{ formatDate(item.date_ajout) }}</div>
             </td>
             <td class="actions-cell">
-              <button @click="viewBusiness(item)" class="action-btn view-btn" title="Voir détails">
-                👁️
-              </button>
-              <button @click="editBusiness(item)" class="action-btn edit-btn" title="Modifier">
-                ✏️
-              </button>
-              <button @click="confirmDelete(item)" class="action-btn delete-btn" title="Supprimer">
-                🗑️
-              </button>
+              <div class="actions-wrapper">
+                <NuxtLink :to="`/admin/business/${item.id_business}/edit`" class="action-btn edit-btn" title="Modifier">
+                  ✏️
+                </NuxtLink>
+                <button @click="confirmDelete(item)" class="action-btn delete-btn" title="Supprimer">
+                  🗑️
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -142,9 +141,9 @@
         <div class="empty-icon">🏢</div>
         <h3>Aucune fiche business trouvée</h3>
         <p>{{ searchQuery ? 'Aucun résultat pour votre recherche' : 'Commencez par ajouter votre première fiche business' }}</p>
-        <button v-if="!searchQuery" @click="addBusiness" class="btn btn-primary">
+        <NuxtLink v-if="!searchQuery" to="/admin/business/new" class="btn btn-primary">
           Ajouter une fiche business
-        </button>
+        </NuxtLink>
       </div>
     </ClientOnly>
 
@@ -171,139 +170,7 @@
       </div>
     </ClientOnly>
 
-    <!-- Edit Modal -->
-    <div v-if="showEditModal" class="modal-overlay" @click="closeModal">
-      <div class="modal" @click.stop>
-        <div class="modal-header">
-          <h2>{{ isEditing ? 'Modifier la fiche business' : 'Ajouter une fiche business' }}</h2>
-          <button @click="closeModal" class="modal-close">×</button>
-        </div>
-        <div class="modal-body">
-          <form @submit.prevent="saveBusiness" class="business-form">
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label">Dénomination *</label>
-                <input v-model="formData.denomination" type="text" class="form-input" required />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Type *</label>
-                <select v-model="formData.type" class="form-input" required>
-                  <option value="">Sélectionner un type</option>
-                  <option value="Personnalité">Personnalité</option>
-                  <option value="Studio">Studio</option>
-                  <option value="Editeur">Editeur</option>
-                  <option value="Divers">Divers</option>
-                  <option value="Chaîne TV">Chaîne TV</option>
-                  <option value="Magazine">Magazine</option>
-                  <option value="Evénement">Evénement</option>
-                  <option value="Association">Association</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Origine</label>
-                <input v-model="formData.origine" type="text" class="form-input" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Site officiel</label>
-                <input v-model="formData.site_officiel" type="url" class="form-input" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Image (filename only)</label>
-                <input v-model="formData.image" type="text" class="form-input" placeholder="example.jpg" />
-                <small class="form-help">Image sera stockée dans /images/business/</small>
-              </div>
-            </div>
-            <div class="form-group full-width">
-              <label class="form-label">Autres dénominations</label>
-              <textarea v-model="formData.autres_denominations" class="form-textarea" rows="2"></textarea>
-            </div>
-            <div class="form-group full-width">
-              <label class="form-label">Notes</label>
-              <textarea v-model="formData.notes" class="form-textarea" rows="4"></textarea>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Statut</label>
-              <select v-model="formData.statut" class="form-input">
-                <option :value="1">Actif</option>
-                <option :value="0">Inactif</option>
-                <option :value="2">En attente</option>
-              </select>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button @click="closeModal" type="button" class="btn btn-secondary">
-            Annuler
-          </button>
-          <button @click="saveBusiness" type="submit" class="btn btn-primary" :disabled="saving">
-            {{ saving ? 'Enregistrement...' : (isEditing ? 'Modifier' : 'Créer') }}
-          </button>
-        </div>
-      </div>
-    </div>
 
-    <!-- View Details Modal -->
-    <div v-if="showViewModal" class="modal-overlay" @click="showViewModal = false">
-      <div class="modal modal-large" @click.stop>
-        <div class="modal-header">
-          <h2>{{ viewData.denomination }}</h2>
-          <button @click="showViewModal = false" class="modal-close">×</button>
-        </div>
-        <div class="modal-body">
-          <div class="business-details">
-            <div class="details-grid">
-              <div class="detail-item">
-                <strong>Type:</strong> {{ viewData.type }}
-              </div>
-              <div class="detail-item">
-                <strong>Origine:</strong> {{ viewData.origine || 'Non spécifiée' }}
-              </div>
-              <div class="detail-item">
-                <strong>Site officiel:</strong>
-                <a v-if="viewData.site_officiel" :href="viewData.site_officiel" target="_blank">
-                  {{ viewData.site_officiel }}
-                </a>
-                <span v-else>Non spécifié</span>
-              </div>
-              <div class="detail-item">
-                <strong>Statut:</strong> {{ getStatusText(viewData.statut) }}
-              </div>
-            </div>
-            <div v-if="viewData.autres_denominations" class="detail-section">
-              <strong>Autres dénominations:</strong>
-              <p>{{ viewData.autres_denominations }}</p>
-            </div>
-            <div v-if="viewData.notes" class="detail-section">
-              <strong>Notes:</strong>
-              <p>{{ viewData.notes }}</p>
-            </div>
-            <div v-if="viewData.relations" class="detail-section">
-              <strong>Relations:</strong>
-              <div class="relations-details">
-                <div v-if="viewData.relations.animes?.length" class="relation-group">
-                  <h4>Animes ({{ viewData.relations.animes.length }})</h4>
-                  <ul>
-                    <li v-for="anime in viewData.relations.animes" :key="anime.id_anime">
-                      {{ anime.titre }} 
-                      <span v-if="anime.precisions" class="relation-precision">({{ anime.precisions }})</span>
-                    </li>
-                  </ul>
-                </div>
-                <div v-if="viewData.relations.mangas?.length" class="relation-group">
-                  <h4>Mangas ({{ viewData.relations.mangas.length }})</h4>
-                  <ul>
-                    <li v-for="manga in viewData.relations.mangas" :key="manga.id_manga">
-                      {{ manga.titre }}
-                      <span v-if="manga.precisions" class="relation-precision">({{ manga.precisions }})</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Delete Confirmation Modal -->
     <div v-if="showDeleteModal" class="modal-overlay" @click="showDeleteModal = false">
@@ -372,26 +239,9 @@ const availableTypes = ref([])
 const statusCounts = ref({})
 
 // Modal states
-const showEditModal = ref(false)
-const showViewModal = ref(false)
 const showDeleteModal = ref(false)
-const isEditing = ref(false)
-const saving = ref(false)
 const deleting = ref(false)
 const businessToDelete = ref(null)
-const viewData = ref({})
-
-// Form data
-const formData = ref({
-  denomination: '',
-  type: '',
-  origine: '',
-  site_officiel: '',
-  image: '',
-  autres_denominations: '',
-  notes: '',
-  statut: 1
-})
 
 // Debounced search
 let searchTimeout = null
@@ -479,80 +329,12 @@ const changePage = (page) => {
 }
 
 // Business actions
-const addBusiness = () => {
-  isEditing.value = false
-  formData.value = {
-    denomination: '',
-    type: '',
-    origine: '',
-    site_officiel: '',
-    image: '',
-    autres_denominations: '',
-    notes: '',
-    statut: 1
-  }
-  showEditModal.value = true
-}
-
-const editBusiness = (item) => {
-  isEditing.value = true
-  formData.value = { ...item }
-  showEditModal.value = true
-}
-
-const viewBusiness = async (item) => {
-  try {
-    const headers = authStore.getAuthHeaders()
-    const response = await $fetch(`${API_BASE}/api/admin/business/${item.id_business}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers
-      }
-    })
-    viewData.value = response.data
-    showViewModal.value = true
-  } catch (err) {
-    console.error('View business error:', err)
-    error.value = 'Erreur lors du chargement des détails'
-  }
-}
 
 const confirmDelete = (item) => {
   businessToDelete.value = item
   showDeleteModal.value = true
 }
 
-const saveBusiness = async () => {
-  saving.value = true
-  try {
-    if (isEditing.value) {
-      await $fetch(`${API_BASE}/api/admin/business/${formData.value.id_business}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authStore.getAuthHeaders()
-        },
-        body: formData.value
-      })
-    } else {
-      await $fetch(`${API_BASE}/api/admin/business`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authStore.getAuthHeaders()
-        },
-        body: formData.value
-      })
-    }
-    
-    closeModal()
-    loadBusiness()
-  } catch (err) {
-    error.value = err.message || 'Erreur lors de l\'enregistrement'
-  } finally {
-    saving.value = false
-  }
-}
 
 const deleteBusiness = async () => {
   deleting.value = true
@@ -576,11 +358,6 @@ const deleteBusiness = async () => {
   }
 }
 
-const closeModal = () => {
-  showEditModal.value = false
-  showViewModal.value = false
-  saving.value = false
-}
 
 // Utility functions
 const getStatusClass = (statut) => {

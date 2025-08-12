@@ -1,6 +1,9 @@
 /* Import existing admin styles and add business-specific styles */
 .admin-business {
   padding: 2rem;
+  background-color: var(--bg-color);
+  min-height: 100vh;
+  color: var(--text-color);
 }
 
 .page-header {
@@ -14,11 +17,11 @@
   font-size: 2rem;
   font-weight: bold;
   margin: 0 0 0.5rem 0;
-  color: #1f2937;
+  color: var(--text-color);
 }
 
 .page-subtitle {
-  color: #6b7280;
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -59,11 +62,12 @@
 }
 
 .filters-section {
-  background: white;
+  background: var(--surface-color);
   padding: 1.5rem;
   border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow);
   margin-bottom: 1.5rem;
+  border: 1px solid var(--border-color);
 }
 
 .filters-grid {
@@ -80,23 +84,25 @@
 .filter-label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-color);
   margin-bottom: 0.25rem;
 }
 
 .filter-input,
 .filter-select {
   padding: 0.5rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-color);
   border-radius: 0.375rem;
   font-size: 0.875rem;
+  background-color: var(--bg-color);
+  color: var(--text-color);
 }
 
 .filter-input:focus,
 .filter-select:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--accent-light);
 }
 
 .loading-state,
@@ -109,8 +115,8 @@
 .loading-spinner {
   width: 2rem;
   height: 2rem;
-  border: 3px solid #f3f4f6;
-  border-top: 3px solid #3b82f6;
+  border: 3px solid var(--border-color);
+  border-top: 3px solid var(--accent-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 1rem;
@@ -121,10 +127,11 @@
 }
 
 .table-container {
-  background: white;
+  background: var(--surface-color);
   border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow);
   overflow: hidden;
+  border: 1px solid var(--border-color);
 }
 
 .admin-table {
@@ -133,22 +140,35 @@
 }
 
 .admin-table th {
-  background-color: #f9fafb;
+  background-color: var(--bg-secondary);
   padding: 0.75rem;
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  border-bottom: 1px solid #e5e7eb;
+  color: var(--text-color);
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.admin-table th:last-child {
+  text-align: center;
+  min-width: 120px;
 }
 
 .admin-table td {
   padding: 0.75rem;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border-light);
   vertical-align: middle;
+  color: var(--text-color);
+  height: auto;
+  min-height: 80px; /* Match the image cell height + padding */
+}
+
+.table-row {
+  min-height: 80px;
 }
 
 .table-row:hover {
-  background-color: #f9fafb;
+  background-color: var(--surface-hover);
 }
 
 .business-thumbnail {
@@ -158,14 +178,26 @@
   border-radius: 0.375rem;
 }
 
+.image-cell {
+  padding: 0.75rem;
+  vertical-align: middle;
+  min-height: 80px;
+  display: table-cell;
+}
+
+.title-cell {
+  min-height: 80px;
+  vertical-align: middle;
+}
+
 .title-main {
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-color);
 }
 
 .title-alt {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin-top: 0.25rem;
 }
 
@@ -175,8 +207,9 @@
   font-size: 0.75rem;
   font-weight: 500;
   border-radius: 9999px;
-  background-color: #e5e7eb;
-  color: #374151;
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
 }
 
 .relations-count {
@@ -187,12 +220,12 @@
   display: block;
   font-size: 1.25rem;
   font-weight: bold;
-  color: #3b82f6;
+  color: var(--accent-color);
 }
 
 .relations-label {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .status-badge {
@@ -220,25 +253,46 @@
 
 .date-cell {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .actions-cell {
+  display: table-cell;
+  vertical-align: middle;
+  padding: 0.75rem;
+  min-width: 120px;
+  text-align: center;
+  position: relative;
+}
+
+.actions-cell .actions-wrapper {
   display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 0.25rem;
+  height: 100%;
 }
 
 .action-btn {
-  padding: 0.25rem;
-  background: none;
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
   cursor: pointer;
-  border-radius: 0.25rem;
-  transition: background-color 0.15s;
+  border-radius: 0.375rem;
+  transition: all 0.15s ease;
+  font-size: 0.875rem;
+  min-width: 2rem;
+  min-height: 2rem;
+  color: var(--text-secondary);
 }
 
 .action-btn:hover {
-  background-color: #f3f4f6;
+  background-color: var(--surface-hover);
+  border-color: var(--accent-color);
+  transform: translateY(-1px);
 }
 
 .pagination {
@@ -251,16 +305,17 @@
 
 .pagination-btn {
   padding: 0.5rem 1rem;
-  border: 1px solid #d1d5db;
-  background: white;
+  border: 1px solid var(--border-color);
+  background: var(--surface-color);
+  color: var(--text-color);
   border-radius: 0.375rem;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .pagination-btn:hover:not(:disabled) {
-  background-color: #f9fafb;
-  border-color: #9ca3af;
+  background-color: var(--surface-hover);
+  border-color: var(--accent-color);
 }
 
 .pagination-btn:disabled {
@@ -270,7 +325,7 @@
 
 .pagination-info {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .modal-overlay {
@@ -287,13 +342,14 @@
 }
 
 .modal {
-  background: white;
+  background: var(--surface-color);
   border-radius: 0.5rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-hover);
   width: 90%;
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
+  border: 1px solid var(--border-color);
 }
 
 .modal-large {
@@ -305,14 +361,14 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .modal-header h2 {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-color);
 }
 
 .modal-close {
@@ -320,7 +376,7 @@
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--text-secondary);
   padding: 0;
 }
 
@@ -333,7 +389,7 @@
   justify-content: flex-end;
   gap: 0.5rem;
   padding: 1.5rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-color);
 }
 
 .form-grid {
@@ -355,28 +411,30 @@
 .form-label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-color);
   margin-bottom: 0.25rem;
 }
 
 .form-input,
 .form-textarea {
   padding: 0.5rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-color);
   border-radius: 0.375rem;
   font-size: 0.875rem;
+  background-color: var(--bg-color);
+  color: var(--text-color);
 }
 
 .form-input:focus,
 .form-textarea:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--accent-light);
 }
 
 .form-help {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin-top: 0.25rem;
   display: block;
 }
@@ -403,7 +461,7 @@
 .detail-section strong {
   display: block;
   margin-bottom: 0.5rem;
-  color: #1f2937;
+  color: var(--text-color);
 }
 
 .relations-details {
@@ -416,7 +474,7 @@
 
 .relation-group h4 {
   margin: 0 0 0.5rem 0;
-  color: #374151;
+  color: var(--text-color);
   font-size: 0.875rem;
   font-weight: 600;
 }
@@ -428,12 +486,12 @@
 }
 
 .relation-precision {
-  color: #6b7280;
+  color: var(--text-secondary);
   font-style: italic;
 }
 
 .warning-text {
-  color: #dc2626;
+  color: var(--error-color);
   font-size: 0.875rem;
   margin-top: 0.5rem;
 }
@@ -441,7 +499,7 @@
 .retry-btn {
   margin-top: 1rem;
   padding: 0.5rem 1rem;
-  background-color: #3b82f6;
+  background-color: var(--accent-color);
   color: white;
   border: none;
   border-radius: 0.375rem;

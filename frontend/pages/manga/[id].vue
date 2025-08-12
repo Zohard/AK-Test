@@ -261,7 +261,7 @@ const formatRating = (rating) => {
 
 const getImageUrl = (imagePath) => {
   if (!imagePath) return null
-  return `/images/mangas/${imagePath}`
+  return `http://localhost:3001/images/manga/${imagePath}`
 }
 
 const hideImage = (event) => {
