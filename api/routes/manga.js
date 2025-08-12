@@ -288,4 +288,77 @@ router.get('/autocomplete', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/mangas/{id}/tags:
+ *   get:
+ *     summary: Get tags for a specific manga
+ *     tags: [Mangas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Manga ID
+ *     responses:
+ *       200:
+ *         description: List of tags
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 manga_id:
+ *                   type: integer
+ *                 tags:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id_tag:
+ *                         type: integer
+ *                       tag_name:
+ *                         type: string
+ *                       tag_nice_url:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       categorie:
+ *                         type: string
+ *       404:
+ *         description: Manga not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/:id/tags', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const tags = await pool.query(`
+      SELECT 
+        t.id_tag,
+        t.tag_name,
+        t.tag_nice_url,
+        t.description,
+        t.categorie
+      FROM ak_tags t
+      INNER JOIN ak_tag2fiche tf ON t.id_tag = tf.id_tag
+      WHERE tf.id_fiche = $1 AND tf.type = 'manga'
+      ORDER BY t.categorie, t.tag_name
+    `, [id]);
+    
+    res.json({
+      manga_id: parseInt(id),
+      tags: tags.rows
+    });
+  } catch (error) {
+    console.error('Tags fetch error:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de la récupération des tags',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 module.exports = router;

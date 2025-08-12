@@ -80,7 +80,7 @@
               <div class="thumbnail-container">
                 <img
                   v-if="manga.image"
-                  :src="getImageUrl(`mangas/${manga.image}`)"
+                  :src="getImageUrl(`images/manga/${manga.image}`)"
                   :alt="manga.titre"
                   class="manga-thumbnail"
                   @error="handleImageError"
@@ -428,7 +428,7 @@ const handleImageError = (event) => {
   event.target.dataset.fallback = 'true'
   
   // Try to use the placeholder image from public folder
-  const placeholderPath = '/images/mangas/placeholder-manga.jpg'
+  const placeholderPath = 'http://localhost:3001/images/manga/placeholder-manga.jpg'
   
   // Create a temporary image to test if placeholder exists
   const testImg = new Image()

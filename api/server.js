@@ -107,6 +107,10 @@ app.use('/images', express.static(imagesPath));
 // Serve anime images specifically
 app.use('/anime', express.static(path.join(imagesPath, 'anime')));
 
+// Serve manga images specifically - removed to avoid route conflict with /api/mangas
+// Use /images/manga/ instead
+// app.use('/mangas', express.static(path.join(imagesPath, 'manga')));
+
 // Serve screenshots specifically
 app.use('/screenshots', express.static(path.join(imagesPath, 'screenshots')));
 
@@ -133,7 +137,7 @@ const storage = multer.diskStorage({
     } else if (req.originalUrl && (req.originalUrl.includes('/admin/animes') || req.originalUrl.includes('/animes'))) {
       uploadDir = path.join(uploadsRoot, 'anime');
       console.log('Detected anime upload - URL:', req.originalUrl);
-    } else if (req.originalUrl && (req.originalUrl.includes('/admin/mangas') || req.originalUrl.includes('/mangas'))) {
+    } else if (req.originalUrl && (req.originalUrl.includes('/admin/mangas') || req.originalUrl.includes('/api/mangas'))) {
       uploadDir = path.join(uploadsRoot, 'manga');
       console.log('Detected manga upload - URL:', req.originalUrl);
     } else {

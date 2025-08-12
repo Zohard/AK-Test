@@ -72,7 +72,7 @@ const getImageUrl = (imagePath, type) => {
   
   // Return appropriate path based on content type
   if (type === 'Manga') {
-    return getImageUrlWithFallback(`images/manga/${imagePath}`)
+    return getDirectApiUrl(`images/manga/${imagePath}`)
   } else if (type === 'Anime') {
     return getDirectApiUrl(`anime/${imagePath}`)
   }

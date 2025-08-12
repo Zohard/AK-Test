@@ -741,7 +741,7 @@
                     >
                       <div class="cover-image">
                         <img 
-                          :src="getImageUrl(`mangas/${cover.url_screen}`)" 
+                          :src="getImageUrl(`images/manga/${cover.url_screen}`)" 
                           :alt="`Couverture ${cover.id_screen}`"
                           class="cover-thumbnail"
                           @error="handleCoverImageError"
@@ -1286,7 +1286,7 @@ const loadStaffList = async () => {
       headers: authStore.getAuthHeaders()
     })
     console.log('Staff response:', response)
-    staffList.value = Array.isArray(response.data) ? response.data : []
+    staffList.value = Array.isArray(response.staff) ? response.staff : []
     console.log('Staff list set to:', staffList.value)
   } catch (error) {
     console.error('Error loading staff:', error)
@@ -1430,10 +1430,10 @@ const loadRelationsList = async () => {
       headers: authStore.getAuthHeaders()
     })
     
-    relationsList.value = (response.data || []).map(relation => ({
+    relationsList.value = (response.relations || []).map(relation => ({
       id_relation: relation.id_relation,
       target_type: relation.id_anime ? 'anime' : 'manga',
-      target_title: relation.titre,
+      target_title: relation.anime_titre || relation.manga_titre,
       target_id: relation.id_anime || relation.id_manga,
       id_anime: relation.id_anime,
       id_manga: relation.id_manga
@@ -1615,7 +1615,7 @@ const loadCoversList = async () => {
       headers: authStore.getAuthHeaders()
     })
     
-    coversList.value = response.data || []
+    coversList.value = response.covers || []
     console.log('Covers loaded:', coversList.value)
   } catch (error) {
     console.error('Error loading covers:', error)
@@ -1870,7 +1870,7 @@ const getImageSrc = () => {
     if (formData.value.image.startsWith('http')) {
       return formData.value.image
     } else {
-      return getImageUrl(`mangas/${formData.value.image}`)
+      return getImageUrl(`images/manga/${formData.value.image}`)
     }
   }
   return '/placeholder-manga.jpg'
