@@ -428,7 +428,8 @@ const handleImageError = (event) => {
   event.target.dataset.fallback = 'true'
   
   // Try to use the placeholder image from public folder
-  const placeholderPath = 'http://localhost:3001/images/manga/placeholder-manga.jpg'
+  const { getImageUrl } = useImageUrl()
+  const placeholderPath = getImageUrl('manga/placeholder-manga.jpg')
   
   // Create a temporary image to test if placeholder exists
   const testImg = new Image()

@@ -1965,6 +1965,7 @@ router.get('/business', async (req, res) => {
         type,
         origine,
         site_officiel,
+        image,
         statut,
         date_ajout,
         date_modification
@@ -3482,6 +3483,479 @@ router.delete('/animes/:id/relations/:relationId', async (req, res) => {
   }
 });
 
+
+/**
+ * @swagger
+ * /api/admin/articles:
+ *   get:
+ *     summary: Get all articles for admin management
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search in title or content
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: integer
+ *         description: Filter by status
+ *     responses:
+ *       200:
+ *         description: List of articles
+ *       500:
+ *         description: Server error
+ */
+router.get('/articles', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+    const search = req.query.search || '';
+    const status = req.query.status !== undefined ? parseInt(req.query.status) : null;
+
+    let whereClause = '';
+    let params = [];
+    let paramCount = 0;
+
+    if (search) {
+      paramCount++;
+      whereClause += `WHERE (titre ILIKE $${paramCount} OR texte ILIKE $${paramCount})`;
+      params.push(`%${search}%`);
+    }
+
+    if (status !== null) {
+      paramCount++;
+      if (whereClause) {
+        whereClause += ` AND statut = $${paramCount}`;
+      } else {
+        whereClause += `WHERE statut = $${paramCount}`;
+      }
+      params.push(status);
+    }
+
+    // Get total count
+    const countQuery = `SELECT COUNT(*) FROM ak_webzine_articles ${whereClause}`;
+    const countResult = await pool.query(countQuery, params);
+    const total = parseInt(countResult.rows[0].count);
+
+    // Get articles
+    params.push(limit, offset);
+    const articlesQuery = `
+      SELECT 
+        id_art,
+        titre,
+        nice_url,
+        date,
+        img,
+        auteur,
+        auteurs_multiples,
+        meta_description,
+        tags,
+        nb_com,
+        nb_clics,
+        onindex,
+        statut,
+        SUBSTRING(texte, 1, 200) as excerpt
+      FROM ak_webzine_articles 
+      ${whereClause}
+      ORDER BY date DESC
+      LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
+    `;
+
+    const articles = await pool.query(articlesQuery, params);
+
+    res.json({
+      articles: articles.rows,
+      pagination: {
+        current_page: page,
+        total_pages: Math.ceil(total / limit),
+        total_items: total,
+        items_per_page: limit
+      }
+    });
+  } catch (error) {
+    console.error('Articles list error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des articles' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/articles/{id}:
+ *   get:
+ *     summary: Get a specific article for editing
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Article ID
+ *     responses:
+ *       200:
+ *         description: Article details
+ *       404:
+ *         description: Article not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/articles/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(
+      'SELECT * FROM ak_webzine_articles WHERE id_art = $1',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Article introuvable' });
+    }
+    
+    res.json({ article: result.rows[0] });
+  } catch (error) {
+    console.error('Article get error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération de l\'article' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/articles:
+ *   post:
+ *     summary: Create a new article
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - titre
+ *               - texte
+ *               - auteur
+ *             properties:
+ *               titre:
+ *                 type: string
+ *               nice_url:
+ *                 type: string
+ *               img:
+ *                 type: string
+ *               imgunebig:
+ *                 type: string
+ *               imgunebig2:
+ *                 type: string
+ *               texte:
+ *                 type: string
+ *               auteur:
+ *                 type: integer
+ *               auteurs_multiples:
+ *                 type: string
+ *               meta_description:
+ *                 type: string
+ *               tags:
+ *                 type: string
+ *               videos:
+ *                 type: string
+ *               onindex:
+ *                 type: integer
+ *               nl2br:
+ *                 type: integer
+ *               statut:
+ *                 type: integer
+ *     responses:
+ *       201:
+ *         description: Article created successfully
+ *       400:
+ *         description: Validation error
+ *       500:
+ *         description: Server error
+ */
+router.post('/articles', async (req, res) => {
+  try {
+    const {
+      titre,
+      nice_url,
+      img,
+      imgunebig,
+      imgunebig2,
+      texte,
+      auteur,
+      auteurs_multiples,
+      meta_description,
+      tags,
+      videos,
+      onindex = 0,
+      nl2br = 1,
+      statut = 0
+    } = req.body;
+
+    if (!titre || !texte || !auteur) {
+      return res.status(400).json({ error: 'Titre, texte et auteur sont requis' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO ak_webzine_articles (
+        titre, nice_url, date, img, imgunebig, imgunebig2, texte, auteur,
+        auteurs_multiples, meta_description, tags, videos, nb_com, nb_clics,
+        trackbacks_open, onindex, nl2br, already_ping, statut
+      ) VALUES (
+        $1, $2, NOW(), $3, $4, $5, $6, $7, $8, $9, $10, $11, 0, 0, 1, $12, $13, 0, $14
+      ) RETURNING *
+    `, [
+      titre, nice_url, img, imgunebig, imgunebig2, texte, auteur,
+      auteurs_multiples, meta_description, tags, videos, onindex, nl2br, statut
+    ]);
+
+    res.status(201).json({
+      message: 'Article créé avec succès',
+      article: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Article creation error:', error);
+    res.status(500).json({ error: 'Erreur lors de la création de l\'article' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/articles/{id}:
+ *   put:
+ *     summary: Update an existing article
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Article ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               titre:
+ *                 type: string
+ *               nice_url:
+ *                 type: string
+ *               img:
+ *                 type: string
+ *               imgunebig:
+ *                 type: string
+ *               imgunebig2:
+ *                 type: string
+ *               texte:
+ *                 type: string
+ *               auteur:
+ *                 type: integer
+ *               auteurs_multiples:
+ *                 type: string
+ *               meta_description:
+ *                 type: string
+ *               tags:
+ *                 type: string
+ *               videos:
+ *                 type: string
+ *               onindex:
+ *                 type: integer
+ *               nl2br:
+ *                 type: integer
+ *               statut:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Article updated successfully
+ *       404:
+ *         description: Article not found
+ *       500:
+ *         description: Server error
+ */
+router.put('/articles/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      titre,
+      nice_url,
+      img,
+      imgunebig,
+      imgunebig2,
+      texte,
+      auteur,
+      auteurs_multiples,
+      meta_description,
+      tags,
+      videos,
+      onindex,
+      nl2br,
+      statut
+    } = req.body;
+
+    const result = await pool.query(`
+      UPDATE ak_webzine_articles SET
+        titre = COALESCE($1, titre),
+        nice_url = COALESCE($2, nice_url),
+        img = COALESCE($3, img),
+        imgunebig = COALESCE($4, imgunebig),
+        imgunebig2 = COALESCE($5, imgunebig2),
+        texte = COALESCE($6, texte),
+        auteur = COALESCE($7, auteur),
+        auteurs_multiples = COALESCE($8, auteurs_multiples),
+        meta_description = COALESCE($9, meta_description),
+        tags = COALESCE($10, tags),
+        videos = COALESCE($11, videos),
+        onindex = COALESCE($12, onindex),
+        nl2br = COALESCE($13, nl2br),
+        statut = COALESCE($14, statut)
+      WHERE id_art = $15
+      RETURNING *
+    `, [
+      titre, nice_url, img, imgunebig, imgunebig2, texte, auteur,
+      auteurs_multiples, meta_description, tags, videos, onindex, nl2br, statut, id
+    ]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Article introuvable' });
+    }
+
+    res.json({
+      message: 'Article mis à jour avec succès',
+      article: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Article update error:', error);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour de l\'article' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/articles/{id}:
+ *   delete:
+ *     summary: Delete an article
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Article ID
+ *     responses:
+ *       200:
+ *         description: Article deleted successfully
+ *       404:
+ *         description: Article not found
+ *       500:
+ *         description: Server error
+ */
+router.delete('/articles/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(
+      'DELETE FROM ak_webzine_articles WHERE id_art = $1 RETURNING *',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Article introuvable' });
+    }
+    
+    res.json({
+      message: 'Article supprimé avec succès',
+      article: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Article delete error:', error);
+    res.status(500).json({ error: 'Erreur lors de la suppression de l\'article' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/articles/{id}/publish:
+ *   put:
+ *     summary: Publish/unpublish an article
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Article ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - statut
+ *             properties:
+ *               statut:
+ *                 type: integer
+ *                 description: 0 for draft, 1 for published
+ *     responses:
+ *       200:
+ *         description: Article status updated
+ *       404:
+ *         description: Article not found
+ *       500:
+ *         description: Server error
+ */
+router.put('/articles/:id/publish', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { statut } = req.body;
+    
+    const result = await pool.query(
+      'UPDATE ak_webzine_articles SET statut = $1 WHERE id_art = $2 RETURNING *',
+      [statut, id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Article introuvable' });
+    }
+    
+    res.json({
+      message: `Article ${statut ? 'publié' : 'mis en brouillon'} avec succès`,
+      article: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Article publish error:', error);
+    res.status(500).json({ error: 'Erreur lors de la modification du statut' });
+  }
+});
 
 // TODO: Add more admin routes like:
 // - PUT /reviews/:id/approve (approve review)

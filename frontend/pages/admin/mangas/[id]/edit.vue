@@ -661,7 +661,7 @@
                       >
                         <div class="autocomplete-image">
                           <img 
-                            :src="content.image ? getImageUrl(`${selectedRelationType}s/${content.image}`) : '/placeholder-anime.jpg'" 
+                            :src="content.image ? getImageUrl(`${selectedRelationType}/${content.image}`) : '/placeholder-anime.jpg'" 
                             :alt="content.titre"
                             class="autocomplete-thumbnail"
                             @error="handleImageError"
@@ -741,7 +741,7 @@
                     >
                       <div class="cover-image">
                         <img 
-                          :src="getImageUrl(`images/manga/${cover.url_screen}`)" 
+                          :src="getImageUrl(`manga/${cover.url_screen}`)" 
                           :alt="`Couverture ${cover.id_screen}`"
                           class="cover-thumbnail"
                           @error="handleCoverImageError"
@@ -1870,7 +1870,7 @@ const getImageSrc = () => {
     if (formData.value.image.startsWith('http')) {
       return formData.value.image
     } else {
-      return getImageUrl(`images/manga/${formData.value.image}`)
+      return getImageUrl(`manga/${formData.value.image}`)
     }
   }
   return '/placeholder-manga.jpg'
