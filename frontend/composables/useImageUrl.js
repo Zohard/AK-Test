@@ -20,8 +20,13 @@ export function useImageUrl() {
     // Remove leading slash if present
     const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath
     
+    // For Docker API (port 3001), use /images/ prefix
+    // For development API (port 3002), use direct path
+    const isDockerApi = API_BASE.includes(':3001')
+    const finalPath = isDockerApi ? `images/${cleanPath}` : cleanPath
+    
     // Return the full API URL
-    return `${API_BASE}/${cleanPath}`
+    return `${API_BASE}/${finalPath}`
   }
   
   /**

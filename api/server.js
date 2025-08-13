@@ -78,7 +78,7 @@ app.use(cors({
 }));
 
 // Override helmet's restrictive CORS policy for images
-app.use(['/images', '/anime', '/screenshots'], (req, res, next) => {
+app.use(['/images', '/anime', '/screenshots', '/business'], (req, res, next) => {
   res.removeHeader('Cross-Origin-Resource-Policy');
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -114,6 +114,9 @@ app.use('/anime', express.static(path.join(imagesPath, 'anime')));
 // Serve screenshots specifically
 app.use('/screenshots', express.static(path.join(imagesPath, 'screenshots')));
 
+// Serve business images specifically
+app.use('/business', express.static(path.join(imagesPath, 'business')));
+
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -140,6 +143,9 @@ const storage = multer.diskStorage({
     } else if (req.originalUrl && (req.originalUrl.includes('/admin/mangas') || req.originalUrl.includes('/api/mangas'))) {
       uploadDir = path.join(uploadsRoot, 'manga');
       console.log('Detected manga upload - URL:', req.originalUrl);
+    } else if (req.originalUrl && (req.originalUrl.includes('/admin/business') || req.originalUrl.includes('/business'))) {
+      uploadDir = path.join(uploadsRoot, 'business');
+      console.log('Detected business upload - URL:', req.originalUrl);
     } else {
       uploadDir = uploadsRoot;
       console.log('Default upload directory - URL:', req.originalUrl);

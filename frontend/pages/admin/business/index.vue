@@ -276,7 +276,7 @@ const loadBusiness = async () => {
     })
     
     if (searchQuery.value.trim()) {
-      params.append('denomination', searchQuery.value.trim())
+      params.append('search', searchQuery.value.trim())
     }
     
     if (typeFilter.value) {
