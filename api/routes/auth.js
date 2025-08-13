@@ -5,7 +5,17 @@ const jwt = require('jsonwebtoken');
 const router = express.Router();
 
 const pool = require('../config/database');
-const { verifyPassword, generateToken, sanitizeUser } = require('../utils/auth');
+const { 
+  verifyPassword, 
+  generateToken, 
+  sanitizeUser, 
+  generateRefreshToken,
+  verifyRefreshToken,
+  revokeAllRefreshTokens,
+  generatePasswordResetToken,
+  verifyPasswordResetToken,
+  markPasswordResetTokenUsed
+} = require('../utils/auth');
 const { authenticateToken: authMiddleware } = require('../middleware/auth');
 
 /**
@@ -102,9 +112,15 @@ router.post('/register', [
     
     const user = result.rows[0];
     const token = generateToken(user);
+    const refreshToken = await generateRefreshToken(
+      user,
+      req.ip || req.connection.remoteAddress,
+      req.get('User-Agent')
+    );
     
     res.status(201).json({ 
       token, 
+      refreshToken,
       user: sanitizeUser(user),
       message: 'Inscription réussie'
     });
@@ -227,9 +243,15 @@ router.post('/login', [
     );
     
     const token = generateToken(user);
+    const refreshToken = await generateRefreshToken(
+      user,
+      req.ip || req.connection.remoteAddress,
+      req.get('User-Agent')
+    );
     
     res.json({ 
       token, 
+      refreshToken,
       user: sanitizeUser(user),
       message: 'Connexion réussie'
     });
@@ -345,6 +367,228 @@ router.get('/verify', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Token verification error:', error);
     res.status(500).json({ error: 'Erreur lors de la vérification du token' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/refresh:
+ *   post:
+ *     summary: Refresh access token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 description: Valid refresh token
+ *     responses:
+ *       200:
+ *         description: Tokens refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 accessToken:
+ *                   type: string
+ *                 refreshToken:
+ *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Invalid or expired refresh token
+ *       500:
+ *         description: Server error
+ */
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(401).json({ error: 'Token de rafraîchissement requis' });
+    }
+    
+    // Verify and consume the refresh token
+    const user = await verifyRefreshToken(refreshToken);
+    
+    if (!user) {
+      return res.status(401).json({ error: 'Token de rafraîchissement invalide ou expiré' });
+    }
+    
+    // Generate new tokens
+    const newAccessToken = generateToken(user);
+    const newRefreshToken = await generateRefreshToken(
+      user,
+      req.ip || req.connection.remoteAddress,
+      req.get('User-Agent')
+    );
+    
+    res.json({
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+      user: sanitizeUser(user),
+      message: 'Tokens rafraîchis avec succès'
+    });
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(500).json({ error: 'Erreur lors du rafraîchissement du token' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Request password reset
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: User's email address
+ *     responses:
+ *       200:
+ *         description: Password reset email sent (always returns success for security)
+ *       400:
+ *         description: Invalid email format
+ *       500:
+ *         description: Server error
+ */
+router.post('/forgot-password', [
+  body('email').isEmail().withMessage('Format d\'email invalide')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  try {
+    const { email } = req.body;
+    
+    // Find user by email
+    const result = await pool.query(
+      'SELECT * FROM smf_members WHERE email_address = $1',
+      [email]
+    );
+    
+    // Always return success for security (don't reveal if email exists)
+    if (result.rows.length === 0) {
+      return res.json({ 
+        message: 'Si cette adresse email existe, vous recevrez un lien de réinitialisation' 
+      });
+    }
+    
+    const user = result.rows[0];
+    
+    // Generate reset token
+    const resetToken = await generatePasswordResetToken(
+      user,
+      req.ip || req.connection.remoteAddress,
+      req.get('User-Agent')
+    );
+    
+    // TODO: Send email with reset link
+    // For now, log the token (in production, send email)
+    console.log(`Password reset token for ${email}: ${resetToken}`);
+    console.log(`Reset link: ${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`);
+    
+    res.json({ 
+      message: 'Si cette adresse email existe, vous recevrez un lien de réinitialisation',
+      // Remove this in production:
+      resetToken: resetToken // Only for development/testing
+    });
+  } catch (error) {
+    console.error('Password reset request error:', error);
+    res.status(500).json({ error: 'Erreur lors de la demande de réinitialisation' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Reset password with token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - newPassword
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Password reset token
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *                 description: New password
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *       400:
+ *         description: Invalid token or password requirements not met
+ *       500:
+ *         description: Server error
+ */
+router.post('/reset-password', [
+  body('token').notEmpty().withMessage('Token de réinitialisation requis'),
+  body('newPassword').isLength({ min: 6 }).withMessage('Le nouveau mot de passe doit contenir au moins 6 caractères')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  try {
+    const { token, newPassword } = req.body;
+    
+    // Verify reset token
+    const tokenData = await verifyPasswordResetToken(token);
+    
+    if (!tokenData) {
+      return res.status(400).json({ error: 'Token de réinitialisation invalide ou expiré' });
+    }
+    
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    
+    // Update user password
+    await pool.query(
+      'UPDATE smf_members SET passwd = $1 WHERE id_member = $2',
+      [hashedPassword, tokenData.id_member]
+    );
+    
+    // Mark token as used
+    await markPasswordResetTokenUsed(token);
+    
+    // Revoke all refresh tokens for security
+    await revokeAllRefreshTokens(tokenData.id_member);
+    
+    res.json({ 
+      message: 'Mot de passe réinitialisé avec succès'
+    });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({ error: 'Erreur lors de la réinitialisation du mot de passe' });
   }
 });
 
