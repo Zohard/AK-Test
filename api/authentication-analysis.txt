@@ -1,0 +1,204 @@
+AUTHENTICATION & USER MANAGEMENT API COMPARISON ANALYSIS
+===========================================================
+
+Date: August 13, 2025
+Project: Anime-Kun API v2.0
+Database: PostgreSQL
+Current API Base: /api/
+
+CURRENT IMPLEMENTATION STATUS
+=============================
+
+✅ IMPLEMENTED FEATURES:
+
+Authentication (/api/auth/)
+---------------------------
+✅ POST /api/auth/register - User registration with email, username, password
+✅ POST /api/auth/login - User login (username/email + password)
+✅ POST /api/auth/logout - User logout (JWT invalidation)
+✅ GET /api/auth/profile - Get authenticated user profile
+✅ GET /api/auth/verify - Verify JWT token validity
+
+Users (/api/users/)
+-------------------
+✅ GET /api/users/{id} - Get user profile by ID
+✅ GET /api/users/{id}/reviews - Get user's reviews with pagination
+
+MISSING FEATURES ANALYSIS
+=========================
+
+❌ CRITICAL MISSING - SECURITY & CORE:
+
+1. Token Management
+   - ❌ POST /api/v1/auth/refresh - Refresh JWT tokens
+   - Note: Current implementation has no token refresh mechanism
+
+2. Password Recovery System
+   - ❌ POST /api/v1/auth/forgot-password - Request password reset
+   - ❌ POST /api/v1/auth/reset-password - Reset password with token
+   - Note: No password recovery flow exists
+
+3. OAuth Integration
+   - ❌ OAuth login providers (Google, GitHub, Discord, etc.)
+   - Note: Only traditional email/password auth available
+
+❌ MISSING - USER MANAGEMENT:
+
+4. Admin User Operations
+   - ❌ GET/POST /api/v1/users - List/create users (admin only)
+   - ❌ PUT/DELETE /api/v1/users/{userId} - Update/delete user profiles
+   - Note: No admin user management interface
+
+5. Self-Service User Management
+   - ❌ GET/PUT /api/v1/users/me - View/update authenticated user's profile
+   - ❌ Profile photo upload/management
+   - ❌ User preferences and privacy settings
+   - Note: Users can only view profiles, not update them
+
+❌ MISSING - USER FEATURES:
+
+6. Notification System
+   - ❌ GET /api/v1/users/{userId}/notifications - List user notifications
+   - ❌ PUT /api/v1/users/{userId}/notifications/{id} - Mark notifications as read
+   - Note: No notification system for new episodes, replies, messages
+
+7. Private Messaging
+   - ❌ GET/POST/DELETE /api/v1/users/{userId}/messages - Private messaging system
+   - Note: No user-to-user communication system
+
+8. Custom Lists Management
+   - ❌ GET/POST/PUT/DELETE /api/v1/users/{userId}/lists - Custom user lists
+   - ❌ POST/DELETE /api/v1/users/{userId}/lists/{listId}/items - Manage list items
+   - Note: No watchlist, plan-to-watch, completed, dropped lists
+
+9. Favorites System
+   - ❌ GET/POST/DELETE /api/v1/users/{userId}/favorites - User favorites
+   - Note: No favorites/bookmarking system
+
+IMPLEMENTATION RECOMMENDATIONS
+==============================
+
+PHASE 1 - HIGH PRIORITY (Security & Core Features)
+--------------------------------------------------
+Estimated Time: 2-3 weeks
+
+1. Implement Token Refresh System
+   Route: POST /api/auth/refresh
+   - Add refresh token generation in login
+   - Create refresh token storage (Redis or database)
+   - Implement token rotation for security
+
+2. Password Recovery Flow
+   Routes: POST /api/auth/forgot-password, POST /api/auth/reset-password
+   - Email token generation and sending
+   - Secure token validation
+   - Password reset with token verification
+
+3. User Profile Management
+   Routes: GET/PUT /api/users/me
+   - Allow users to update their own profiles
+   - Profile photo upload integration
+   - User preferences and privacy settings
+
+PHASE 2 - MEDIUM PRIORITY (User Experience)
+-------------------------------------------
+Estimated Time: 3-4 weeks
+
+4. Custom Lists System
+   Routes: /api/users/{userId}/lists/*
+   - Watchlist, plan-to-watch, completed, dropped lists
+   - Add/remove anime/manga to/from lists
+   - List sharing and privacy controls
+
+5. Favorites System
+   Routes: /api/users/{userId}/favorites
+   - Bookmark favorite anime/manga
+   - Quick access to user's favorites
+
+6. Private Messaging
+   Routes: /api/users/{userId}/messages
+   - User-to-user messaging system
+   - Message threads and conversations
+   - Message status (read/unread)
+
+PHASE 3 - LOW PRIORITY (Advanced Features)
+------------------------------------------
+Estimated Time: 4-5 weeks
+
+7. Notification System
+   Routes: /api/users/{userId}/notifications
+   - New episode notifications
+   - Reply notifications
+   - System announcements
+   - Email/push notification preferences
+
+8. OAuth Integration
+   Routes: /api/auth/oauth/*
+   - Google OAuth2 integration
+   - GitHub OAuth integration
+   - Discord OAuth integration
+
+9. Admin User Management
+   Routes: /api/admin/users/*
+   - Admin-only user CRUD operations
+   - User role management
+   - Bulk user operations
+
+TECHNICAL CONSIDERATIONS
+========================
+
+Database Schema Updates Required:
+- User tokens table (refresh tokens)
+- Password reset tokens table
+- User lists and list items tables
+- User favorites table
+- Private messages table
+- Notifications table
+- OAuth provider accounts table
+
+Security Enhancements:
+- Rate limiting on auth endpoints
+- Account lockout after failed attempts
+- Email verification for new accounts
+- Two-factor authentication (future consideration)
+
+Current Architecture Strengths:
+- PostgreSQL database with SMF integration
+- JWT-based authentication
+- Express.js with proper middleware
+- Input validation with express-validator
+- Swagger documentation
+
+CURRENT API ENDPOINT MAPPING
+============================
+
+Specification → Current Implementation
+
+AUTH ENDPOINTS:
+POST /api/v1/auth/register → ✅ POST /api/auth/register
+POST /api/v1/auth/login → ✅ POST /api/auth/login  
+POST /api/v1/auth/logout → ✅ POST /api/auth/logout
+POST /api/v1/auth/refresh → ❌ MISSING
+POST /api/v1/auth/forgot-password → ❌ MISSING
+POST /api/v1/auth/reset-password → ❌ MISSING
+
+USER ENDPOINTS:
+GET/POST /api/v1/users → ❌ MISSING (admin only)
+GET/PUT/DELETE /api/v1/users/{userId} → ✅ GET only (/api/users/{id})
+GET/PUT /api/v1/users/me → ❌ MISSING
+GET /api/v1/users/{userId}/notifications → ❌ MISSING
+GET/POST/DELETE /api/v1/users/{userId}/messages → ❌ MISSING
+GET/POST/PUT/DELETE /api/v1/users/{userId}/lists → ❌ MISSING
+GET/POST/DELETE /api/v1/users/{userId}/favorites → ❌ MISSING
+
+NEXT STEPS
+==========
+
+1. Review and approve this analysis
+2. Prioritize which phase to implement first
+3. Create database migration scripts for new tables
+4. Implement Phase 1 features (token refresh, password recovery)
+5. Add comprehensive tests for authentication flows
+6. Update API documentation with new endpoints
+
+Note: Your current PostgreSQL connection is working correctly. The previous issue was a port conflict between the frontend and API servers, not a database connectivity problem.

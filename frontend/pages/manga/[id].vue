@@ -16,8 +16,8 @@
       <div class="manga-header">
         <div class="manga-image-section">
           <img 
-            v-if="getImageUrl(manga.image)"
-            :src="getImageUrl(manga.image)" 
+            v-if="getMangaImageUrl(manga.image)"
+            :src="getMangaImageUrl(manga.image)" 
             :alt="manga.titre"
             class="manga-poster"
             @error="hideImage"
@@ -154,6 +154,8 @@
 </template>
 
 <script setup>
+import { useImageUrl } from '~/composables/useImageUrl'
+
 // Get route parameter
 const route = useRoute()
 const mangaId = route.params.id
@@ -168,7 +170,7 @@ useHead({
 
 // API configuration
 const config = useRuntimeConfig()
-const API_BASE = config.public.apiBase || 'http://localhost:3001'
+const API_BASE = config.public.apiBase
 
 // Reactive data
 const manga = ref(null)
@@ -259,9 +261,11 @@ const formatRating = (rating) => {
   return parseFloat(rating).toFixed(1)
 }
 
-const getImageUrl = (imagePath) => {
+const { getImageUrl } = useImageUrl()
+
+const getMangaImageUrl = (imagePath) => {
   if (!imagePath) return null
-  return `/images/mangas/${imagePath}`
+  return getImageUrl(`manga/${imagePath}`)
 }
 
 const hideImage = (event) => {

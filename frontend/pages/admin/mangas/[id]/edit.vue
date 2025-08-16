@@ -434,7 +434,7 @@
                         class="business-card"
                         :class="{ 'selected': selectedBusiness?.id === business.id }"
                       >
-                        <div class="business-name">{{ business.nom }}</div>
+                        <div class="business-name">{{ business.denomination }}</div>
                         <div class="business-meta">
                           <span class="business-id">ID: {{ business.id }}</span>
                           <span class="business-type">{{ business.type || 'N/A' }}</span>
@@ -640,39 +640,39 @@
                       ✕
                     </div>
                   </div>
-                </div>
-
-                <!-- Autocomplete Results -->
-                <div v-if="relationSearchResults.length > 0 && showAutocomplete" class="autocomplete-dropdown">
-                  <div class="autocomplete-header">
-                    <span class="results-count">{{ relationSearchResults.length }} résultat{{ relationSearchResults.length > 1 ? 's' : '' }}</span>
-                    <span class="keyboard-hint">↑↓ pour naviguer, Entrée pour sélectionner</span>
-                  </div>
-                  <div class="autocomplete-results">
-                    <div 
-                      v-for="(content, index) in relationSearchResults" 
-                      :key="`${selectedRelationType}-${content.id}`"
-                      @click="selectRelationTarget(content)"
-                      @mouseenter="highlightedIndex = index"
-                      class="autocomplete-item"
-                      :class="{ 
-                        'selected': selectedRelationTarget?.id === content.id,
-                        'highlighted': index === highlightedIndex
-                      }"
-                    >
-                      <div class="autocomplete-image">
-                        <img 
-                          :src="content.image ? `/images/${selectedRelationType}s/${content.image}` : '/placeholder-anime.jpg'" 
-                          :alt="content.titre"
-                          class="autocomplete-thumbnail"
-                          @error="handleImageError"
-                        />
-                      </div>
-                      <div class="autocomplete-content">
-                        <div class="autocomplete-title">{{ content.titre }}</div>
-                        <div class="autocomplete-meta">
-                          <span class="content-id">ID: {{ content.id }}</span>
-                          <span v-if="content.annee" class="content-year">{{ content.annee }}</span>
+                  
+                  <!-- Autocomplete Results -->
+                  <div v-if="relationSearchResults.length > 0 && showAutocomplete" class="autocomplete-dropdown">
+                    <div class="autocomplete-header">
+                      <span class="results-count">{{ relationSearchResults.length }} résultat{{ relationSearchResults.length > 1 ? 's' : '' }}</span>
+                      <span class="keyboard-hint">↑↓ pour naviguer, Entrée pour sélectionner</span>
+                    </div>
+                    <div class="autocomplete-results">
+                      <div 
+                        v-for="(content, index) in relationSearchResults" 
+                        :key="`${selectedRelationType}-${content.id}`"
+                        @click="selectRelationTarget(content)"
+                        @mouseenter="highlightedIndex = index"
+                        class="autocomplete-item"
+                        :class="{ 
+                          'selected': selectedRelationTarget?.id === content.id,
+                          'highlighted': index === highlightedIndex
+                        }"
+                      >
+                        <div class="autocomplete-image">
+                          <img 
+                            :src="content.image ? getImageUrl(`${selectedRelationType}/${content.image}`) : '/placeholder-anime.jpg'" 
+                            :alt="content.titre"
+                            class="autocomplete-thumbnail"
+                            @error="handleImageError"
+                          />
+                        </div>
+                        <div class="autocomplete-content">
+                          <div class="autocomplete-title">{{ content.titre }}</div>
+                          <div class="autocomplete-meta">
+                            <span class="content-id">ID: {{ content.id }}</span>
+                            <span v-if="content.annee" class="content-year">{{ content.annee }}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -741,7 +741,7 @@
                     >
                       <div class="cover-image">
                         <img 
-                          :src="`/images/mangas/${cover.url_screen}`" 
+                          :src="getImageUrl(`manga/${cover.url_screen}`)" 
                           :alt="`Couverture ${cover.id_screen}`"
                           class="cover-thumbnail"
                           @error="handleCoverImageError"
@@ -952,6 +952,8 @@
 </template>
 
 <script setup>
+import { useImageUrl } from '~/composables/useImageUrl'
+
 // Layout
 definePageMeta({
   layout: 'admin',
@@ -974,7 +976,8 @@ const mangaId = route.params.id
 
 // API config
 const config = useRuntimeConfig()
-const API_BASE = config.public.apiBase || 'http://localhost:3001'
+const API_BASE = config.public.apiBase
+const { getImageUrl } = useImageUrl()
 
 // Reactive data
 const manga = ref(null)
@@ -1283,7 +1286,7 @@ const loadStaffList = async () => {
       headers: authStore.getAuthHeaders()
     })
     console.log('Staff response:', response)
-    staffList.value = Array.isArray(response.data) ? response.data : []
+    staffList.value = Array.isArray(response.staff) ? response.staff : []
     console.log('Staff list set to:', staffList.value)
   } catch (error) {
     console.error('Error loading staff:', error)
@@ -1427,10 +1430,10 @@ const loadRelationsList = async () => {
       headers: authStore.getAuthHeaders()
     })
     
-    relationsList.value = (response.data || []).map(relation => ({
+    relationsList.value = (response.relations || []).map(relation => ({
       id_relation: relation.id_relation,
       target_type: relation.id_anime ? 'anime' : 'manga',
-      target_title: relation.titre,
+      target_title: relation.anime_titre || relation.manga_titre,
       target_id: relation.id_anime || relation.id_manga,
       id_anime: relation.id_anime,
       id_manga: relation.id_manga
@@ -1557,15 +1560,14 @@ const addRelation = async () => {
   try {
     addingRelation.value = true
     
-    const relationData = {
-      target_type: selectedRelationType.value,
-      target_id: selectedRelationTarget.value.id
-    }
+    const requestBody = selectedRelationType.value === 'anime' 
+      ? { id_anime: selectedRelationTarget.value.id }
+      : { id_manga: selectedRelationTarget.value.id }
     
     await $fetch(`${API_BASE}/api/admin/mangas/${mangaId}/relations`, {
       method: 'POST',
       headers: authStore.getAuthHeaders(),
-      body: relationData
+      body: requestBody
     })
     
     // Clear selection
@@ -1613,7 +1615,7 @@ const loadCoversList = async () => {
       headers: authStore.getAuthHeaders()
     })
     
-    coversList.value = response.data || []
+    coversList.value = response.covers || []
     console.log('Covers loaded:', coversList.value)
   } catch (error) {
     console.error('Error loading covers:', error)
@@ -1794,10 +1796,14 @@ const loadTagCategories = async () => {
   try {
     const response = await $fetch(`${API_BASE}/api/tags`)
     
-    tagCategories.value = Object.keys(response.data).map(categoryName => ({
-      name: categoryName,
-      tags: response.data[categoryName]
-    }))
+    if (response && response.categories && Array.isArray(response.categories)) {
+      tagCategories.value = response.categories.map(category => ({
+        name: category.categorie,
+        tags: category.tags || []
+      }))
+    } else {
+      tagCategories.value = []
+    }
   } catch (error) {
     console.error('Load tag categories error:', error)
   }
@@ -1808,7 +1814,7 @@ const loadMangaTags = async () => {
   
   try {
     const response = await $fetch(`${API_BASE}/api/mangas/${mangaId}/tags`)
-    selectedTags.value = response.data || []
+    selectedTags.value = response.tags || []
   } catch (err) {
     console.error('Load manga tags error:', err)
   }
@@ -1864,7 +1870,7 @@ const getImageSrc = () => {
     if (formData.value.image.startsWith('http')) {
       return formData.value.image
     } else {
-      return `/images/mangas/${formData.value.image}`
+      return getImageUrl(`manga/${formData.value.image}`)
     }
   }
   return '/placeholder-manga.jpg'
@@ -1887,3 +1893,5 @@ const updateImagePreview = () => {
   imagePreview.value = formData.value.image
 }
 </script>
+
+<style scoped src="~/assets/css/admin-manga-edit.css"></style>

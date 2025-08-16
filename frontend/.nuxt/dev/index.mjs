@@ -648,7 +648,8 @@ const _inlineRuntimeConfig = {
     }
   },
   "public": {
-    "apiBase": "http://localhost:3001"
+    "apiBase": "http://localhost:3001",
+    "forumUrl": "http://localhost:8083"
   }
 };
 const envOptions = {

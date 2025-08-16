@@ -1,0 +1,30 @@
+DATABASE TABLE COMPARISON ANALYSIS
+================================================================================
+
+MySQL tables: 145
+PostgreSQL tables: 155
+Common tables: 142
+MySQL-only tables: 3
+PostgreSQL-only tables: 13
+
+TABLES MISSING IN POSTGRESQL (3 tables):
+------------------------------------------------------------
+- smf_calendar
+- smf_calendar_holidays
+- smf_log_activity
+
+POSTGRESQL-ONLY TABLES (13 tables):
+------------------------------------------------------------
+- ak_anime_screenshots
+- ak_password_reset_tokens
+- ak_refresh_tokens
+- ak_top_list_items
+- ak_top_lists
+- ak_user_anime_list
+- ak_user_manga_list
+- ak_users
+- doctrine_migration_versions
+- smf_member_logins
+- smf_moderator_groups
+- smf_user_alerts
+- smf_user_alerts_prefs

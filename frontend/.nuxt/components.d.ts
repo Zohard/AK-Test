@@ -15,8 +15,14 @@ interface _GlobalComponents {
       'AnimeCard': typeof import("../components/AnimeCard.vue")['default']
     'AnimeSearch': typeof import("../components/AnimeSearch.vue")['default']
     'ArticleCard': typeof import("../components/ArticleCard.vue")['default']
+    'BaseButton': typeof import("../components/BaseButton.vue")['default']
+    'ErrorState': typeof import("../components/ErrorState.vue")['default']
+    'FormField': typeof import("../components/FormField.vue")['default']
     'FormattedText': typeof import("../components/FormattedText.vue")['default']
     'HeroBanner': typeof import("../components/HeroBanner.vue")['default']
+    'LoadingState': typeof import("../components/LoadingState.vue")['default']
+    'PageHeader': typeof import("../components/PageHeader.vue")['default']
+    'TabNavigation': typeof import("../components/TabNavigation.vue")['default']
     'TheHeader': typeof import("../components/TheHeader.vue")['default']
     'ThemeToggle': typeof import("../components/ThemeToggle.vue")['default']
     'NuxtWelcome': typeof import("../node_modules/nuxt/dist/app/components/welcome.vue")['default']
@@ -46,8 +52,14 @@ interface _GlobalComponents {
       'LazyAnimeCard': LazyComponent<typeof import("../components/AnimeCard.vue")['default']>
     'LazyAnimeSearch': LazyComponent<typeof import("../components/AnimeSearch.vue")['default']>
     'LazyArticleCard': LazyComponent<typeof import("../components/ArticleCard.vue")['default']>
+    'LazyBaseButton': LazyComponent<typeof import("../components/BaseButton.vue")['default']>
+    'LazyErrorState': LazyComponent<typeof import("../components/ErrorState.vue")['default']>
+    'LazyFormField': LazyComponent<typeof import("../components/FormField.vue")['default']>
     'LazyFormattedText': LazyComponent<typeof import("../components/FormattedText.vue")['default']>
     'LazyHeroBanner': LazyComponent<typeof import("../components/HeroBanner.vue")['default']>
+    'LazyLoadingState': LazyComponent<typeof import("../components/LoadingState.vue")['default']>
+    'LazyPageHeader': LazyComponent<typeof import("../components/PageHeader.vue")['default']>
+    'LazyTabNavigation': LazyComponent<typeof import("../components/TabNavigation.vue")['default']>
     'LazyTheHeader': LazyComponent<typeof import("../components/TheHeader.vue")['default']>
     'LazyThemeToggle': LazyComponent<typeof import("../components/ThemeToggle.vue")['default']>
     'LazyNuxtWelcome': LazyComponent<typeof import("../node_modules/nuxt/dist/app/components/welcome.vue")['default']>
@@ -83,8 +95,14 @@ declare module 'vue' {
 export const AnimeCard: typeof import("../components/AnimeCard.vue")['default']
 export const AnimeSearch: typeof import("../components/AnimeSearch.vue")['default']
 export const ArticleCard: typeof import("../components/ArticleCard.vue")['default']
+export const BaseButton: typeof import("../components/BaseButton.vue")['default']
+export const ErrorState: typeof import("../components/ErrorState.vue")['default']
+export const FormField: typeof import("../components/FormField.vue")['default']
 export const FormattedText: typeof import("../components/FormattedText.vue")['default']
 export const HeroBanner: typeof import("../components/HeroBanner.vue")['default']
+export const LoadingState: typeof import("../components/LoadingState.vue")['default']
+export const PageHeader: typeof import("../components/PageHeader.vue")['default']
+export const TabNavigation: typeof import("../components/TabNavigation.vue")['default']
 export const TheHeader: typeof import("../components/TheHeader.vue")['default']
 export const ThemeToggle: typeof import("../components/ThemeToggle.vue")['default']
 export const NuxtWelcome: typeof import("../node_modules/nuxt/dist/app/components/welcome.vue")['default']
@@ -114,8 +132,14 @@ export const NuxtRouteAnnouncer: typeof import("../node_modules/nuxt/dist/app/co
 export const LazyAnimeCard: LazyComponent<typeof import("../components/AnimeCard.vue")['default']>
 export const LazyAnimeSearch: LazyComponent<typeof import("../components/AnimeSearch.vue")['default']>
 export const LazyArticleCard: LazyComponent<typeof import("../components/ArticleCard.vue")['default']>
+export const LazyBaseButton: LazyComponent<typeof import("../components/BaseButton.vue")['default']>
+export const LazyErrorState: LazyComponent<typeof import("../components/ErrorState.vue")['default']>
+export const LazyFormField: LazyComponent<typeof import("../components/FormField.vue")['default']>
 export const LazyFormattedText: LazyComponent<typeof import("../components/FormattedText.vue")['default']>
 export const LazyHeroBanner: LazyComponent<typeof import("../components/HeroBanner.vue")['default']>
+export const LazyLoadingState: LazyComponent<typeof import("../components/LoadingState.vue")['default']>
+export const LazyPageHeader: LazyComponent<typeof import("../components/PageHeader.vue")['default']>
+export const LazyTabNavigation: LazyComponent<typeof import("../components/TabNavigation.vue")['default']>
 export const LazyTheHeader: LazyComponent<typeof import("../components/TheHeader.vue")['default']>
 export const LazyThemeToggle: LazyComponent<typeof import("../components/ThemeToggle.vue")['default']>
 export const LazyNuxtWelcome: LazyComponent<typeof import("../node_modules/nuxt/dist/app/components/welcome.vue")['default']>

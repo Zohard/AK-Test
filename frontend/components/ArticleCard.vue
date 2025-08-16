@@ -65,18 +65,20 @@ const imageAndTitle = computed(() => {
   }
 })
 
+const { getImageUrlWithFallback, getDirectApiUrl } = useImageUrl()
+
 const getImageUrl = (imagePath, type) => {
   if (!imagePath) return null
   
   // Return appropriate path based on content type
   if (type === 'Manga') {
-    return `/images/mangas/${imagePath}`
+    return getDirectApiUrl(`images/manga/${imagePath}`)
   } else if (type === 'Anime') {
-    return `/images/animes/${imagePath}`
+    return getDirectApiUrl(`anime/${imagePath}`)
   }
   
   // Default fallback
-  return `/images/${imagePath}`
+  return getDirectApiUrl(`anime/${imagePath}`)
 }
 
 const hideImage = (event) => {

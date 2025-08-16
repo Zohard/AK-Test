@@ -80,7 +80,7 @@
               <div class="thumbnail-container">
                 <img
                   v-if="manga.image"
-                  :src="`/images/mangas/${manga.image}`"
+                  :src="getImageUrl(`images/manga/${manga.image}`)"
                   :alt="manga.titre"
                   class="manga-thumbnail"
                   @error="handleImageError"
@@ -231,6 +231,8 @@
 </template>
 
 <script setup>
+import { useImageUrl } from '~/composables/useImageUrl'
+
 // Layout
 definePageMeta({
   layout: 'admin'
@@ -244,10 +246,11 @@ useHead({
 // Auth check
 const authStore = useAuthStore()
 const { isAdmin } = storeToRefs(authStore)
+const { getImageUrl } = useImageUrl()
 
 // API config
 const config = useRuntimeConfig()
-const API_BASE = config.public.apiBase || 'http://localhost:3001'
+const API_BASE = config.public.apiBase
 
 // Reactive data
 const mangas = ref([])
@@ -425,7 +428,8 @@ const handleImageError = (event) => {
   event.target.dataset.fallback = 'true'
   
   // Try to use the placeholder image from public folder
-  const placeholderPath = '/images/mangas/placeholder-manga.jpg'
+  const { getImageUrl } = useImageUrl()
+  const placeholderPath = getImageUrl('manga/placeholder-manga.jpg')
   
   // Create a temporary image to test if placeholder exists
   const testImg = new Image()

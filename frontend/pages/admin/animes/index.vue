@@ -78,7 +78,7 @@
           <tr v-for="anime in animes" :key="anime.id_anime" class="table-row">
             <td class="image-cell">
               <img
-                :src="anime.image ? `/images/${anime.image}` : '/placeholder-anime.jpg'"
+                :src="getImageSource(anime)"
                 :alt="anime.titre"
                 class="anime-thumbnail"
                 @error="handleImageError"
@@ -94,8 +94,8 @@
             <td>{{ anime.nb_ep || '—' }}</td>
             <td>{{ anime.studio || '—' }}</td>
             <td class="rating-cell">
-              <div v-if="anime.moyenne_notes" class="rating">
-                <span class="rating-value">{{ anime.moyenne_notes.toFixed(1) }}</span>
+              <div v-if="anime.moyennenotes" class="rating">
+                <span class="rating-value">{{ Number(anime.moyennenotes).toFixed(1) }}</span>
                 <span class="rating-count">({{ anime.nb_reviews }})</span>
               </div>
               <span v-else class="no-rating">Pas de note</span>
@@ -251,7 +251,7 @@ const { isAdmin } = storeToRefs(authStore)
 
 // API config
 const config = useRuntimeConfig()
-const API_BASE = config.public.apiBase || 'http://localhost:3001'
+const API_BASE = config.public.apiBase
 
 // Reactive data
 const animes = ref([])
@@ -447,6 +447,27 @@ const closeModal = () => {
   showEditModal.value = false
   isEditing.value = false
   resetForm()
+}
+
+const { getDirectApiUrl } = useImageUrl()
+
+// Get image source with proper fallback handling
+const getImageSource = (anime) => {
+  if (!anime.image) {
+    return '/placeholder-anime.jpg'
+  }
+  
+  // Handle different image path formats
+  if (anime.image.startsWith('http')) {
+    // Full URL
+    return anime.image
+  } else if (anime.image.startsWith('/')) {
+    // Absolute path - use fallback routing
+    return getDirectApiUrl(anime.image.slice(1))
+  } else {
+    // Relative path - add anime directory
+    return getDirectApiUrl(`anime/${anime.image}`)
+  }
 }
 
 // Handle image error

@@ -23,6 +23,7 @@ build/
 dist/
 *.tgz
 *.tar.gz
+*.zip
 
 # Runtime data
 pids
@@ -76,6 +77,11 @@ frontend/public/images/
 *.sql
 *.sql.gz
 discourse_*.sql
+
+# Backup files
+backups/
+*.backup
+*backup*.zip
 
 # Nuxt build files
 .nuxt/

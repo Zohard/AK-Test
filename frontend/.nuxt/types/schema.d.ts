@@ -101,6 +101,8 @@ declare module 'nuxt/schema' {
   }
   interface PublicRuntimeConfig {
    apiBase: string,
+
+   forumUrl: string,
   }
 }
 declare module 'vue' {

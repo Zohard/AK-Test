@@ -81,10 +81,11 @@ const formatRating = (rating) => {
   return parseFloat(rating).toFixed(1)
 }
 
+const { getDirectApiUrl } = useImageUrl()
+
 const getImageUrl = (imagePath) => {
   if (!imagePath) return null
-  // Use the same image path as homepage
-  return `/images/${imagePath}`
+  return getDirectApiUrl(`anime/${imagePath}`)
 }
 
 const hideImage = (event) => {

@@ -1,26 +1,40 @@
 version: '3.8'
 services:
-  db:
-    image: mysql:8.0
-    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+  anime-kun-postgres:
+    image: postgres:15-alpine
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: anime_kun
+      POSTGRES_USER: anime_user
+      POSTGRES_PASSWORD: anime_password
+      POSTGRES_DB: anime_kun
     volumes:
-      - db_data:/var/lib/mysql
-      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - db_data:/var/lib/postgresql/data
+      # - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
     ports:
-      - "3306:3306"
+      - "5432:5432"
+    restart: unless-stopped
+
   api:
     build:
       context: .
       dockerfile: Dockerfile.api
     depends_on:
-      - db
+      - anime-kun-postgres
     ports:
       - "3001:3000"
     volumes:
       - ./api:/app
+      - uploaded_images:/app/uploads  # Use named volume for persistence
+      - /app/node_modules  # Prevent node_modules from being overwritten
+    environment:
+      - DB_HOST=anime-kun-postgres
+      - DB_USER=anime_user
+      - DB_PASSWORD=anime_password
+      - DB_NAME=anime_kun
+      - DB_PORT=5432
+      - PORT=3000
+      - NODE_ENV=development
+    restart: unless-stopped
+
   frontend:
     build:
       context: .
@@ -31,7 +45,28 @@ services:
       - "3000:3000"
     volumes:
       - ./frontend:/app
+      - /app/node_modules  # Prevent node_modules from being overwritten
+      - frontend_build:/app/build  # If you have a build directory to persist
     environment:
-      - API_BASE_URL=http://localhost:3001
+      - API_BASE_URL=http://api:3000
+      - CHOKIDAR_USEPOLLING=true  # For better file watching in Docker
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:4
+    ports:
+      - "8081:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=anime-kun-postgres
+      - ADMINER_DESIGN=pepa-linha
+    restart: unless-stopped
+    networks:
+      - default
+
 volumes:
   db_data:
+    driver: local
+  uploaded_images:  # Named volume for uploaded images
+    driver: local
+  frontend_build:  # Optional: for build artifacts
+    driver: local

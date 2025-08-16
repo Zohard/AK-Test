@@ -37,6 +37,7 @@ services:
       - DB_NAME=anime_kun
       - DB_PORT=5432
       - PORT=3000
+      - EXTERNAL_PORT=3001
       - FRONTEND_URL=http://localhost
     ports:
       - "3001:3000"

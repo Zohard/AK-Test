@@ -130,7 +130,7 @@ useHead({
 
 // API configuration
 const config = useRuntimeConfig()
-const API_BASE = config.public.apiBase || 'http://localhost:3001'
+const API_BASE = config.public.apiBase
 
 // Reactive data
 const credentials = ref({
@@ -196,7 +196,7 @@ const handleLogin = async () => {
       })
     })
     
-    if (response.success && response.token) {
+    if (response.token && response.user) {
       // Store authentication data
       const authStore = useAuthStore()
       await authStore.login(response.token, response.user)
