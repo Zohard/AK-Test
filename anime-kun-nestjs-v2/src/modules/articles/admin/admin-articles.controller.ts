@@ -134,23 +134,53 @@ export class AdminArticlesController {
     return this.articlesService.publish(id, publishDto, req.user.sub, req.user.isAdmin);
   }
 
-  @Patch(':id/feature')
+  @Get('featured')
   @UseGuards(ArticlePermissionsGuard)
   @CanPublishArticles()
-  @ApiOperation({ summary: 'Feature or unfeature an article on homepage' })
-  @ApiResponse({ status: 200, description: 'Article feature status updated' })
+  @ApiOperation({ summary: 'Get featured articles management' })
+  @ApiResponse({ status: 200, description: 'Featured articles retrieved successfully' })
+  getFeaturedManagement(@Query('limit') limit?: number) {
+    return this.articlesService.getFeaturedArticles(limit || 10);
+  }
+
+  @Post(':id/feature')
+  @UseGuards(ArticlePermissionsGuard)
+  @CanPublishArticles()
+  @ApiOperation({ summary: 'Feature an article on homepage' })
+  @ApiResponse({ status: 200, description: 'Article featured successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'Article not found' })
-  feature(
+  featureArticle(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { featured: boolean },
-    @Request() req,
+    @Body() body: { order?: number },
   ) {
-    const publishDto: PublishArticleDto = {
-      onindex: body.featured,
-    };
-    return this.articlesService.publish(id, publishDto, req.user.sub, req.user.isAdmin);
+    return this.articlesService.featureArticle(id, body.order);
+  }
+
+  @Delete(':id/feature')
+  @UseGuards(ArticlePermissionsGuard)
+  @CanPublishArticles()
+  @ApiOperation({ summary: 'Unfeature an article from homepage' })
+  @ApiResponse({ status: 200, description: 'Article unfeatured successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
+  @ApiResponse({ status: 404, description: 'Article not found' })
+  unfeatureArticle(@Param('id', ParseIntPipe) id: number) {
+    return this.articlesService.unfeatureArticle(id);
+  }
+
+  @Patch('featured/reorder')
+  @UseGuards(ArticlePermissionsGuard)
+  @CanPublishArticles()
+  @ApiOperation({ summary: 'Reorder featured articles' })
+  @ApiResponse({ status: 200, description: 'Featured articles reordered successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
+  reorderFeatured(
+    @Body() body: { articles: Array<{ articleId: number; order: number }> },
+  ) {
+    return this.articlesService.reorderFeaturedArticles(body.articles);
   }
 
   @Delete(':id')

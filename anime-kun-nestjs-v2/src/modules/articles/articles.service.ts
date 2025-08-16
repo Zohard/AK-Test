@@ -410,7 +410,8 @@ export class ArticlesService {
         (SELECT COUNT(*) FROM ak_webzine_articles WHERE statut = -1) as archived_articles,
         (SELECT COUNT(*) FROM ak_webzine_com WHERE moderation = 1) as approved_comments,
         (SELECT COUNT(*) FROM ak_webzine_com WHERE moderation = 0) as pending_comments,
-        (SELECT COUNT(*) FROM ak_webzine_categories) as categories_count
+        (SELECT COUNT(*) FROM ak_webzine_categories) as categories_count,
+        (SELECT COUNT(*) FROM ak_webzine_une WHERE actif = 1) as featured_articles
     `;
 
     const result = (stats as any[])[0];
@@ -422,6 +423,178 @@ export class ArticlesService {
       approved_comments: Number(result.approved_comments),
       pending_comments: Number(result.pending_comments),
       categories_count: Number(result.categories_count),
+      featured_articles: Number(result.featured_articles),
+    };
+  }
+
+  async getFeaturedArticles(limit: number = 5) {
+    const featured = await this.prisma.akWebzineUne.findMany({
+      where: { actif: 1 },
+      include: {
+        article: {
+          include: {
+            author: {
+              select: {
+                idMember: true,
+                memberName: true,
+                realName: true,
+              }
+            },
+            categories: {
+              include: {
+                category: true
+              }
+            },
+            _count: {
+              select: {
+                comments: { where: { moderation: 1 } },
+                images: true,
+              }
+            }
+          }
+        }
+      },
+      orderBy: { ordre: 'asc' },
+      take: limit,
+    });
+
+    return featured.map(item => ({
+      ...item.article,
+      featured: {
+        order: item.ordre,
+        dateAdded: item.dateAjout,
+      },
+      categories: item.article.categories.map(cat => cat.category),
+      commentCount: item.article._count.comments,
+      imageCount: item.article._count.images,
+      content: undefined, // Don't include full content in featured list
+      texte: undefined,
+      _count: undefined,
+    }));
+  }
+
+  async featureArticle(articleId: number, order?: number) {
+    // Check if article exists and is published
+    const article = await this.prisma.akWebzineArticle.findUnique({
+      where: { idArt: articleId }
+    });
+
+    if (!article) {
+      throw new NotFoundException('Article not found');
+    }
+
+    if (article.statut !== 1) {
+      throw new BadRequestException('Only published articles can be featured');
+    }
+
+    // Check if already featured
+    const existingFeature = await this.prisma.akWebzineUne.findFirst({
+      where: { idArticle: articleId, actif: 1 }
+    });
+
+    if (existingFeature) {
+      throw new BadRequestException('Article is already featured');
+    }
+
+    // Get next order if not provided
+    let featureOrder = order;
+    if (!featureOrder) {
+      const lastFeature = await this.prisma.akWebzineUne.findFirst({
+        where: { actif: 1 },
+        orderBy: { ordre: 'desc' },
+      });
+      featureOrder = (lastFeature?.ordre || 0) + 1;
+    }
+
+    // Get next ID
+    const lastFeatureItem = await this.prisma.akWebzineUne.findFirst({
+      orderBy: { idUne: 'desc' },
+    });
+    const nextId = (lastFeatureItem?.idUne || 0) + 1;
+
+    const featured = await this.prisma.akWebzineUne.create({
+      data: {
+        idUne: nextId,
+        idArticle: articleId,
+        ordre: featureOrder,
+        dateAjout: new Date(),
+        actif: 1,
+      },
+      include: {
+        article: {
+          select: {
+            idArt: true,
+            titre: true,
+            niceUrl: true,
+          }
+        }
+      }
+    });
+
+    return {
+      message: 'Article featured successfully',
+      featured,
+    };
+  }
+
+  async unfeatureArticle(articleId: number) {
+    const featured = await this.prisma.akWebzineUne.findFirst({
+      where: { idArticle: articleId, actif: 1 }
+    });
+
+    if (!featured) {
+      throw new NotFoundException('Article is not currently featured');
+    }
+
+    await this.prisma.akWebzineUne.update({
+      where: { idUne: featured.idUne },
+      data: { actif: 0 }
+    });
+
+    return {
+      message: 'Article unfeatured successfully',
+    };
+  }
+
+  async reorderFeaturedArticles(articleOrders: Array<{ articleId: number; order: number }>) {
+    const results: Array<{ articleId: number; status: string; message?: string }> = [];
+
+    for (const { articleId, order } of articleOrders) {
+      try {
+        const featured = await this.prisma.akWebzineUne.findFirst({
+          where: { idArticle: articleId, actif: 1 }
+        });
+
+        if (!featured) {
+          results.push({
+            articleId,
+            status: 'error',
+            message: 'Article is not featured'
+          });
+          continue;
+        }
+
+        await this.prisma.akWebzineUne.update({
+          where: { idUne: featured.idUne },
+          data: { ordre: order }
+        });
+
+        results.push({
+          articleId,
+          status: 'success'
+        });
+      } catch (error) {
+        results.push({
+          articleId,
+          status: 'error',
+          message: error.message
+        });
+      }
+    }
+
+    return {
+      message: 'Featured articles reordered',
+      results,
     };
   }
 

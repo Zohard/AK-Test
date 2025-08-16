@@ -291,17 +291,19 @@ model AkWebzineArticle {
   comments         AkWebzineComment[]
   images           AkWebzineImg[]
   contentRelations AkWebzineToFiche[]
+  featuredItems    AkWebzineUne[]
 
   @@map("ak_webzine_articles")
 }
 
 model AkWebzineCategory {
-  idCat    Int    @id @map("id_cat")
-  niceUrl  String? @map("nice_url") @db.VarChar(255)
-  nom      String? @db.VarChar(255)
+  idCat         Int    @id @map("id_cat")
+  niceUrl       String? @map("nice_url") @db.VarChar(255)
+  nom           String? @db.VarChar(255)
 
   // Relations
-  articles AkWebzineArt2Cat[]
+  articles      AkWebzineArt2Cat[]
+  subCategories AkWebzineSousCategory[]
 
   @@map("ak_webzine_categories")
 }
@@ -347,6 +349,31 @@ model AkWebzineImg {
   article AkWebzineArticle @relation(fields: [idArt], references: [idArt], onDelete: Cascade)
 
   @@map("ak_webzine_img")
+}
+
+model AkWebzineSousCategory {
+  idSousCat  Int    @id @map("id_sous_cat")
+  idCat      Int    @map("id_cat")
+  niceUrl    String? @map("nice_url") @db.VarChar(255)
+  nom        String? @db.VarChar(255)
+
+  // Relations
+  category   AkWebzineCategory @relation(fields: [idCat], references: [idCat], onDelete: Cascade)
+
+  @@map("ak_webzine_sous_categories")
+}
+
+model AkWebzineUne {
+  idUne     Int      @id @map("id_une")
+  idArticle Int      @map("id_article")
+  ordre     Int?     @default(0)
+  dateAjout DateTime @map("date_ajout") @db.Timestamp
+  actif     Int      @db.SmallInt @default(1)
+
+  // Relations
+  article   AkWebzineArticle @relation(fields: [idArticle], references: [idArt], onDelete: Cascade)
+
+  @@map("ak_webzine_une")
 }
 
 model AkWebzineToFiche {

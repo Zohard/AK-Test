@@ -52,10 +52,8 @@ export class ArticlesController {
   @Get('featured')
   @ApiOperation({ summary: 'Get featured articles' })
   @ApiResponse({ status: 200, description: 'Featured articles retrieved successfully' })
-  getFeatured(@Query() query: ArticleQueryDto) {
-    query.status = 'published';
-    query.onindex = true;
-    return this.articlesService.findAll(query);
+  getFeatured(@Query('limit') limit?: number) {
+    return this.articlesService.getFeaturedArticles(limit || 5);
   }
 
   @Get('category/:categoryId')
