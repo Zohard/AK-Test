@@ -128,7 +128,6 @@ export class AnimesController {
     return this.animesService.autocomplete(query, exclude, parsedLimit);
   }
 
-
   @Get(':id/tags')
   @ApiOperation({ summary: 'Tags pour un anime spécifique' })
   @ApiParam({ name: 'id', description: "ID de l'anime", type: 'number' })
@@ -145,6 +144,15 @@ export class AnimesController {
   @ApiResponse({ status: 404, description: 'Anime introuvable' })
   async getAnimeRelations(@Param('id', ParseIntPipe) id: number) {
     return this.animesService.getAnimeRelations(id);
+  }
+
+  @Get(':id/staff')
+  @ApiOperation({ summary: 'Staff et équipe technique pour un anime spécifique' })
+  @ApiParam({ name: 'id', description: "ID de l'anime", type: 'number' })
+  @ApiResponse({ status: 200, description: 'Liste du staff' })
+  @ApiResponse({ status: 404, description: 'Anime introuvable' })
+  async getAnimeStaff(@Param('id', ParseIntPipe) id: number) {
+    return this.animesService.getAnimeStaff(id);
   }
 
   @Get(':id')

@@ -39,23 +39,19 @@ export class ReviewsController {
     return this.reviewsService.findAll(query);
   }
 
-  @Post()
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Créer une nouvelle critique' })
-  @ApiResponse({ status: 201, description: 'Critique créée avec succès' })
-  @ApiResponse({
-    status: 400,
-    description: 'Données invalides ou critique déjà existante',
-  })
-  async create(@Body() createReviewDto: CreateReviewDto, @Request() req) {
-    return this.reviewsService.create(createReviewDto, req.user.id);
+  @Get('count')
+  @ApiOperation({ summary: 'Nombre total de critiques' })
+  @ApiResponse({ status: 200, description: 'Nombre de critiques' })
+  async getReviewsCount() {
+    return this.reviewsService.getReviewsCount();
   }
 
   @Get('top')
   @ApiOperation({ summary: 'Top critiques les plus utiles' })
   @ApiResponse({ status: 200, description: 'Liste des meilleures critiques' })
-  async getTopReviews(@Query('limit', new ParseIntPipe({ optional: true })) limit = 10) {
+  async getTopReviews(
+    @Query('limit', new ParseIntPipe({ optional: true })) limit = 10,
+  ) {
     return this.reviewsService.getTopReviews(limit);
   }
 
@@ -84,6 +80,19 @@ export class ReviewsController {
   @ApiResponse({ status: 200, description: 'Liste de mes critiques' })
   async getMyReviews(@Request() req, @Query('limit', ParseIntPipe) limit = 20) {
     return this.reviewsService.getUserReviews(req.user.id, limit);
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Créer une nouvelle critique' })
+  @ApiResponse({ status: 201, description: 'Critique créée avec succès' })
+  @ApiResponse({
+    status: 400,
+    description: 'Données invalides ou critique déjà existante',
+  })
+  async create(@Body() createReviewDto: CreateReviewDto, @Request() req) {
+    return this.reviewsService.create(createReviewDto, req.user.id);
   }
 
   @Get(':id')
