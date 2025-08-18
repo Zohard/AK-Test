@@ -104,6 +104,15 @@ export class MangasController {
     return this.mangasService.getMangaTags(id);
   }
 
+  @Get(':id/staff')
+  @ApiOperation({ summary: 'Staff et équipe technique pour un manga spécifique' })
+  @ApiParam({ name: 'id', description: 'ID du manga', type: 'number' })
+  @ApiResponse({ status: 200, description: 'Liste du staff' })
+  @ApiResponse({ status: 404, description: 'Manga introuvable' })
+  async getMangaStaff(@Param('id', ParseIntPipe) id: number) {
+    return this.mangasService.getMangaStaff(id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Récupérer un manga par ID' })
   @ApiParam({ name: 'id', description: 'ID du manga', type: 'number' })

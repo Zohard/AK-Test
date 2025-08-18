@@ -1,0 +1,35 @@
+{
+  "name": "anime-kun-frontendv2",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "test": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@nuxt/devtools": "latest",
+    "@playwright/test": "^1.40.0",
+    "@vue/test-utils": "^2.4.0",
+    "nuxt": "^3.8.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0",
+    "vue-tsc": "^2.2.10"
+  },
+  "dependencies": {
+    "@headlessui/vue": "^1.7.16",
+    "@heroicons/vue": "^2.0.18",
+    "@nuxtjs/color-mode": "^3.3.0",
+    "@nuxtjs/tailwindcss": "^6.8.4",
+    "@pinia/nuxt": "^0.11.2",
+    "@vueuse/core": "^10.5.0",
+    "@vueuse/nuxt": "^10.5.0",
+    "axios": "^1.6.7",
+    "pinia": "^3.0.3",
+    "vue": "^3.5.18"
+  }
+}

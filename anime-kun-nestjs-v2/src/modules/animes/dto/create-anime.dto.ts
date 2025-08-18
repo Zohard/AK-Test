@@ -51,7 +51,6 @@ export class CreateAnimeDto {
   @IsUrl()
   image?: string;
 
-
   @ApiPropertyOptional({
     description: "Nombre d'épisodes",
     example: 25,
@@ -76,8 +75,6 @@ export class CreateAnimeDto {
   @IsOptional()
   @IsString()
   realisateur?: string;
-
-
 
   @ApiPropertyOptional({
     description: 'Statut (0 = en attente, 1 = validé, 2 = refusé)',

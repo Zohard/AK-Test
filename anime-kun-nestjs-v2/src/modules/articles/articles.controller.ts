@@ -13,10 +13,19 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ArticlePermissionsGuard } from './guards/article-permissions.guard';
-import { CanWriteArticles, CanEditArticles, CanPublishArticles } from './decorators/article-permissions.decorator';
+import {
+  CanWriteArticles,
+  CanEditArticles,
+  CanPublishArticles,
+} from './decorators/article-permissions.decorator';
 import { ArticlesService } from './articles.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
@@ -51,7 +60,10 @@ export class ArticlesController {
 
   @Get('featured')
   @ApiOperation({ summary: 'Get featured articles' })
-  @ApiResponse({ status: 200, description: 'Featured articles retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Featured articles retrieved successfully',
+  })
   getFeatured(@Query('limit') limit?: number) {
     return this.articlesService.getFeaturedArticles(limit || 5);
   }
@@ -82,7 +94,10 @@ export class ArticlesController {
 
   @Get('search')
   @ApiOperation({ summary: 'Search articles' })
-  @ApiResponse({ status: 200, description: 'Search results retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Search results retrieved successfully',
+  })
   search(@Query() query: ArticleQueryDto) {
     query.status = 'published';
     return this.articlesService.findAll(query);
@@ -118,7 +133,12 @@ export class ArticlesController {
     @Body() updateArticleDto: UpdateArticleDto,
     @Request() req,
   ) {
-    return this.articlesService.update(id, updateArticleDto, req.user.sub, req.user.isAdmin);
+    return this.articlesService.update(
+      id,
+      updateArticleDto,
+      req.user.sub,
+      req.user.isAdmin,
+    );
   }
 
   @Patch(':id/publish')
@@ -126,7 +146,10 @@ export class ArticlesController {
   @CanPublishArticles()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Publish or unpublish an article' })
-  @ApiResponse({ status: 200, description: 'Article publication status updated' })
+  @ApiResponse({
+    status: 200,
+    description: 'Article publication status updated',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'Article not found' })
@@ -135,7 +158,12 @@ export class ArticlesController {
     @Body() publishDto: PublishArticleDto,
     @Request() req,
   ) {
-    return this.articlesService.publish(id, publishDto, req.user.sub, req.user.isAdmin);
+    return this.articlesService.publish(
+      id,
+      publishDto,
+      req.user.sub,
+      req.user.isAdmin,
+    );
   }
 
   @Delete(':id')
@@ -158,6 +186,8 @@ export class ArticlesController {
   trackView(@Param('id', ParseIntPipe) id: number) {
     // This endpoint just increments the view counter
     // The actual increment happens in getById method
-    return this.articlesService.getById(id, false).then(() => ({ success: true }));
+    return this.articlesService
+      .getById(id, false)
+      .then(() => ({ success: true }));
   }
 }

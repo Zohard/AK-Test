@@ -1,15 +1,30 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../shared/services/prisma.service';
 import { ContentAdminQueryDto } from './dto/content-admin-query.dto';
 import { BulkActionDto } from './dto/bulk-action.dto';
-import { CreateContentRelationshipDto, UpdateContentRelationshipDto } from './dto/content-relationship.dto';
+import {
+  CreateContentRelationshipDto,
+  UpdateContentRelationshipDto,
+} from './dto/content-relationship.dto';
 
 @Injectable()
 export class AdminContentService {
   constructor(private prisma: PrismaService) {}
 
   async getAllContent(query: ContentAdminQueryDto) {
-    const { page = 1, limit = 20, search, status, type, sort = 'date_ajout', order = 'DESC' } = query;
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      status,
+      type,
+      sort = 'date_ajout',
+      order = 'DESC',
+    } = query;
     const offset = (page - 1) * limit;
 
     // Determine which tables to query based on type filter
@@ -25,16 +40,16 @@ export class AdminContentService {
           status: 'statut',
           dateAdd: 'date_ajout',
           reviews: 'nb_reviews',
-          rating: 'moyennenotes'
+          rating: 'moyennenotes',
         },
         manga: {
           table: 'ak_mangas',
-          id: 'id_manga', 
+          id: 'id_manga',
           title: 'titre',
           status: 'statut',
           dateAdd: 'date_ajout',
           reviews: 'nb_reviews',
-          rating: 'moyennenotes'
+          rating: 'moyennenotes',
         },
         business: {
           table: 'ak_business',
@@ -43,8 +58,8 @@ export class AdminContentService {
           status: 'statut',
           dateAdd: 'date_ajout',
           reviews: '0 as nb_reviews',
-          rating: '0 as moyennenotes'
-        }
+          rating: '0 as moyennenotes',
+        },
       };
 
       const config = columnMap[contentType];
@@ -67,8 +82,11 @@ export class AdminContentService {
         paramIndex++;
       }
 
-      const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-      
+      const whereClause =
+        whereConditions.length > 0
+          ? `WHERE ${whereConditions.join(' AND ')}`
+          : '';
+
       // Get content for this type
       const contentQuery = `
         SELECT 
@@ -88,7 +106,10 @@ export class AdminContentService {
       params.push(limit, offset);
 
       try {
-        const content = await this.prisma.$queryRawUnsafe(contentQuery, ...params);
+        const content = await this.prisma.$queryRawUnsafe(
+          contentQuery,
+          ...params,
+        );
         results.push(...(content as any[]));
       } catch (error) {
         console.error(`Error querying ${contentType}:`, error);
@@ -118,8 +139,8 @@ export class AdminContentService {
         totalPages,
         totalItems: total,
         hasNext: page < totalPages,
-        hasPrevious: page > 1
-      }
+        hasPrevious: page > 1,
+      },
     };
   }
 
@@ -127,16 +148,16 @@ export class AdminContentService {
     const columnMap = {
       anime: {
         table: 'ak_animes',
-        id: 'id_anime'
+        id: 'id_anime',
       },
       manga: {
         table: 'ak_mangas',
-        id: 'id_manga'
+        id: 'id_manga',
       },
       business: {
         table: 'ak_business',
-        id: 'id_business'
-      }
+        id: 'id_business',
+      },
     };
 
     const config = columnMap[type];
@@ -146,7 +167,7 @@ export class AdminContentService {
 
     const content = await this.prisma.$queryRawUnsafe(
       `SELECT * FROM ${config.table} WHERE ${config.id} = $1`,
-      id
+      id,
     );
 
     if (!content || (content as any[]).length === 0) {
@@ -160,7 +181,7 @@ export class AdminContentService {
       // Get screenshots/covers using id_titre column
       const media = await this.prisma.$queryRawUnsafe(
         `SELECT * FROM ak_screenshots WHERE id_titre = $1`,
-        id
+        id,
       );
       result.media = media;
 
@@ -180,24 +201,29 @@ export class AdminContentService {
     return result;
   }
 
-  async updateContentStatus(id: number, type: string, status: number, adminId: number) {
+  async updateContentStatus(
+    id: number,
+    type: string,
+    status: number,
+    adminId: number,
+  ) {
     const columnMap = {
       anime: {
         table: 'ak_animes',
-        id: 'id_anime'
+        id: 'id_anime',
       },
       manga: {
         table: 'ak_mangas',
-        id: 'id_manga'
+        id: 'id_manga',
       },
       business: {
         table: 'ak_business',
-        id: 'id_business'
+        id: 'id_business',
       },
       article: {
         table: 'ak_webzine_articles',
-        id: 'id'
-      }
+        id: 'id',
+      },
     };
 
     const config = columnMap[type];
@@ -208,7 +234,7 @@ export class AdminContentService {
     await this.prisma.$queryRawUnsafe(
       `UPDATE ${config.table} SET statut = $1 WHERE ${config.id} = $2`,
       status,
-      id
+      id,
     );
 
     // Log admin action
@@ -221,20 +247,20 @@ export class AdminContentService {
     const columnMap = {
       anime: {
         table: 'ak_animes',
-        id: 'id_anime'
+        id: 'id_anime',
       },
       manga: {
         table: 'ak_mangas',
-        id: 'id_manga'
+        id: 'id_manga',
       },
       business: {
         table: 'ak_business',
-        id: 'id_business'
+        id: 'id_business',
       },
       article: {
         table: 'ak_webzine_articles',
-        id: 'id'
-      }
+        id: 'id',
+      },
     };
 
     const config = columnMap[type];
@@ -254,41 +280,42 @@ export class AdminContentService {
       const reviewIdColumn = type === 'anime' ? 'id_anime' : 'id_manga';
       await this.prisma.$queryRawUnsafe(
         `DELETE FROM ak_critique WHERE ${reviewIdColumn} = $1`,
-        id
+        id,
       );
 
       // Delete screenshots/covers
       await this.prisma.$queryRawUnsafe(
         `DELETE FROM ak_screenshots WHERE id_titre = $1`,
-        id
+        id,
       );
 
       // Delete relationships
       const idColumn = type === 'anime' ? 'id_anime' : 'id_manga';
       await this.prisma.$queryRawUnsafe(
         `DELETE FROM ak_fiche_to_fiche WHERE ${idColumn} = $1`,
-        id
+        id,
       );
 
       // Delete business relationships
-      const staffTable = type === 'anime' ? 'ak_business_to_animes' : 'ak_business_to_mangas';
+      const staffTable =
+        type === 'anime' ? 'ak_business_to_animes' : 'ak_business_to_mangas';
       await this.prisma.$queryRawUnsafe(
         `DELETE FROM ${staffTable} WHERE ${idColumn} = $1`,
-        id
+        id,
       );
 
       // Delete tags
       await this.prisma.$queryRawUnsafe(
         `DELETE FROM ak_tag2fiche WHERE id_fiche = $1 AND type = $2`,
         id,
-        type
+        type,
       );
     }
 
     // Delete the main content
     await this.prisma.$queryRawUnsafe(
       `DELETE FROM ${config.table} WHERE ${config.id} = $1`,
-      id
+      id,
     );
 
     // Log admin action
@@ -299,7 +326,7 @@ export class AdminContentService {
 
   async performBulkAction(bulkAction: BulkActionDto, adminId: number) {
     const { ids, action, contentType } = bulkAction;
-    const results: Array<{id: number, status: string, message: string}> = [];
+    const results: Array<{ id: number; status: string; message: string }> = [];
 
     for (const id of ids) {
       try {
@@ -320,17 +347,17 @@ export class AdminContentService {
             results.push({ id, status: 'error', message: 'Invalid action' });
         }
       } catch (error) {
-        results.push({ 
-          id, 
-          status: 'error', 
-          message: error.message || 'Unknown error' 
+        results.push({
+          id,
+          status: 'error',
+          message: error.message || 'Unknown error',
         });
       }
     }
 
     return {
       message: 'Bulk action completed',
-      results
+      results,
     };
   }
 
@@ -351,16 +378,23 @@ export class AdminContentService {
     return relationships;
   }
 
-  async createContentRelationship(id: number, type: string, relationshipDto: CreateContentRelationshipDto) {
-    const { related_id, related_type, relation_type, description } = relationshipDto;
+  async createContentRelationship(
+    id: number,
+    type: string,
+    relationshipDto: CreateContentRelationshipDto,
+  ) {
+    const { related_id, related_type, relation_type, description } =
+      relationshipDto;
 
     // Check if content exists
     await this.getContentById(id, type);
     await this.getContentById(related_id, related_type);
 
     // Create relationship
-    const animeId = type === 'anime' ? id : (related_type === 'anime' ? related_id : null);
-    const mangaId = type === 'manga' ? id : (related_type === 'manga' ? related_id : null);
+    const animeId =
+      type === 'anime' ? id : related_type === 'anime' ? related_id : null;
+    const mangaId =
+      type === 'manga' ? id : related_type === 'manga' ? related_id : null;
     const relatedAnimeId = related_type === 'anime' ? related_id : null;
     const relatedMangaId = related_type === 'manga' ? related_id : null;
 
@@ -394,10 +428,12 @@ export class AdminContentService {
   }
 
   async getContentStaff(id: number, type: string) {
-    const staffTable = type === 'anime' ? 'ak_business_to_animes' : 'ak_business_to_mangas';
+    const staffTable =
+      type === 'anime' ? 'ak_business_to_animes' : 'ak_business_to_mangas';
     const idColumn = type === 'anime' ? 'id_anime' : 'id_manga';
-    
-    const staff = await this.prisma.$queryRawUnsafe(`
+
+    const staff = await this.prisma.$queryRawUnsafe(
+      `
       SELECT 
         bs.*,
         b.denomination as nom,
@@ -406,31 +442,49 @@ export class AdminContentService {
       FROM ${staffTable} bs
       JOIN ak_business b ON bs.id_business = b.id_business
       WHERE bs.${idColumn} = $1
-    `, id);
+    `,
+      id,
+    );
 
     return staff;
   }
 
-  async addContentStaff(id: number, type: string, businessId: number, role?: string) {
-    const staffTable = type === 'anime' ? 'ak_business_to_animes' : 'ak_business_to_mangas';
+  async addContentStaff(
+    id: number,
+    type: string,
+    businessId: number,
+    role?: string,
+  ) {
+    const staffTable =
+      type === 'anime' ? 'ak_business_to_animes' : 'ak_business_to_mangas';
     const idColumn = type === 'anime' ? 'id_anime' : 'id_manga';
-    
-    await this.prisma.$queryRawUnsafe(`
+
+    await this.prisma.$queryRawUnsafe(
+      `
       INSERT INTO ${staffTable} (${idColumn}, id_business, type)
       VALUES ($1, $2, $3)
-    `, id, businessId, role || null);
+    `,
+      id,
+      businessId,
+      role || null,
+    );
 
     return { message: 'Staff member added successfully' };
   }
 
   async removeContentStaff(id: number, type: string, businessId: number) {
-    const staffTable = type === 'anime' ? 'ak_business_to_animes' : 'ak_business_to_mangas';
+    const staffTable =
+      type === 'anime' ? 'ak_business_to_animes' : 'ak_business_to_mangas';
     const idColumn = type === 'anime' ? 'id_anime' : 'id_manga';
-    
-    await this.prisma.$queryRawUnsafe(`
+
+    await this.prisma.$queryRawUnsafe(
+      `
       DELETE FROM ${staffTable} 
       WHERE ${idColumn} = $1 AND id_business = $2
-    `, id, businessId);
+    `,
+      id,
+      businessId,
+    );
 
     return { message: 'Staff member removed successfully' };
   }
@@ -481,7 +535,7 @@ export class AdminContentService {
     `;
 
     const result = (stats as any[])[0];
-    
+
     // Convert BigInt values to regular numbers for JSON serialization
     return {
       active_animes: Number(result.active_animes),
@@ -490,7 +544,7 @@ export class AdminContentService {
       inactive_mangas: Number(result.inactive_mangas),
       active_business: Number(result.active_business),
       active_articles: Number(result.active_articles),
-      pending_reviews: Number(result.pending_reviews)
+      pending_reviews: Number(result.pending_reviews),
     };
   }
 }

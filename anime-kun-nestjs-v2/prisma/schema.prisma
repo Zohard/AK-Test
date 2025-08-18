@@ -125,23 +125,44 @@ model AkAnimesEpisode {
 
 // Mangas
 model AkManga {
-  idManga      Int       @id @map("id_manga")
-  niceUrl      String?   @map("nice_url") @db.VarChar(255)
-  titre        String    @db.Text
-  auteur       String?   @db.Text
-  annee        String?   @db.VarChar(4)
-  nbVolumes    String?   @map("nb_volumes") @db.VarChar(255)
-  image        String?   @db.VarChar(255)
-  nbReviews    Int?      @default(0) @map("nb_reviews")
-  moyenneNotes Float?    @default(0) @map("moyennenotes") @db.Real
-  dateAjout    DateTime? @map("date_ajout") @db.Timestamptz
-  synopsis     String?   @db.Text
-  statut       Int       @default(0)
-  editeur      String?   @db.VarChar(255)
+  idManga              Int       @id @map("id_manga")
+  niceUrl              String?   @map("nice_url") @db.VarChar(255)
+  titre                String    @db.Text
+  auteur               String?   @db.Text
+  annee                String?   @db.VarChar(4)
+  origine              String?   @db.VarChar(255)
+  titreOrig            String?   @map("titre_orig") @db.Text
+  titreFr              String?   @map("titre_fr") @db.Text
+  titresAlternatifs    String?   @map("titres_alternatifs") @db.Text
+  licence              Int?      @default(0)
+  nbVolumes            String?   @map("nb_volumes") @db.VarChar(255)
+  nbVol                Int?      @map("nb_vol")
+  statutVol            String?   @map("statut_vol") @db.VarChar(255)
+  synopsis             String?   @db.Text
+  image                String?   @db.VarChar(255)
+  editeur              String?   @db.VarChar(255)
+  isbn                 String?   @db.VarChar(255)
+  precisions           String?   @db.Text
+  tags                 String?   @db.Text
+  nbClics              Int?      @default(0) @map("nb_clics")
+  nbClicsDay           Int?      @default(0) @map("nb_clics_day")
+  nbClicsWeek          Int?      @default(0) @map("nb_clics_week")
+  nbClicsMonth         Int?      @default(0) @map("nb_clics_month")
+  nbReviews            Int?      @default(0) @map("nb_reviews")
+  label                Int?      @default(0)
+  moyenneNotes         Float?    @default(0) @map("moyennenotes") @db.Real
+  lienForum            Int?      @default(0) @map("lienforum")
+  statut               Int       @default(0)
+  ficheComplete        Int?      @default(0) @map("fiche_complete")
+  dateAjout            DateTime? @map("date_ajout") @db.Timestamptz
+  dateModification     Int?      @map("date_modification")
+  latestCache          Int?      @map("latest_cache")
+  classementPopularite Int?      @map("classement_popularite")
+  variationPopularite  String?   @map("variation_popularite") @db.Text
 
   // Relations
-  reviews      AkCritique[]
-  businessRelations AkBusinessToManga[]
+  reviews              AkCritique[]
+  businessRelations    AkBusinessToManga[]
 
   @@map("ak_mangas")
 }
@@ -166,7 +187,7 @@ model AkBusiness {
   statut                Int       @default(1)
   dateAjout             DateTime? @map("date_ajout") @db.Timestamptz
   dateModification      Int?      @map("date_modification")
-  latestCache           String?   @map("latest_cache")
+  latestCache           Int?      @map("latest_cache")
 
   // Relations
   animeRelations        AkBusinessToAnime[] @relation("BusinessToAnime")

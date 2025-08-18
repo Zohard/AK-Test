@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../shared/services/prisma.service';
 import sharp from 'sharp';
 import * as path from 'path';
@@ -11,23 +15,25 @@ export class MediaService {
   private readonly uploadPath = './uploads';
   private readonly allowedMimeTypes = [
     'image/jpeg',
-    'image/jpg', 
+    'image/jpg',
     'image/png',
     'image/webp',
-    'image/gif'
+    'image/gif',
   ];
 
   async uploadImage(
     file: Express.Multer.File,
     type: 'anime' | 'manga' | 'avatar' | 'cover',
-    relatedId?: number
+    relatedId?: number,
   ) {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
 
     if (!this.allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException('Invalid file type. Only images are allowed.');
+      throw new BadRequestException(
+        'Invalid file type. Only images are allowed.',
+      );
     }
 
     // Ensure upload directory exists
@@ -57,7 +63,7 @@ export class MediaService {
         size: processedImage.length,
         type,
         url: `/uploads/${filename}`,
-        relatedId
+        relatedId,
       };
     } catch (error) {
       // Clean up file if database insert fails
@@ -93,7 +99,7 @@ export class MediaService {
       relatedId: Number(result.related_id),
       type: this.getTypeName(result.type),
       uploadDate: result.upload_date,
-      url: `/uploads/${result.filename}`
+      url: `/uploads/${result.filename}`,
     };
   }
 
@@ -109,17 +115,17 @@ export class MediaService {
       ORDER BY upload_date DESC
     `;
 
-    return (media as any[]).map(item => ({
+    return (media as any[]).map((item) => ({
       id: Number(item.id),
       filename: item.filename,
       uploadDate: item.upload_date,
-      url: `/uploads/${item.filename}`
+      url: `/uploads/${item.filename}`,
     }));
   }
 
   async deleteMedia(id: number, userId: number) {
     const media = await this.getMediaById(id);
-    
+
     // Delete file from filesystem
     const filePath = path.join(this.uploadPath, media.filename);
     try {
@@ -141,29 +147,30 @@ export class MediaService {
 
     // Get image metadata
     const metadata = await processor.metadata();
-    
+
     // Define size constraints based on type
     const sizeConstraints = {
       avatar: { width: 150, height: 150 },
       cover: { width: 400, height: 600 },
       anime: { width: 800, height: 600 },
-      manga: { width: 400, height: 600 }
+      manga: { width: 400, height: 600 },
     };
 
     const constraints = sizeConstraints[type] || sizeConstraints.anime;
 
     // Resize if image is larger than constraints
-    if (metadata.width > constraints.width || metadata.height > constraints.height) {
+    if (
+      metadata.width > constraints.width ||
+      metadata.height > constraints.height
+    ) {
       processor = processor.resize(constraints.width, constraints.height, {
         fit: 'inside',
-        withoutEnlargement: true
+        withoutEnlargement: true,
       });
     }
 
     // Optimize and convert to WebP for better compression
-    return processor
-      .webp({ quality: 85 })
-      .toBuffer();
+    return processor.webp({ quality: 85 }).toBuffer();
   }
 
   private async ensureUploadDirectory() {
@@ -176,10 +183,10 @@ export class MediaService {
 
   private getTypeId(type: string): number {
     const typeMap = {
-      'anime': 1,
-      'manga': 2,
-      'avatar': 3,
-      'cover': 4
+      anime: 1,
+      manga: 2,
+      avatar: 3,
+      cover: 4,
     };
     return typeMap[type] || 1;
   }
@@ -187,9 +194,9 @@ export class MediaService {
   private getTypeName(typeId: number): string {
     const typeMap = {
       1: 'anime',
-      2: 'manga', 
+      2: 'manga',
       3: 'avatar',
-      4: 'cover'
+      4: 'cover',
     };
     return typeMap[typeId] || 'anime';
   }
@@ -205,10 +212,58 @@ export class MediaService {
       ORDER BY type
     `;
 
-    return (stats as any[]).map(stat => ({
+    return (stats as any[]).map((stat) => ({
       type: this.getTypeName(stat.type),
       count: Number(stat.count),
-      latestUpload: stat.latest_upload
+      latestUpload: stat.latest_upload,
     }));
+  }
+
+  async serveImage(type: string, filename: string) {
+    // For backwards compatibility, try to find in type-specific directory first
+    let filePath = path.join(this.uploadPath, type, filename);
+
+    try {
+      await fs.access(filePath);
+    } catch {
+      // If not found in type directory, try root uploads directory
+      filePath = path.join(this.uploadPath, filename);
+      try {
+        await fs.access(filePath);
+      } catch {
+        throw new NotFoundException('Image not found');
+      }
+    }
+
+    const buffer = await fs.readFile(filePath);
+    const ext = path.extname(filename).toLowerCase();
+
+    // Determine content type
+    let contentType = 'image/jpeg'; // default
+    switch (ext) {
+      case '.png':
+        contentType = 'image/png';
+        break;
+      case '.gif':
+        contentType = 'image/gif';
+        break;
+      case '.webp':
+        contentType = 'image/webp';
+        break;
+      case '.jpg':
+      case '.jpeg':
+        contentType = 'image/jpeg';
+        break;
+    }
+
+    // Generate ETag for caching
+    const crypto = require('crypto');
+    const etag = crypto.createHash('md5').update(buffer).digest('hex');
+
+    return {
+      buffer,
+      contentType,
+      etag,
+    };
   }
 }

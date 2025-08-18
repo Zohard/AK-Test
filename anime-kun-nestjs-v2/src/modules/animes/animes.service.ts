@@ -119,17 +119,16 @@ export class AnimesService extends BaseContentService<
       ];
     }
 
-
     if (studio) {
       where.businessRelations = {
         some: {
           type: {
-            in: ['Studio d\'animation', 'Studio d\'animation (sous-traitance)']
+            in: ["Studio d'animation", "Studio d'animation (sous-traitance)"],
           },
           business: {
-            denomination: { contains: studio, mode: 'insensitive' }
-          }
-        }
+            denomination: { contains: studio, mode: 'insensitive' },
+          },
+        },
       };
     }
 
@@ -332,12 +331,12 @@ export class AnimesService extends BaseContentService<
 
   async getRandomAnime() {
     // Get random anime using raw SQL for better performance
-    const randomAnime = (await this.prisma.$queryRaw`
-      SELECT * FROM ak_animes 
+    const randomAnime = await this.prisma.$queryRaw<Array<{ id_anime: number }>>`
+      SELECT id_anime FROM ak_animes 
       WHERE statut = 1 
       ORDER BY RANDOM() 
       LIMIT 1
-    `) as any[];
+    `;
 
     if (randomAnime.length === 0) {
       throw new NotFoundException('Aucun anime disponible');
@@ -357,7 +356,6 @@ export class AnimesService extends BaseContentService<
     };
   }
 
-
   async getAnimeTags(id: number) {
     return this.getTags(id, 'anime');
   }
@@ -376,16 +374,70 @@ export class AnimesService extends BaseContentService<
     }
 
     // Get relations using raw SQL for now
-    const relations = (await this.prisma.$queryRaw`
+    const relations = await this.prisma.$queryRaw`
       SELECT COUNT(*) as count, id_fiche_depart
       FROM ak_fiche_to_fiche 
       WHERE id_fiche_depart = ${'anime' + id}
       GROUP BY id_fiche_depart
-    `) as any[];
+    `;
 
     return {
       anime_id: id,
       relations,
+    };
+  }
+
+  async getAnimeStaff(id: number) {
+    // First check if anime exists
+    const anime = await this.prisma.akAnime.findUnique({
+      where: { idAnime: id, statut: 1 },
+      select: { idAnime: true },
+    });
+
+    if (!anime) {
+      throw new NotFoundException('Anime introuvable');
+    }
+
+    // Get staff/business relations
+    const staff = await this.prisma.$queryRaw`
+      SELECT 
+        bs.id_relation as idRelation,
+        bs.id_anime as idAnime,
+        bs.id_business as idBusiness,
+        bs.type,
+        bs.precisions,
+        b.denomination,
+        b.autres_denominations as autresDenominations,
+        b.type as businessType,
+        b.image,
+        b.notes,
+        b.origine,
+        b.site_officiel as siteOfficiel,
+        b.date,
+        b.statut
+      FROM ak_business_to_animes bs
+      JOIN ak_business b ON bs.id_business = b.id_business
+      WHERE bs.id_anime = ${id}
+      ORDER BY bs.type, b.denomination
+    ` as any[];
+
+    return {
+      anime_id: id,
+      staff: staff.map((s: any) => ({
+        ...s,
+        business: {
+          idBusiness: s.idBusiness,
+          denomination: s.denomination,
+          autresDenominations: s.autresDenominations,
+          type: s.businessType,
+          image: s.image,
+          notes: s.notes,
+          origine: s.origine,
+          siteOfficiel: s.siteOfficiel,
+          date: s.date,
+          statut: s.statut,
+        },
+      })),
     };
   }
 

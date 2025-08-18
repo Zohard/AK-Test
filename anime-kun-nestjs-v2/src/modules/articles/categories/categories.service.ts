@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../shared/services/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -10,15 +14,15 @@ export class CategoriesService {
 
   async create(createCategoryDto: CreateCategoryDto) {
     const { nom } = createCategoryDto;
-    
+
     // Generate nice URL if not provided
     const niceUrl = createCategoryDto.niceUrl || this.generateNiceUrl(nom);
-    
+
     // Ensure URL uniqueness
     const existingCategory = await this.prisma.akWebzineCategory.findFirst({
-      where: { niceUrl }
+      where: { niceUrl },
     });
-    
+
     if (existingCategory) {
       throw new BadRequestException('A category with this URL already exists');
     }
@@ -39,9 +43,9 @@ export class CategoriesService {
         _count: {
           select: {
             articles: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     return {
@@ -66,7 +70,7 @@ export class CategoriesService {
     // Filter out empty categories if requested
     if (!includeEmpty) {
       where.articles = {
-        some: {}
+        some: {},
       };
     }
 
@@ -78,8 +82,8 @@ export class CategoriesService {
           _count: {
             select: {
               articles: true,
-            }
-          }
+            },
+          },
         },
         orderBy: { nom: 'asc' },
         skip: offset,
@@ -89,7 +93,7 @@ export class CategoriesService {
     ]);
 
     // Transform results
-    const transformedCategories = categories.map(category => ({
+    const transformedCategories = categories.map((category) => ({
       ...category,
       articleCount: category._count.articles,
       _count: undefined,
@@ -116,7 +120,7 @@ export class CategoriesService {
         _count: {
           select: {
             articles: true,
-          }
+          },
         },
         articles: {
           include: {
@@ -131,18 +135,18 @@ export class CategoriesService {
                   select: {
                     idMember: true,
                     memberName: true,
-                  }
-                }
-              }
-            }
+                  },
+                },
+              },
+            },
           },
           take: 10, // Latest 10 articles
           orderBy: {
             article: {
-              date: 'desc'
-            }
-          }
-        }
+              date: 'desc',
+            },
+          },
+        },
       },
     });
 
@@ -153,7 +157,7 @@ export class CategoriesService {
     return {
       ...category,
       articleCount: category._count.articles,
-      recentArticles: category.articles.map(rel => rel.article),
+      recentArticles: category.articles.map((rel) => rel.article),
       articles: undefined,
       _count: undefined,
     };
@@ -166,8 +170,8 @@ export class CategoriesService {
         _count: {
           select: {
             articles: true,
-          }
-        }
+          },
+        },
       },
     });
 
@@ -184,7 +188,7 @@ export class CategoriesService {
 
   async update(id: number, updateCategoryDto: UpdateCategoryDto) {
     const existingCategory = await this.prisma.akWebzineCategory.findUnique({
-      where: { idCat: id }
+      where: { idCat: id },
     });
 
     if (!existingCategory) {
@@ -196,17 +200,21 @@ export class CategoriesService {
     // Update nice URL if name changed
     if (updateData.nom && updateData.nom !== existingCategory.nom) {
       updateData.niceUrl = this.generateNiceUrl(updateData.nom);
-      
+
       // Check for URL conflicts
-      const conflictingCategory = await this.prisma.akWebzineCategory.findFirst({
-        where: { 
-          niceUrl: updateData.niceUrl,
-          idCat: { not: id }
-        }
-      });
-      
+      const conflictingCategory = await this.prisma.akWebzineCategory.findFirst(
+        {
+          where: {
+            niceUrl: updateData.niceUrl,
+            idCat: { not: id },
+          },
+        },
+      );
+
       if (conflictingCategory) {
-        throw new BadRequestException('A category with this URL already exists');
+        throw new BadRequestException(
+          'A category with this URL already exists',
+        );
       }
     }
 
@@ -217,9 +225,9 @@ export class CategoriesService {
         _count: {
           select: {
             articles: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     return {
@@ -236,9 +244,9 @@ export class CategoriesService {
         _count: {
           select: {
             articles: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     if (!category) {
@@ -246,11 +254,13 @@ export class CategoriesService {
     }
 
     if (category._count.articles > 0) {
-      throw new BadRequestException('Cannot delete category that contains articles. Please move or delete all articles first.');
+      throw new BadRequestException(
+        'Cannot delete category that contains articles. Please move or delete all articles first.',
+      );
     }
 
     await this.prisma.akWebzineCategory.delete({
-      where: { idCat: id }
+      where: { idCat: id },
     });
 
     return { message: 'Category deleted successfully' };
@@ -269,7 +279,7 @@ export class CategoriesService {
     `;
 
     const result = (stats as any[])[0];
-    
+
     return {
       total_categories: Number(result.total_categories),
       categories_with_articles: Number(result.categories_with_articles),

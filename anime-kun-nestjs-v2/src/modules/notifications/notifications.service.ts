@@ -20,7 +20,13 @@ export interface NotificationPreferences {
 
 export interface NotificationData {
   userId: number;
-  type: 'new_review' | 'new_anime' | 'new_manga' | 'review_moderated' | 'security_alert' | 'marketing';
+  type:
+    | 'new_review'
+    | 'new_anime'
+    | 'new_manga'
+    | 'review_moderated'
+    | 'security_alert'
+    | 'marketing';
   title: string;
   message: string;
   data?: any;
@@ -50,10 +56,13 @@ export class NotificationsService {
           pass: this.configService.get('SMTP_PASS'),
         },
       });
-      
+
       this.logger.log('Email transporter initialized successfully');
     } catch (error) {
-      this.logger.error('Failed to initialize email transporter:', error.message);
+      this.logger.error(
+        'Failed to initialize email transporter:',
+        error.message,
+      );
     }
   }
 
@@ -63,7 +72,9 @@ export class NotificationsService {
       // Check user preferences
       const preferences = await this.getUserPreferences(data.userId);
       if (!this.shouldSendNotification(data.type, preferences)) {
-        this.logger.debug(`Notification blocked by user preferences: ${data.type} for user ${data.userId}`);
+        this.logger.debug(
+          `Notification blocked by user preferences: ${data.type} for user ${data.userId}`,
+        );
         return false;
       }
 
@@ -76,7 +87,9 @@ export class NotificationsService {
         await this.sendEmail(data);
       }
 
-      this.logger.log(`Notification sent successfully: ${data.type} to user ${data.userId}`);
+      this.logger.log(
+        `Notification sent successfully: ${data.type} to user ${data.userId}`,
+      );
       return true;
     } catch (error) {
       this.logger.error(`Failed to send notification: ${error.message}`);
@@ -114,13 +127,18 @@ export class NotificationsService {
         emailMarketing: prefs.email_marketing || false,
       };
     } catch (error) {
-      this.logger.warn(`Failed to get user preferences for user ${userId}, using defaults: ${error.message}`);
+      this.logger.warn(
+        `Failed to get user preferences for user ${userId}, using defaults: ${error.message}`,
+      );
       return this.getDefaultPreferences();
     }
   }
 
   // Update user notification preferences
-  async updateUserPreferences(userId: number, preferences: Partial<NotificationPreferences>): Promise<boolean> {
+  async updateUserPreferences(
+    userId: number,
+    preferences: Partial<NotificationPreferences>,
+  ): Promise<boolean> {
     try {
       await this.prisma.$executeRaw`
         INSERT INTO user_notification_preferences (
@@ -161,10 +179,15 @@ export class NotificationsService {
   }
 
   // Get user notifications (inbox)
-  async getUserNotifications(userId: number, page = 1, limit = 20, unreadOnly = false) {
+  async getUserNotifications(
+    userId: number,
+    page = 1,
+    limit = 20,
+    unreadOnly = false,
+  ) {
     const offset = (page - 1) * limit;
 
-    const whereClause = unreadOnly 
+    const whereClause = unreadOnly
       ? `WHERE user_id = ${userId} AND read_at IS NULL`
       : `WHERE user_id = ${userId}`;
 
@@ -212,11 +235,15 @@ export class NotificationsService {
         SET read_at = NOW()
         WHERE id = ${notificationId} AND user_id = ${userId} AND read_at IS NULL
       `;
-      
-      this.logger.debug(`Marked notification ${notificationId} as read for user ${userId}`);
+
+      this.logger.debug(
+        `Marked notification ${notificationId} as read for user ${userId}`,
+      );
       return true;
     } catch (error) {
-      this.logger.error(`Failed to mark notification as read: ${error.message}`);
+      this.logger.error(
+        `Failed to mark notification as read: ${error.message}`,
+      );
       return false;
     }
   }
@@ -229,11 +256,13 @@ export class NotificationsService {
         SET read_at = NOW()
         WHERE user_id = ${userId} AND read_at IS NULL
       `;
-      
+
       this.logger.log(`Marked all notifications as read for user ${userId}`);
       return true;
     } catch (error) {
-      this.logger.error(`Failed to mark all notifications as read: ${error.message}`);
+      this.logger.error(
+        `Failed to mark all notifications as read: ${error.message}`,
+      );
       return false;
     }
   }
@@ -274,22 +303,34 @@ export class NotificationsService {
     };
   }
 
-  private shouldSendNotification(type: string, preferences: NotificationPreferences): boolean {
+  private shouldSendNotification(
+    type: string,
+    preferences: NotificationPreferences,
+  ): boolean {
     // Always send security alerts
     if (type === 'security_alert') return true;
-    
+
     // Check user preferences for other types
     switch (type) {
-      case 'new_review': return preferences.emailNewReview;
-      case 'new_anime': return preferences.emailNewAnime;
-      case 'new_manga': return preferences.emailNewManga;
-      case 'review_moderated': return preferences.emailReviewModerated;
-      case 'marketing': return preferences.emailMarketing;
-      default: return false;
+      case 'new_review':
+        return preferences.emailNewReview;
+      case 'new_anime':
+        return preferences.emailNewAnime;
+      case 'new_manga':
+        return preferences.emailNewManga;
+      case 'review_moderated':
+        return preferences.emailReviewModerated;
+      case 'marketing':
+        return preferences.emailMarketing;
+      default:
+        return false;
     }
   }
 
-  private shouldSendEmail(type: string, preferences: NotificationPreferences): boolean {
+  private shouldSendEmail(
+    type: string,
+    preferences: NotificationPreferences,
+  ): boolean {
     return this.shouldSendNotification(type, preferences);
   }
 
@@ -345,7 +386,9 @@ export class NotificationsService {
         text: template.text,
       });
 
-      this.logger.log(`Email sent successfully to ${userData.email_address} for notification type: ${data.type}`);
+      this.logger.log(
+        `Email sent successfully to ${userData.email_address} for notification type: ${data.type}`,
+      );
     } catch (error) {
       this.logger.error(`Failed to send email: ${error.message}`);
     }
@@ -353,7 +396,7 @@ export class NotificationsService {
 
   private getEmailTemplate(data: NotificationData): EmailTemplate {
     const baseUrl = this.configService.get('APP_URL', 'http://localhost:3003');
-    
+
     switch (data.type) {
       case 'new_review':
         return {

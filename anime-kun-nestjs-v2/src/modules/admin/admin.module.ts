@@ -7,13 +7,14 @@ import { AdminModerationModule } from './moderation/admin-moderation.module';
 import { PrismaService } from '../../shared/services/prisma.service';
 
 @Module({
-  imports: [
-    AdminUsersModule,
-    AdminContentModule,
-    AdminModerationModule
-  ],
+  imports: [AdminUsersModule, AdminContentModule, AdminModerationModule],
   controllers: [AdminController],
   providers: [AdminService, PrismaService],
-  exports: [AdminService, AdminUsersModule, AdminContentModule, AdminModerationModule]
+  exports: [
+    AdminService,
+    AdminUsersModule,
+    AdminContentModule,
+    AdminModerationModule,
+  ],
 })
 export class AdminModule {}

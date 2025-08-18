@@ -6,6 +6,6 @@ import { PrismaService } from '../../../shared/services/prisma.service';
 @Module({
   controllers: [AdminContentController],
   providers: [AdminContentService, PrismaService],
-  exports: [AdminContentService]
+  exports: [AdminContentService],
 })
 export class AdminContentModule {}

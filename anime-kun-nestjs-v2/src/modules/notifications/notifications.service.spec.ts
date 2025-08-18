@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { NotificationsService, NotificationData } from './notifications.service';
+import {
+  NotificationsService,
+  NotificationData,
+} from './notifications.service';
 import { PrismaService } from '../../shared/services/prisma.service';
 import * as nodemailer from 'nodemailer';
 
@@ -103,7 +106,9 @@ describe('NotificationsService', () => {
     });
 
     it('should not send email when user preferences block it', async () => {
-      mockPrismaService.$queryRaw.mockResolvedValueOnce([{ email_new_review: false }]);
+      mockPrismaService.$queryRaw.mockResolvedValueOnce([
+        { email_new_review: false },
+      ]);
       mockPrismaService.$executeRaw.mockResolvedValue(undefined);
 
       const result = await service.sendNotification(mockNotificationData);
@@ -141,7 +146,9 @@ describe('NotificationsService', () => {
     });
 
     it('should handle notification failure gracefully', async () => {
-      mockPrismaService.$queryRaw.mockRejectedValue(new Error('Database error'));
+      mockPrismaService.$queryRaw.mockRejectedValue(
+        new Error('Database error'),
+      );
 
       const result = await service.sendNotification(mockNotificationData);
 
@@ -192,7 +199,9 @@ describe('NotificationsService', () => {
     });
 
     it('should handle database errors gracefully', async () => {
-      mockPrismaService.$queryRaw.mockRejectedValue(new Error('Database error'));
+      mockPrismaService.$queryRaw.mockRejectedValue(
+        new Error('Database error'),
+      );
 
       const result = await service.getUserPreferences(123);
 
@@ -227,7 +236,9 @@ describe('NotificationsService', () => {
         emailNewReview: true,
       };
 
-      mockPrismaService.$executeRaw.mockRejectedValue(new Error('Database error'));
+      mockPrismaService.$executeRaw.mockRejectedValue(
+        new Error('Database error'),
+      );
 
       const result = await service.updateUserPreferences(123, preferences);
 
@@ -282,7 +293,9 @@ describe('NotificationsService', () => {
     });
 
     it('should handle mark as read failures', async () => {
-      mockPrismaService.$executeRaw.mockRejectedValue(new Error('Database error'));
+      mockPrismaService.$executeRaw.mockRejectedValue(
+        new Error('Database error'),
+      );
 
       const result = await service.markAsRead(123, 456);
 
@@ -323,7 +336,9 @@ describe('NotificationsService', () => {
     });
 
     it('should handle stats query failures', async () => {
-      mockPrismaService.$queryRaw.mockRejectedValue(new Error('Database error'));
+      mockPrismaService.$queryRaw.mockRejectedValue(
+        new Error('Database error'),
+      );
 
       const result = await service.getNotificationStats(123);
 

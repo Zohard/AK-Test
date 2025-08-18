@@ -41,7 +41,7 @@ describe('Media E2E', () => {
   describe('/api/media (POST)', () => {
     it('should upload image successfully', () => {
       const mockImageBuffer = Buffer.from('fake-image-data');
-      
+
       return request(app.getHttpServer())
         .post('/api/media/upload')
         .attach('file', mockImageBuffer, 'test.jpg')
@@ -58,7 +58,7 @@ describe('Media E2E', () => {
 
     it('should reject invalid file type', () => {
       const mockTextFile = Buffer.from('text content');
-      
+
       return request(app.getHttpServer())
         .post('/api/media/upload')
         .attach('file', mockTextFile, 'test.txt')
@@ -69,9 +69,7 @@ describe('Media E2E', () => {
     it('should require authentication', () => {
       mockJwtGuard.canActivate.mockReturnValueOnce(false);
 
-      return request(app.getHttpServer())
-        .post('/api/media/upload')
-        .expect(401);
+      return request(app.getHttpServer()).post('/api/media/upload').expect(401);
     });
   });
 
@@ -105,9 +103,7 @@ describe('Media E2E', () => {
     it('should return 404 for non-existent media', () => {
       jest.spyOn(prismaService, '$queryRaw').mockResolvedValue([]);
 
-      return request(app.getHttpServer())
-        .get('/api/media/999')
-        .expect(404);
+      return request(app.getHttpServer()).get('/api/media/999').expect(404);
     });
   });
 
@@ -170,15 +166,14 @@ describe('Media E2E', () => {
     it('should return 404 for non-existent media', () => {
       jest.spyOn(prismaService, '$queryRaw').mockResolvedValue([]);
 
-      return request(app.getHttpServer())
-        .delete('/api/media/999')
-        .expect(404);
+      return request(app.getHttpServer()).delete('/api/media/999').expect(404);
     });
   });
 
   describe('/api/media/admin/stats (GET)', () => {
     it('should get admin statistics', () => {
-      jest.spyOn(prismaService, '$queryRaw')
+      jest
+        .spyOn(prismaService, '$queryRaw')
         .mockResolvedValueOnce([
           {
             total_files: 100,

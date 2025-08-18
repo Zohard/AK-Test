@@ -17,7 +17,7 @@ export class ArticlePermissionsGuard implements CanActivate {
     }
 
     const { user } = context.switchToHttp().getRequest();
-    
+
     if (!user) {
       return false;
     }
@@ -49,7 +49,7 @@ export class ArticlePermissionsGuard implements CanActivate {
   private hasWriterRole(user: any): boolean {
     // Implement your writer role check logic
     // This could be based on user groups, permissions, or a separate roles table
-    
+
     // For now, check if user has admin privileges or is in a writer group
     return user.isAdmin || user.idGroup === 2 || user.isWriter === true;
   }
@@ -57,7 +57,7 @@ export class ArticlePermissionsGuard implements CanActivate {
   private hasEditorRole(user: any): boolean {
     // Implement your editor role check logic
     // Editors typically have more permissions than writers
-    
+
     return user.isAdmin || user.idGroup === 3 || user.isEditor === true;
   }
 }

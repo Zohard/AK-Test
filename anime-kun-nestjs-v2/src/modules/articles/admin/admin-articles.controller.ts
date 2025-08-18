@@ -11,16 +11,21 @@ import {
   Request,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { AdminGuard } from '../../../common/guards/admin.guard';
 import { ArticlePermissionsGuard } from '../guards/article-permissions.guard';
-import { 
-  CanWriteArticles, 
-  CanEditArticles, 
-  CanPublishArticles, 
+import {
+  CanWriteArticles,
+  CanEditArticles,
+  CanPublishArticles,
   CanDeleteArticles,
-  CanManageCategories 
+  CanManageCategories,
 } from '../decorators/article-permissions.decorator';
 import { ArticlesService } from '../articles.service';
 import { CreateArticleDto } from '../dto/create-article.dto';
@@ -60,14 +65,20 @@ export class AdminArticlesController {
 
   @Get('stats')
   @ApiOperation({ summary: 'Get articles statistics' })
-  @ApiResponse({ status: 200, description: 'Statistics retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Statistics retrieved successfully',
+  })
   getStats() {
     return this.articlesService.getStats();
   }
 
   @Get('drafts')
   @ApiOperation({ summary: 'Get draft articles' })
-  @ApiResponse({ status: 200, description: 'Draft articles retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Draft articles retrieved successfully',
+  })
   getDrafts(@Query() query: ArticleQueryDto, @Request() req) {
     query.status = 'draft';
     if (!req.user.isAdmin) {
@@ -80,7 +91,10 @@ export class AdminArticlesController {
   @UseGuards(ArticlePermissionsGuard)
   @CanPublishArticles()
   @ApiOperation({ summary: 'Get articles pending publication' })
-  @ApiResponse({ status: 200, description: 'Pending articles retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Pending articles retrieved successfully',
+  })
   getPendingPublication(@Query() query: ArticleQueryDto) {
     query.status = 'draft';
     return this.articlesService.findAll(query);
@@ -88,7 +102,10 @@ export class AdminArticlesController {
 
   @Get('my-articles')
   @ApiOperation({ summary: 'Get current user articles' })
-  @ApiResponse({ status: 200, description: 'User articles retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'User articles retrieved successfully',
+  })
   getMyArticles(@Query() query: ArticleQueryDto, @Request() req) {
     query.authorId = req.user.sub;
     return this.articlesService.findAll(query);
@@ -115,14 +132,22 @@ export class AdminArticlesController {
     @Body() updateArticleDto: UpdateArticleDto,
     @Request() req,
   ) {
-    return this.articlesService.update(id, updateArticleDto, req.user.sub, req.user.isAdmin);
+    return this.articlesService.update(
+      id,
+      updateArticleDto,
+      req.user.sub,
+      req.user.isAdmin,
+    );
   }
 
   @Patch(':id/publish')
   @UseGuards(ArticlePermissionsGuard)
   @CanPublishArticles()
   @ApiOperation({ summary: 'Publish or unpublish an article (Admin)' })
-  @ApiResponse({ status: 200, description: 'Article publication status updated' })
+  @ApiResponse({
+    status: 200,
+    description: 'Article publication status updated',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'Article not found' })
@@ -131,14 +156,22 @@ export class AdminArticlesController {
     @Body() publishDto: PublishArticleDto,
     @Request() req,
   ) {
-    return this.articlesService.publish(id, publishDto, req.user.sub, req.user.isAdmin);
+    return this.articlesService.publish(
+      id,
+      publishDto,
+      req.user.sub,
+      req.user.isAdmin,
+    );
   }
 
   @Get('featured')
   @UseGuards(ArticlePermissionsGuard)
   @CanPublishArticles()
   @ApiOperation({ summary: 'Get featured articles management' })
-  @ApiResponse({ status: 200, description: 'Featured articles retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Featured articles retrieved successfully',
+  })
   getFeaturedManagement(@Query('limit') limit?: number) {
     return this.articlesService.getFeaturedArticles(limit || 10);
   }
@@ -174,7 +207,10 @@ export class AdminArticlesController {
   @UseGuards(ArticlePermissionsGuard)
   @CanPublishArticles()
   @ApiOperation({ summary: 'Reorder featured articles' })
-  @ApiResponse({ status: 200, description: 'Featured articles reordered successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Featured articles reordered successfully',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   reorderFeatured(
@@ -205,7 +241,12 @@ export class AdminArticlesController {
     @Request() req,
   ) {
     const { articleIds, publish } = body;
-    const results: Array<{ id: number; status: string; data?: any; message?: string }> = [];
+    const results: Array<{
+      id: number;
+      status: string;
+      data?: any;
+      message?: string;
+    }> = [];
 
     for (const articleId of articleIds) {
       try {
@@ -217,10 +258,10 @@ export class AdminArticlesController {
         );
         results.push({ id: articleId, status: 'success', data: result });
       } catch (error) {
-        results.push({ 
-          id: articleId, 
-          status: 'error', 
-          message: error.message 
+        results.push({
+          id: articleId,
+          status: 'error',
+          message: error.message,
         });
       }
     }
@@ -236,22 +277,23 @@ export class AdminArticlesController {
   @CanDeleteArticles()
   @ApiOperation({ summary: 'Bulk delete articles (Admin only)' })
   @ApiResponse({ status: 200, description: 'Articles deleted successfully' })
-  async bulkDelete(
-    @Body() body: { articleIds: number[] },
-    @Request() req,
-  ) {
+  async bulkDelete(@Body() body: { articleIds: number[] }, @Request() req) {
     const { articleIds } = body;
     const results: Array<{ id: number; status: string; message: string }> = [];
 
     for (const articleId of articleIds) {
       try {
-        await this.articlesService.remove(articleId, req.user.sub, req.user.isAdmin);
+        await this.articlesService.remove(
+          articleId,
+          req.user.sub,
+          req.user.isAdmin,
+        );
         results.push({ id: articleId, status: 'success', message: 'Deleted' });
       } catch (error) {
-        results.push({ 
-          id: articleId, 
-          status: 'error', 
-          message: error.message 
+        results.push({
+          id: articleId,
+          status: 'error',
+          message: error.message,
         });
       }
     }

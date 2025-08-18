@@ -106,15 +106,14 @@ export class MangasService extends BaseContentService<
       ];
     }
 
-
     if (auteur) {
       where.businessRelations = {
         some: {
           type: 'Auteur',
           business: {
-            denomination: { contains: auteur, mode: 'insensitive' }
-          }
-        }
+            denomination: { contains: auteur, mode: 'insensitive' },
+          },
+        },
       };
     }
 
@@ -265,6 +264,60 @@ export class MangasService extends BaseContentService<
 
   async getMangaTags(id: number) {
     return this.getTags(id, 'manga');
+  }
+
+  async getMangaStaff(id: number) {
+    // First check if manga exists
+    const manga = await this.prisma.akManga.findUnique({
+      where: { idManga: id, statut: 1 },
+      select: { idManga: true },
+    });
+
+    if (!manga) {
+      throw new NotFoundException('Manga introuvable');
+    }
+
+    // Get staff/business relations
+    const staff = await this.prisma.$queryRaw`
+      SELECT 
+        bs.id_relation as idRelation,
+        bs.id_manga as idManga,
+        bs.id_business as idBusiness,
+        bs.type,
+        bs.precisions,
+        b.denomination,
+        b.autres_denominations as autresDenominations,
+        b.type as businessType,
+        b.image,
+        b.notes,
+        b.origine,
+        b.site_officiel as siteOfficiel,
+        b.date,
+        b.statut
+      FROM ak_business_to_mangas bs
+      JOIN ak_business b ON bs.id_business = b.id_business
+      WHERE bs.id_manga = ${id}
+      ORDER BY bs.type, b.denomination
+    ` as any[];
+
+    return {
+      manga_id: id,
+      staff: staff.map((s: any) => ({
+        ...s,
+        business: {
+          idBusiness: s.idBusiness,
+          denomination: s.denomination,
+          autresDenominations: s.autresDenominations,
+          type: s.businessType,
+          image: s.image,
+          notes: s.notes,
+          origine: s.origine,
+          siteOfficiel: s.siteOfficiel,
+          date: s.date,
+          statut: s.statut,
+        },
+      })),
+    };
   }
 
   async getRandomManga() {

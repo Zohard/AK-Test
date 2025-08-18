@@ -378,6 +378,16 @@ export class ReviewsService {
     };
   }
 
+  async getReviewsCount() {
+    const total = await this.prisma.akCritique.count({
+      where: {
+        statut: 0, // Only count visible/active reviews
+      },
+    });
+
+    return { count: total };
+  }
+
   private formatReview(review: any) {
     const {
       idCritique,
@@ -393,7 +403,9 @@ export class ReviewsService {
       userId: idMembre,
       animeId: idAnime,
       mangaId: idManga,
-      reviewDate: dateCritique ? new Date(dateCritique * 1000).toISOString() : null,
+      reviewDate: dateCritique
+        ? new Date(dateCritique * 1000).toISOString()
+        : null,
       ...otherFields,
     };
   }

@@ -1,14 +1,26 @@
-import { IsNotEmpty, IsString, IsIn, IsOptional, MaxLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsIn,
+  IsOptional,
+  MaxLength,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ModerateCommentDto {
-  @ApiProperty({ description: 'Moderation status', enum: ['approved', 'pending', 'rejected'] })
+  @ApiProperty({
+    description: 'Moderation status',
+    enum: ['approved', 'pending', 'rejected'],
+  })
   @IsNotEmpty()
   @IsString()
   @IsIn(['approved', 'pending', 'rejected'])
   status: string;
 
-  @ApiPropertyOptional({ description: 'Reason for moderation action', example: 'Spam content detected' })
+  @ApiPropertyOptional({
+    description: 'Reason for moderation action',
+    example: 'Spam content detected',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(500)

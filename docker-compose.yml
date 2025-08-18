@@ -52,16 +52,36 @@ services:
       - CHOKIDAR_USEPOLLING=true  # For better file watching in Docker
     restart: unless-stopped
 
-  adminer:
-    image: adminer:4
+  # NestJS API v3 (new)
+  nestjs-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.nestjs
+    depends_on:
+      - anime-kun-postgres
     ports:
-      - "8081:8080"
+      - "3003:3003"
+    volumes:
+      - nestjs_uploads:/app/uploads
     environment:
-      - ADMINER_DEFAULT_SERVER=anime-kun-postgres
-      - ADMINER_DESIGN=pepa-linha
+      - DATABASE_URL=postgresql://anime_user:anime_password@anime-kun-postgres:5432/anime_kun
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - PORT=3003
+      - NODE_ENV=development
+      - FRONTEND_URL=http://localhost:3000
     restart: unless-stopped
-    networks:
-      - default
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    ports:
+      - "8085:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@anime-kun.com
+      - PGADMIN_DEFAULT_PASSWORD=admin123
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    restart: unless-stopped
+    depends_on:
+      - anime-kun-postgres
 
 volumes:
   db_data:
@@ -69,4 +89,6 @@ volumes:
   uploaded_images:  # Named volume for uploaded images
     driver: local
   frontend_build:  # Optional: for build artifacts
+    driver: local
+  nestjs_uploads:  # Named volume for NestJS uploads
     driver: local

@@ -16,7 +16,12 @@ import {
   Headers,
   Optional,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -52,7 +57,9 @@ export class CommentsController {
 
   @Post('anonymous')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create a comment anonymously (requires moderation)' })
+  @ApiOperation({
+    summary: 'Create a comment anonymously (requires moderation)',
+  })
   @ApiResponse({ status: 201, description: 'Comment submitted for moderation' })
   @ApiResponse({ status: 404, description: 'Article not found' })
   @ApiResponse({ status: 400, description: 'Invalid comment or spam detected' })
@@ -65,7 +72,7 @@ export class CommentsController {
     if (!createCommentDto.nom || !createCommentDto.email) {
       throw new Error('Name and email are required for anonymous comments');
     }
-    
+
     return this.commentsService.create(
       createCommentDto,
       undefined,
@@ -116,7 +123,12 @@ export class CommentsController {
     @Body() updateCommentDto: UpdateCommentDto,
     @Request() req,
   ) {
-    return this.commentsService.update(id, updateCommentDto, req.user.sub, req.user.isAdmin);
+    return this.commentsService.update(
+      id,
+      updateCommentDto,
+      req.user.sub,
+      req.user.isAdmin,
+    );
   }
 
   @Delete(':id')

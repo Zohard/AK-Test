@@ -11,7 +11,7 @@ import {
   UseGuards,
   Request,
   HttpCode,
-  HttpStatus
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,7 +19,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
-  ApiQuery
+  ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { AdminGuard } from '../../../common/guards/admin.guard';
@@ -54,9 +54,9 @@ export class AdminContentController {
               date_ajout: { type: 'number' },
               note_moyenne: { type: 'number' },
               nb_critiques: { type: 'number' },
-              content_type: { type: 'string' }
-            }
-          }
+              content_type: { type: 'string' },
+            },
+          },
         },
         pagination: {
           type: 'object',
@@ -65,11 +65,11 @@ export class AdminContentController {
             totalPages: { type: 'number' },
             totalItems: { type: 'number' },
             hasNext: { type: 'boolean' },
-            hasPrevious: { type: 'boolean' }
-          }
-        }
-      }
-    }
+            hasPrevious: { type: 'boolean' },
+          },
+        },
+      },
+    },
   })
   async findAll(@Query() query: ContentAdminQueryDto) {
     return this.adminContentService.getAllContent(query);
@@ -89,9 +89,9 @@ export class AdminContentController {
         inactive_mangas: { type: 'number' },
         active_business: { type: 'number' },
         active_articles: { type: 'number' },
-        pending_reviews: { type: 'number' }
-      }
-    }
+        pending_reviews: { type: 'number' },
+      },
+    },
   })
   async getContentStats() {
     return this.adminContentService.getContentStats();
@@ -103,49 +103,75 @@ export class AdminContentController {
   @HttpCode(HttpStatus.OK)
   async performBulkAction(
     @Body() bulkActionDto: BulkActionDto,
-    @Request() req: any
+    @Request() req: any,
   ) {
-    return this.adminContentService.performBulkAction(bulkActionDto, req.user.id);
+    return this.adminContentService.performBulkAction(
+      bulkActionDto,
+      req.user.id,
+    );
   }
 
   @Get(':type/:id')
   @ApiOperation({ summary: 'Get content details for admin management' })
-  @ApiParam({ name: 'type', description: 'Content type', enum: ['anime', 'manga', 'business', 'article'] })
+  @ApiParam({
+    name: 'type',
+    description: 'Content type',
+    enum: ['anime', 'manga', 'business', 'article'],
+  })
   @ApiParam({ name: 'id', description: 'Content ID' })
-  @ApiResponse({ status: 200, description: 'Content details retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Content details retrieved successfully',
+  })
   @ApiResponse({ status: 404, description: 'Content not found' })
   async findOne(
     @Param('type') type: string,
-    @Param('id', ParseIntPipe) id: number
+    @Param('id', ParseIntPipe) id: number,
   ) {
     return this.adminContentService.getContentById(id, type);
   }
 
   @Put(':type/:id/status')
   @ApiOperation({ summary: 'Update content status' })
-  @ApiParam({ name: 'type', description: 'Content type', enum: ['anime', 'manga', 'business', 'article'] })
+  @ApiParam({
+    name: 'type',
+    description: 'Content type',
+    enum: ['anime', 'manga', 'business', 'article'],
+  })
   @ApiParam({ name: 'id', description: 'Content ID' })
-  @ApiResponse({ status: 200, description: 'Content status updated successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Content status updated successfully',
+  })
   @ApiResponse({ status: 404, description: 'Content not found' })
   async updateStatus(
     @Param('type') type: string,
     @Param('id', ParseIntPipe) id: number,
     @Body('status', ParseIntPipe) status: number,
-    @Request() req: any
+    @Request() req: any,
   ) {
-    return this.adminContentService.updateContentStatus(id, type, status, req.user.id);
+    return this.adminContentService.updateContentStatus(
+      id,
+      type,
+      status,
+      req.user.id,
+    );
   }
 
   @Delete(':type/:id')
   @ApiOperation({ summary: 'Delete content (admin only)' })
-  @ApiParam({ name: 'type', description: 'Content type', enum: ['anime', 'manga', 'business', 'article'] })
+  @ApiParam({
+    name: 'type',
+    description: 'Content type',
+    enum: ['anime', 'manga', 'business', 'article'],
+  })
   @ApiParam({ name: 'id', description: 'Content ID' })
   @ApiResponse({ status: 200, description: 'Content deleted successfully' })
   @ApiResponse({ status: 404, description: 'Content not found' })
   async remove(
     @Param('type') type: string,
     @Param('id', ParseIntPipe) id: number,
-    @Request() req: any
+    @Request() req: any,
   ) {
     return this.adminContentService.deleteContent(id, type, req.user.id);
   }
@@ -153,68 +179,94 @@ export class AdminContentController {
   // Relationship management
   @Get(':type/:id/relationships')
   @ApiOperation({ summary: 'Get content relationships' })
-  @ApiParam({ name: 'type', description: 'Content type', enum: ['anime', 'manga'] })
+  @ApiParam({
+    name: 'type',
+    description: 'Content type',
+    enum: ['anime', 'manga'],
+  })
   @ApiParam({ name: 'id', description: 'Content ID' })
   async getRelationships(
     @Param('type') type: string,
-    @Param('id', ParseIntPipe) id: number
+    @Param('id', ParseIntPipe) id: number,
   ) {
     return this.adminContentService.getContentRelationships(id, type);
   }
 
   @Post(':type/:id/relationships')
   @ApiOperation({ summary: 'Create content relationship' })
-  @ApiParam({ name: 'type', description: 'Content type', enum: ['anime', 'manga'] })
+  @ApiParam({
+    name: 'type',
+    description: 'Content type',
+    enum: ['anime', 'manga'],
+  })
   @ApiParam({ name: 'id', description: 'Content ID' })
   async createRelationship(
     @Param('type') type: string,
     @Param('id', ParseIntPipe) id: number,
-    @Body() relationshipDto: CreateContentRelationshipDto
+    @Body() relationshipDto: CreateContentRelationshipDto,
   ) {
-    return this.adminContentService.createContentRelationship(id, type, relationshipDto);
+    return this.adminContentService.createContentRelationship(
+      id,
+      type,
+      relationshipDto,
+    );
   }
 
   @Delete('relationships/:relationshipId')
   @ApiOperation({ summary: 'Delete content relationship' })
   @ApiParam({ name: 'relationshipId', description: 'Relationship ID' })
-  async deleteRelationship(@Param('relationshipId', ParseIntPipe) relationshipId: number) {
+  async deleteRelationship(
+    @Param('relationshipId', ParseIntPipe) relationshipId: number,
+  ) {
     return this.adminContentService.deleteContentRelationship(relationshipId);
   }
 
   // Staff management
   @Get(':type/:id/staff')
   @ApiOperation({ summary: 'Get content staff members' })
-  @ApiParam({ name: 'type', description: 'Content type', enum: ['anime', 'manga'] })
+  @ApiParam({
+    name: 'type',
+    description: 'Content type',
+    enum: ['anime', 'manga'],
+  })
   @ApiParam({ name: 'id', description: 'Content ID' })
   async getStaff(
     @Param('type') type: string,
-    @Param('id', ParseIntPipe) id: number
+    @Param('id', ParseIntPipe) id: number,
   ) {
     return this.adminContentService.getContentStaff(id, type);
   }
 
   @Post(':type/:id/staff')
   @ApiOperation({ summary: 'Add staff member to content' })
-  @ApiParam({ name: 'type', description: 'Content type', enum: ['anime', 'manga'] })
+  @ApiParam({
+    name: 'type',
+    description: 'Content type',
+    enum: ['anime', 'manga'],
+  })
   @ApiParam({ name: 'id', description: 'Content ID' })
   async addStaff(
     @Param('type') type: string,
     @Param('id', ParseIntPipe) id: number,
     @Body('businessId', ParseIntPipe) businessId: number,
-    @Body('role') role?: string
+    @Body('role') role?: string,
   ) {
     return this.adminContentService.addContentStaff(id, type, businessId, role);
   }
 
   @Delete(':type/:id/staff/:businessId')
   @ApiOperation({ summary: 'Remove staff member from content' })
-  @ApiParam({ name: 'type', description: 'Content type', enum: ['anime', 'manga'] })
+  @ApiParam({
+    name: 'type',
+    description: 'Content type',
+    enum: ['anime', 'manga'],
+  })
   @ApiParam({ name: 'id', description: 'Content ID' })
   @ApiParam({ name: 'businessId', description: 'Business ID' })
   async removeStaff(
     @Param('type') type: string,
     @Param('id', ParseIntPipe) id: number,
-    @Param('businessId', ParseIntPipe) businessId: number
+    @Param('businessId', ParseIntPipe) businessId: number,
   ) {
     return this.adminContentService.removeContentStaff(id, type, businessId);
   }
@@ -222,36 +274,48 @@ export class AdminContentController {
   // Tag management
   @Get(':type/:id/tags')
   @ApiOperation({ summary: 'Get content tags' })
-  @ApiParam({ name: 'type', description: 'Content type', enum: ['anime', 'manga'] })
+  @ApiParam({
+    name: 'type',
+    description: 'Content type',
+    enum: ['anime', 'manga'],
+  })
   @ApiParam({ name: 'id', description: 'Content ID' })
   async getTags(
     @Param('type') type: string,
-    @Param('id', ParseIntPipe) id: number
+    @Param('id', ParseIntPipe) id: number,
   ) {
     return this.adminContentService.getContentTags(id, type);
   }
 
   @Post(':type/:id/tags')
   @ApiOperation({ summary: 'Add tag to content' })
-  @ApiParam({ name: 'type', description: 'Content type', enum: ['anime', 'manga'] })
+  @ApiParam({
+    name: 'type',
+    description: 'Content type',
+    enum: ['anime', 'manga'],
+  })
   @ApiParam({ name: 'id', description: 'Content ID' })
   async addTag(
     @Param('type') type: string,
     @Param('id', ParseIntPipe) id: number,
-    @Body('tagId', ParseIntPipe) tagId: number
+    @Body('tagId', ParseIntPipe) tagId: number,
   ) {
     return this.adminContentService.addContentTag(id, type, tagId);
   }
 
   @Delete(':type/:id/tags/:tagId')
   @ApiOperation({ summary: 'Remove tag from content' })
-  @ApiParam({ name: 'type', description: 'Content type', enum: ['anime', 'manga'] })
+  @ApiParam({
+    name: 'type',
+    description: 'Content type',
+    enum: ['anime', 'manga'],
+  })
   @ApiParam({ name: 'id', description: 'Content ID' })
   @ApiParam({ name: 'tagId', description: 'Tag ID' })
   async removeTag(
     @Param('type') type: string,
     @Param('id', ParseIntPipe) id: number,
-    @Param('tagId', ParseIntPipe) tagId: number
+    @Param('tagId', ParseIntPipe) tagId: number,
   ) {
     return this.adminContentService.removeContentTag(id, type, tagId);
   }

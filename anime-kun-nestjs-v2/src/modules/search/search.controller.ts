@@ -1,4 +1,11 @@
-import { Controller, Get, Query, ParseIntPipe, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  ParseIntPipe,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -82,7 +89,10 @@ export class SearchController {
     enum: ['ongoing', 'completed', 'all'],
     example: 'all',
   })
-  @ApiResponse({ status: 200, description: 'Résultats de recherche unifiés avec analytiques' })
+  @ApiResponse({
+    status: 200,
+    description: 'Résultats de recherche unifiés avec analytiques',
+  })
   async unifiedSearch(
     @Query('q') query: string,
     @Query('type') type?: 'anime' | 'manga' | 'all',
@@ -162,7 +172,7 @@ export class SearchController {
     description: 'Nombre de suggestions',
     example: 10,
   })
-  @ApiResponse({ status: 200, description: 'Suggestions d\'autocomplétion' })
+  @ApiResponse({ status: 200, description: "Suggestions d'autocomplétion" })
   async getAutocomplete(
     @Query('q') query: string,
     @Query('type') type?: 'anime' | 'manga' | 'all',
@@ -180,7 +190,10 @@ export class SearchController {
     description: 'Nombre de recherches populaires',
     example: 10,
   })
-  @ApiResponse({ status: 200, description: 'Recherches populaires avec compteurs' })
+  @ApiResponse({
+    status: 200,
+    description: 'Recherches populaires avec compteurs',
+  })
   async getPopularSearches(@Query('limit') limit?: string) {
     const parsedLimit = limit ? parseInt(limit) : 10;
     return this.searchService.getPopularSearches(parsedLimit);
@@ -189,7 +202,10 @@ export class SearchController {
   @Get('analytics')
   @UseGuards(JwtAuthGuard, AdminGuard)
   @ApiOperation({ summary: 'Analytiques de recherche (Admin uniquement)' })
-  @ApiResponse({ status: 200, description: 'Statistiques détaillées des recherches' })
+  @ApiResponse({
+    status: 200,
+    description: 'Statistiques détaillées des recherches',
+  })
   @ApiBearerAuth()
   async getSearchAnalytics() {
     return this.searchService.getSearchAnalytics();

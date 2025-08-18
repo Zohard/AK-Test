@@ -12,7 +12,7 @@ import {
   Request,
   HttpCode,
   HttpStatus,
-  UseInterceptors
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -20,7 +20,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
-  ApiQuery
+  ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { AdminGuard } from '../../../common/guards/admin.guard';
@@ -28,7 +28,11 @@ import { AdminUsersService } from './admin-users.service';
 import { UserAdminQueryDto } from './dto/user-admin-query.dto';
 import { UpdateUserAdminDto } from './dto/update-user-admin.dto';
 import { AuditLogInterceptor } from '../../../common/interceptors/audit-log.interceptor';
-import { AuditLog, AuditActions, AuditTargets } from '../../../common/decorators/audit-log.decorator';
+import {
+  AuditLog,
+  AuditActions,
+  AuditTargets,
+} from '../../../common/decorators/audit-log.decorator';
 
 @ApiTags('Admin - Users')
 @ApiBearerAuth()
@@ -60,9 +64,9 @@ export class AdminUsersController {
               is_activated: { type: 'number' },
               id_group: { type: 'number' },
               group_name: { type: 'string' },
-              online_color: { type: 'string' }
-            }
-          }
+              online_color: { type: 'string' },
+            },
+          },
         },
         pagination: {
           type: 'object',
@@ -71,11 +75,11 @@ export class AdminUsersController {
             totalPages: { type: 'number' },
             totalItems: { type: 'number' },
             hasNext: { type: 'boolean' },
-            hasPrevious: { type: 'boolean' }
-          }
-        }
-      }
-    }
+            hasPrevious: { type: 'boolean' },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({ status: 403, description: 'Admin access required' })
   async findAll(@Query() query: UserAdminQueryDto) {
@@ -95,9 +99,9 @@ export class AdminUsersController {
         banned_users: { type: 'number' },
         admin_users: { type: 'number' },
         moderator_users: { type: 'number' },
-        new_users_month: { type: 'number' }
-      }
-    }
+        new_users_month: { type: 'number' },
+      },
+    },
   })
   async getUserStats() {
     return this.adminUsersService.getUserStats();
@@ -126,8 +130,8 @@ export class AdminUsersController {
             id_group: { type: 'number' },
             group_name: { type: 'string' },
             review_count: { type: 'number' },
-            avg_rating_given: { type: 'number' }
-          }
+            avg_rating_given: { type: 'number' },
+          },
         },
         recent_activity: {
           type: 'array',
@@ -137,12 +141,12 @@ export class AdminUsersController {
               type: { type: 'string' },
               date: { type: 'number' },
               title: { type: 'string' },
-              content_type: { type: 'string' }
-            }
-          }
-        }
-      }
-    }
+              content_type: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({ status: 404, description: 'User not found' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
@@ -159,7 +163,7 @@ export class AdminUsersController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserAdminDto,
-    @Request() req: any
+    @Request() req: any,
   ) {
     return this.adminUsersService.update(id, updateUserDto, req.user.id);
   }
@@ -174,7 +178,7 @@ export class AdminUsersController {
   async banUser(
     @Param('id', ParseIntPipe) id: number,
     @Body('reason') reason: string,
-    @Request() req: any
+    @Request() req: any,
   ) {
     return this.adminUsersService.banUser(id, reason, req.user.id);
   }
@@ -186,10 +190,7 @@ export class AdminUsersController {
   @ApiResponse({ status: 200, description: 'User unbanned successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @HttpCode(HttpStatus.OK)
-  async unbanUser(
-    @Param('id', ParseIntPipe) id: number,
-    @Request() req: any
-  ) {
+  async unbanUser(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     return this.adminUsersService.unbanUser(id, req.user.id);
   }
 
@@ -199,11 +200,11 @@ export class AdminUsersController {
   @ApiParam({ name: 'id', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  @ApiResponse({ status: 400, description: 'Cannot delete administrator users' })
-  async remove(
-    @Param('id', ParseIntPipe) id: number,
-    @Request() req: any
-  ) {
+  @ApiResponse({
+    status: 400,
+    description: 'Cannot delete administrator users',
+  })
+  async remove(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     return this.adminUsersService.deleteUser(id, req.user.id);
   }
 }

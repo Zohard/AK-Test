@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../shared/services/prisma.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
@@ -9,12 +14,17 @@ import { ModerateCommentDto } from './dto/moderate-comment.dto';
 export class CommentsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createCommentDto: CreateCommentDto, userId?: number, ipAddress?: string, userAgent?: string) {
+  async create(
+    createCommentDto: CreateCommentDto,
+    userId?: number,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
     const { articleId, commentaire, nom, email, website } = createCommentDto;
 
     // Validate article exists
     const article = await this.prisma.akWebzineArticle.findUnique({
-      where: { idArt: articleId }
+      where: { idArt: articleId },
     });
 
     if (!article) {
@@ -23,7 +33,9 @@ export class CommentsService {
 
     // Check if article allows comments (basic spam protection)
     if (article.statut !== 1) {
-      throw new BadRequestException('Comments are not allowed on unpublished articles');
+      throw new BadRequestException(
+        'Comments are not allowed on unpublished articles',
+      );
     }
 
     // Basic spam detection
@@ -57,19 +69,21 @@ export class CommentsService {
         idArticle: articleId,
       },
       include: {
-        member: userId ? {
-          select: {
-            idMember: true,
-            memberName: true,
-          }
-        } : undefined,
+        member: userId
+          ? {
+              select: {
+                idMember: true,
+                memberName: true,
+              },
+            }
+          : undefined,
         article: {
           select: {
             idArt: true,
             titre: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     // Update article comment count if approved
@@ -81,7 +95,14 @@ export class CommentsService {
   }
 
   async findAll(query: CommentQueryDto) {
-    const { page = 1, limit = 20, articleId, status = 'approved', search, memberId } = query;
+    const {
+      page = 1,
+      limit = 20,
+      articleId,
+      status = 'approved',
+      search,
+      memberId,
+    } = query;
     const offset = (page - 1) * limit;
 
     // Build where conditions
@@ -124,15 +145,15 @@ export class CommentsService {
             select: {
               idMember: true,
               memberName: true,
-            }
+            },
           },
           article: {
             select: {
               idArt: true,
               titre: true,
               niceUrl: true,
-            }
-          }
+            },
+          },
         },
         orderBy: { date: 'desc' },
         skip: offset,
@@ -163,15 +184,15 @@ export class CommentsService {
           select: {
             idMember: true,
             memberName: true,
-          }
+          },
         },
         article: {
           select: {
             idArt: true,
             titre: true,
             niceUrl: true,
-          }
-        }
+          },
+        },
       },
     });
 
@@ -182,9 +203,14 @@ export class CommentsService {
     return comment;
   }
 
-  async update(id: number, updateCommentDto: UpdateCommentDto, userId: number, isAdmin: boolean = false) {
+  async update(
+    id: number,
+    updateCommentDto: UpdateCommentDto,
+    userId: number,
+    isAdmin: boolean = false,
+  ) {
     const existingComment = await this.prisma.akWebzineComment.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!existingComment) {
@@ -198,9 +224,11 @@ export class CommentsService {
 
     // Only allow editing content for non-admin users
     // Admins can edit everything
-    const updateData = isAdmin ? updateCommentDto : {
-      commentaire: updateCommentDto.commentaire
-    };
+    const updateData = isAdmin
+      ? updateCommentDto
+      : {
+          commentaire: updateCommentDto.commentaire,
+        };
 
     // Basic spam detection if content is being updated
     if (updateData.commentaire && this.isSpamContent(updateData.commentaire)) {
@@ -215,15 +243,15 @@ export class CommentsService {
           select: {
             idMember: true,
             memberName: true,
-          }
+          },
         },
         article: {
           select: {
             idArt: true,
             titre: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     return updatedComment;
@@ -231,9 +259,9 @@ export class CommentsService {
 
   async moderate(id: number, moderateDto: ModerateCommentDto) {
     const { status, reason } = moderateDto;
-    
+
     const comment = await this.prisma.akWebzineComment.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!comment) {
@@ -241,13 +269,14 @@ export class CommentsService {
     }
 
     const oldStatus = comment.moderation;
-    const newStatus = status === 'approved' ? 1 : status === 'rejected' ? -1 : 0;
+    const newStatus =
+      status === 'approved' ? 1 : status === 'rejected' ? -1 : 0;
 
     await this.prisma.akWebzineComment.update({
       where: { id },
       data: {
         moderation: newStatus,
-      }
+      },
     });
 
     // Update article comment count if status changed
@@ -255,15 +284,15 @@ export class CommentsService {
       await this.updateArticleCommentCount(comment.idArticle);
     }
 
-    return { 
+    return {
       message: `Comment ${status} successfully`,
-      reason: reason || undefined
+      reason: reason || undefined,
     };
   }
 
   async remove(id: number, userId: number, isAdmin: boolean = false) {
     const comment = await this.prisma.akWebzineComment.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!comment) {
@@ -276,7 +305,7 @@ export class CommentsService {
     }
 
     await this.prisma.akWebzineComment.delete({
-      where: { id }
+      where: { id },
     });
 
     // Update article comment count
@@ -298,7 +327,7 @@ export class CommentsService {
     `;
 
     const result = (stats as any[])[0];
-    
+
     return {
       approved_comments: Number(result.approved_comments),
       pending_comments: Number(result.pending_comments),
@@ -309,19 +338,20 @@ export class CommentsService {
   }
 
   async bulkModerate(commentIds: number[], status: string, reason?: string) {
-    const moderationValue = status === 'approved' ? 1 : status === 'rejected' ? -1 : 0;
-    
+    const moderationValue =
+      status === 'approved' ? 1 : status === 'rejected' ? -1 : 0;
+
     const results: Array<{ id: number; status: string; message?: string }> = [];
-    
+
     for (const commentId of commentIds) {
       try {
         await this.moderate(commentId, { status, reason });
         results.push({ id: commentId, status: 'success' });
       } catch (error) {
-        results.push({ 
-          id: commentId, 
-          status: 'error', 
-          message: error.message 
+        results.push({
+          id: commentId,
+          status: 'error',
+          message: error.message,
         });
       }
     }
@@ -337,12 +367,12 @@ export class CommentsService {
       where: {
         idArticle: articleId,
         moderation: 1,
-      }
+      },
     });
 
     await this.prisma.akWebzineArticle.update({
       where: { idArt: articleId },
-      data: { nbCom: approvedCount }
+      data: { nbCom: approvedCount },
     });
   }
 
@@ -371,7 +401,7 @@ export class CommentsService {
     // Check for excessive capitalization
     const capsCount = (content.match(/[A-Z]/g) || []).length;
     const totalLetters = (content.match(/[A-Za-z]/g) || []).length;
-    if (totalLetters > 0 && (capsCount / totalLetters) > 0.7) {
+    if (totalLetters > 0 && capsCount / totalLetters > 0.7) {
       return true;
     }
 
@@ -380,7 +410,7 @@ export class CommentsService {
 
   private reverseIp(ip?: string): string | undefined {
     if (!ip) return undefined;
-    
+
     try {
       return ip.split('.').reverse().join('.');
     } catch {

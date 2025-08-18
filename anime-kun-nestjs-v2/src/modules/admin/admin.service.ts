@@ -10,7 +10,7 @@ export class AdminService {
     private prisma: PrismaService,
     private adminUsersService: AdminUsersService,
     private adminContentService: AdminContentService,
-    private adminModerationService: AdminModerationService
+    private adminModerationService: AdminModerationService,
   ) {}
 
   async getDashboardStats() {
@@ -18,7 +18,7 @@ export class AdminService {
     const [userStats, contentStats, moderationStats] = await Promise.all([
       this.adminUsersService.getUserStats(),
       this.adminContentService.getContentStats(),
-      this.adminModerationService.getModerationStats()
+      this.adminModerationService.getModerationStats(),
     ]);
 
     // Get recent activity across all modules
@@ -32,7 +32,7 @@ export class AdminService {
       content: contentStats,
       moderation: moderationStats,
       recent_activity: recentActivity,
-      system_health: systemHealth
+      system_health: systemHealth,
     };
   }
 
@@ -97,14 +97,14 @@ export class AdminService {
     // Convert BigInt values to regular numbers for JSON serialization
     return (activities as any[]).map((activity: any) => ({
       ...activity,
-      target_id: Number(activity.target_id)
+      target_id: Number(activity.target_id),
     }));
   }
 
   async getSystemHealth() {
     // Check database connectivity and performance
     const dbHealth = await this.checkDatabaseHealth();
-    
+
     // Get storage usage
     const storageInfo = await this.getStorageInfo();
 
@@ -115,7 +115,7 @@ export class AdminService {
       database: dbHealth,
       storage: storageInfo,
       performance: performanceMetrics,
-      status: 'healthy' // Overall status
+      status: 'healthy', // Overall status
     };
   }
 
@@ -135,18 +135,20 @@ export class AdminService {
       const connectionResult = await this.prisma.$queryRaw`
         SELECT count(*) as connections FROM pg_stat_activity
       `;
-      const connectionCount = Number((connectionResult as any[])[0]?.connections);
+      const connectionCount = Number(
+        (connectionResult as any[])[0]?.connections,
+      );
 
       return {
         status: 'healthy',
         response_time_ms: responseTime,
         database_size: dbSize,
-        active_connections: connectionCount
+        active_connections: connectionCount,
       };
     } catch (error) {
       return {
         status: 'unhealthy',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -168,13 +170,13 @@ export class AdminService {
         media_files: {
           total_screenshots: Number(result.total_screenshots),
           anime_screenshots: Number(result.anime_screenshots),
-          manga_covers: Number(result.manga_covers)
-        }
+          manga_covers: Number(result.manga_covers),
+        },
       };
     } catch (error) {
       return {
         status: 'error',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -204,13 +206,13 @@ export class AdminService {
           updates: Number(table.updates),
           deletes: Number(table.deletes),
           sequential_scans: Number(table.sequential_scans),
-          index_scans: Number(table.index_scans)
-        }))
+          index_scans: Number(table.index_scans),
+        })),
       };
     } catch (error) {
       return {
         status: 'error',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -237,27 +239,33 @@ export class AdminService {
 
       // Convert BigInt values to numbers for JSON serialization
       return {
-        actions: (actions as any[]).map(action => ({
+        actions: (actions as any[]).map((action) => ({
           ...action,
           id: Number(action.id),
           admin_id: Number(action.admin_id),
-          target_id: action.target_id ? Number(action.target_id) : null
-        }))
+          target_id: action.target_id ? Number(action.target_id) : null,
+        })),
       };
     } catch (error) {
       console.error('Failed to fetch admin actions:', error);
       return {
         message: 'Failed to fetch admin actions',
         error: error.message,
-        actions: []
+        actions: [],
       };
     }
   }
 
   async exportData(type: string, format: string = 'csv') {
     // Implement data export functionality
-    const exportableTypes = ['users', 'animes', 'mangas', 'reviews', 'business'];
-    
+    const exportableTypes = [
+      'users',
+      'animes',
+      'mangas',
+      'reviews',
+      'business',
+    ];
+
     if (!exportableTypes.includes(type)) {
       throw new Error('Invalid export type');
     }
@@ -266,7 +274,7 @@ export class AdminService {
     return {
       message: `Export of ${type} data in ${format} format initiated`,
       export_id: `export_${type}_${Date.now()}`,
-      estimated_completion: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
+      estimated_completion: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
     };
   }
 
@@ -280,7 +288,7 @@ export class AdminService {
       max_upload_size: '10MB',
       supported_image_formats: ['jpg', 'jpeg', 'png', 'webp'],
       cache_enabled: true,
-      backup_frequency: 'daily'
+      backup_frequency: 'daily',
     };
   }
 
@@ -288,10 +296,10 @@ export class AdminService {
     // Update system-wide settings
     // This would typically be stored in a settings table
     console.log('Updating system settings:', settings);
-    
+
     return {
       message: 'System settings updated successfully',
-      updated_settings: settings
+      updated_settings: settings,
     };
   }
 }
