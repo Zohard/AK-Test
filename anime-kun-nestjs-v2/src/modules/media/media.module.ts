@@ -16,9 +16,9 @@ import { PrismaService } from '../../shared/services/prisma.service';
           'image/jpg',
           'image/png',
           'image/webp',
-          'image/gif'
+          'image/gif',
         ];
-        
+
         if (allowedMimeTypes.includes(file.mimetype)) {
           cb(null, true);
         } else {

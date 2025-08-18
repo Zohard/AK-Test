@@ -32,7 +32,15 @@ export class AuthController {
 
   @Post('register')
   @ApiOperation({ summary: "Inscription d'un nouvel utilisateur" })
-  @ApiHeader({ name: 'user-agent', description: 'User agent string', required: false, schema: { default: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0' } })
+  @ApiHeader({
+    name: 'user-agent',
+    description: 'User agent string',
+    required: false,
+    schema: {
+      default:
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0',
+    },
+  })
   @ApiResponse({ status: 201, description: 'Utilisateur créé avec succès' })
   @ApiResponse({
     status: 400,
@@ -43,13 +51,26 @@ export class AuthController {
     @Ip() ip: string,
     @Headers('user-agent') userAgent?: string,
   ) {
-    return this.authService.register(registerDto, ip, userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0');
+    return this.authService.register(
+      registerDto,
+      ip,
+      userAgent ||
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0',
+    );
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Connexion utilisateur' })
-  @ApiHeader({ name: 'user-agent', description: 'User agent string', required: false, schema: { default: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0' } })
+  @ApiHeader({
+    name: 'user-agent',
+    description: 'User agent string',
+    required: false,
+    schema: {
+      default:
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0',
+    },
+  })
   @ApiResponse({ status: 200, description: 'Connexion réussie' })
   @ApiResponse({ status: 401, description: 'Identifiants incorrects' })
   async login(
@@ -57,13 +78,26 @@ export class AuthController {
     @Ip() ip: string,
     @Headers('user-agent') userAgent?: string,
   ) {
-    return this.authService.login(loginDto, ip, userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0');
+    return this.authService.login(
+      loginDto,
+      ip,
+      userAgent ||
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0',
+    );
   }
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Rafraîchissement du token d'accès" })
-  @ApiHeader({ name: 'user-agent', description: 'User agent string', required: false, schema: { default: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0' } })
+  @ApiHeader({
+    name: 'user-agent',
+    description: 'User agent string',
+    required: false,
+    schema: {
+      default:
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0',
+    },
+  })
   @ApiResponse({ status: 200, description: 'Token rafraîchi avec succès' })
   @ApiResponse({
     status: 401,
@@ -77,21 +111,35 @@ export class AuthController {
     return this.authService.refreshToken(
       refreshTokenDto.refreshToken,
       ip,
-      userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0',
+      userAgent ||
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0',
     );
   }
 
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Demande de réinitialisation de mot de passe' })
-  @ApiHeader({ name: 'user-agent', description: 'User agent string', required: false, schema: { default: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0' } })
+  @ApiHeader({
+    name: 'user-agent',
+    description: 'User agent string',
+    required: false,
+    schema: {
+      default:
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0',
+    },
+  })
   @ApiResponse({ status: 200, description: 'Email de réinitialisation envoyé' })
   async forgotPassword(
     @Body() forgotPasswordDto: ForgotPasswordDto,
     @Ip() ip: string,
     @Headers('user-agent') userAgent?: string,
   ) {
-    return this.authService.forgotPassword(forgotPasswordDto, ip, userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0');
+    return this.authService.forgotPassword(
+      forgotPasswordDto,
+      ip,
+      userAgent ||
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0',
+    );
   }
 
   @Post('reset-password')

@@ -39,7 +39,7 @@ export class UnifiedSearchService {
     suggestions?: string[];
   }> {
     const startTime = Date.now();
-    
+
     const {
       query,
       type = 'all',
@@ -74,7 +74,8 @@ export class UnifiedSearchService {
     const results = await Promise.all(promises);
 
     const animeResults = type === 'manga' ? [] : results[0] || [];
-    const mangaResults = type === 'anime' ? [] : results[type === 'all' ? 1 : 0] || [];
+    const mangaResults =
+      type === 'anime' ? [] : results[type === 'all' ? 1 : 0] || [];
 
     // Enhanced result formatting
     const combinedResults = [
@@ -85,11 +86,15 @@ export class UnifiedSearchService {
     // Apply sorting based on sortBy parameter
     let sortedResults = combinedResults;
     if (sortBy === 'rating') {
-      sortedResults = combinedResults.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      sortedResults = combinedResults.sort(
+        (a, b) => (b.rating || 0) - (a.rating || 0),
+      );
     } else if (sortBy === 'title') {
-      sortedResults = combinedResults.sort((a, b) => a.title.localeCompare(b.title));
+      sortedResults = combinedResults.sort((a, b) =>
+        a.title.localeCompare(b.title),
+      );
     }
-    
+
     if (sortOrder === 'asc') {
       sortedResults = sortedResults.reverse();
     }
@@ -233,9 +238,13 @@ export class UnifiedSearchService {
     };
   }
 
-  private buildOrderBy(sortBy: string, sortOrder: string, type: 'anime' | 'manga') {
+  private buildOrderBy(
+    sortBy: string,
+    sortOrder: string,
+    type: 'anime' | 'manga',
+  ) {
     const direction = sortOrder === 'asc' ? 'asc' : 'desc';
-    
+
     switch (sortBy) {
       case 'rating':
         return { moyenneNotes: direction };
@@ -249,16 +258,26 @@ export class UnifiedSearchService {
     }
   }
 
-  private applySorting(results: SearchResult[], sortBy: string, sortOrder: string): SearchResult[] {
+  private applySorting(
+    results: SearchResult[],
+    sortBy: string,
+    sortOrder: string,
+  ): SearchResult[] {
     const direction = sortOrder === 'asc' ? 1 : -1;
-    
+
     switch (sortBy) {
       case 'rating':
-        return results.sort((a, b) => ((b.rating || 0) - (a.rating || 0)) * direction);
+        return results.sort(
+          (a, b) => ((b.rating || 0) - (a.rating || 0)) * direction,
+        );
       case 'title':
-        return results.sort((a, b) => a.title.localeCompare(b.title) * direction);
+        return results.sort(
+          (a, b) => a.title.localeCompare(b.title) * direction,
+        );
       case 'year':
-        return results.sort((a, b) => ((b.year || 0) - (a.year || 0)) * direction);
+        return results.sort(
+          (a, b) => ((b.year || 0) - (a.year || 0)) * direction,
+        );
       case 'relevance':
       default:
         return results; // Already sorted by database query
@@ -278,7 +297,10 @@ export class UnifiedSearchService {
     }
   }
 
-  private async generateSuggestions(query: string, type?: string): Promise<string[]> {
+  private async generateSuggestions(
+    query: string,
+    type?: string,
+  ): Promise<string[]> {
     try {
       // Simple suggestion system based on similar titles
       const suggestions = await this.prisma.$queryRaw`
@@ -292,8 +314,8 @@ export class UnifiedSearchService {
         ORDER BY titre
         LIMIT 5
       `;
-      
-      return (suggestions as any[]).map(s => s.titre);
+
+      return (suggestions as any[]).map((s) => s.titre);
     } catch (error) {
       console.warn('Failed to generate suggestions:', error.message);
       return [];
@@ -301,9 +323,13 @@ export class UnifiedSearchService {
   }
 
   // Enhanced autocomplete method
-  async getAutocomplete(query: string, type: 'anime' | 'manga' | 'all' = 'all', limit = 10): Promise<string[]> {
+  async getAutocomplete(
+    query: string,
+    type: 'anime' | 'manga' | 'all' = 'all',
+    limit = 10,
+  ): Promise<string[]> {
     const suggestions: string[] = [];
-    
+
     try {
       if (type === 'all' || type === 'anime') {
         const animeTitles = await this.prisma.akAnime.findMany({
@@ -315,7 +341,7 @@ export class UnifiedSearchService {
           take: Math.ceil(limit / (type === 'all' ? 2 : 1)),
           orderBy: { moyenneNotes: 'desc' },
         });
-        suggestions.push(...animeTitles.map(a => a.titre));
+        suggestions.push(...animeTitles.map((a) => a.titre));
       }
 
       if (type === 'all' || type === 'manga') {
@@ -328,7 +354,7 @@ export class UnifiedSearchService {
           take: Math.ceil(limit / (type === 'all' ? 2 : 1)),
           orderBy: { moyenneNotes: 'desc' },
         });
-        suggestions.push(...mangaTitles.map(m => m.titre));
+        suggestions.push(...mangaTitles.map((m) => m.titre));
       }
     } catch (error) {
       console.warn('Failed to get autocomplete suggestions:', error.message);
@@ -338,7 +364,9 @@ export class UnifiedSearchService {
   }
 
   // Get popular search terms
-  async getPopularSearches(limit = 10): Promise<Array<{query: string, count: number}>> {
+  async getPopularSearches(
+    limit = 10,
+  ): Promise<Array<{ query: string; count: number }>> {
     try {
       const popular = await this.prisma.$queryRaw`
         SELECT query, COUNT(*) as count
@@ -348,10 +376,10 @@ export class UnifiedSearchService {
         ORDER BY count DESC
         LIMIT ${limit}
       `;
-      
-      return (popular as any[]).map(p => ({
+
+      return (popular as any[]).map((p) => ({
         query: p.query,
-        count: Number(p.count)
+        count: Number(p.count),
       }));
     } catch (error) {
       console.warn('Failed to get popular searches:', error.message);
@@ -364,7 +392,7 @@ export class UnifiedSearchService {
     totalSearches: number;
     uniqueQueries: number;
     avgSearchTime: number;
-    topSearches: Array<{query: string, count: number}>;
+    topSearches: Array<{ query: string; count: number }>;
   }> {
     try {
       const stats = await this.prisma.$queryRaw`
@@ -375,11 +403,11 @@ export class UnifiedSearchService {
         FROM search_analytics 
         WHERE timestamp >= NOW() - INTERVAL '30 days'
       `;
-      
+
       const topSearches = await this.getPopularSearches(5);
-      
+
       const result = (stats as any[])[0];
-      
+
       return {
         totalSearches: Number(result.total_searches),
         uniqueQueries: Number(result.unique_queries),

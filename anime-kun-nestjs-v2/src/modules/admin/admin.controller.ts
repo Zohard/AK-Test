@@ -8,14 +8,14 @@ import {
   UseGuards,
   ParseIntPipe,
   HttpCode,
-  HttpStatus
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiQuery
+  ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AdminGuard } from '../../common/guards/admin.guard';
@@ -44,8 +44,8 @@ export class AdminController {
             banned_users: { type: 'number' },
             admin_users: { type: 'number' },
             moderator_users: { type: 'number' },
-            new_users_month: { type: 'number' }
-          }
+            new_users_month: { type: 'number' },
+          },
         },
         content: {
           type: 'object',
@@ -56,8 +56,8 @@ export class AdminController {
             inactive_mangas: { type: 'number' },
             active_business: { type: 'number' },
             active_articles: { type: 'number' },
-            pending_reviews: { type: 'number' }
-          }
+            pending_reviews: { type: 'number' },
+          },
         },
         moderation: {
           type: 'object',
@@ -66,8 +66,8 @@ export class AdminController {
             approved_reviews: { type: 'number' },
             rejected_reviews: { type: 'number' },
             pending_reports: { type: 'number' },
-            resolved_reports: { type: 'number' }
-          }
+            resolved_reports: { type: 'number' },
+          },
         },
         recent_activity: {
           type: 'array',
@@ -79,9 +79,9 @@ export class AdminController {
               title: { type: 'string' },
               description: { type: 'string' },
               target_id: { type: 'number' },
-              target_type: { type: 'string' }
-            }
-          }
+              target_type: { type: 'string' },
+            },
+          },
         },
         system_health: {
           type: 'object',
@@ -92,28 +92,28 @@ export class AdminController {
                 status: { type: 'string' },
                 response_time_ms: { type: 'number' },
                 database_size: { type: 'string' },
-                active_connections: { type: 'number' }
-              }
+                active_connections: { type: 'number' },
+              },
             },
             storage: {
               type: 'object',
               properties: {
                 status: { type: 'string' },
-                media_files: { type: 'object' }
-              }
+                media_files: { type: 'object' },
+              },
             },
             performance: {
               type: 'object',
               properties: {
                 status: { type: 'string' },
-                top_tables: { type: 'array' }
-              }
+                top_tables: { type: 'array' },
+              },
             },
-            status: { type: 'string' }
-          }
-        }
-      }
-    }
+            status: { type: 'string' },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({ status: 403, description: 'Admin access required' })
   async getDashboard() {
@@ -122,7 +122,12 @@ export class AdminController {
 
   @Get('activity')
   @ApiOperation({ summary: 'Get recent admin and system activity' })
-  @ApiQuery({ name: 'limit', required: false, description: 'Number of activities to return', type: Number })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Number of activities to return',
+    type: Number,
+  })
   @ApiResponse({
     status: 200,
     description: 'Recent activity retrieved successfully',
@@ -136,10 +141,10 @@ export class AdminController {
           title: { type: 'string' },
           description: { type: 'string' },
           target_id: { type: 'number' },
-          target_type: { type: 'string' }
-        }
-      }
-    }
+          target_type: { type: 'string' },
+        },
+      },
+    },
   })
   async getRecentActivity(@Query('limit', ParseIntPipe) limit: number = 20) {
     return this.adminService.getRecentActivity(limit);
@@ -159,26 +164,26 @@ export class AdminController {
             status: { type: 'string' },
             response_time_ms: { type: 'number' },
             database_size: { type: 'string' },
-            active_connections: { type: 'number' }
-          }
+            active_connections: { type: 'number' },
+          },
         },
         storage: {
           type: 'object',
           properties: {
             status: { type: 'string' },
-            media_files: { type: 'object' }
-          }
+            media_files: { type: 'object' },
+          },
         },
         performance: {
           type: 'object',
           properties: {
             status: { type: 'string' },
-            top_tables: { type: 'array' }
-          }
+            top_tables: { type: 'array' },
+          },
         },
-        status: { type: 'string' }
-      }
-    }
+        status: { type: 'string' },
+      },
+    },
   })
   async getSystemHealth() {
     return this.adminService.getSystemHealth();
@@ -186,7 +191,12 @@ export class AdminController {
 
   @Get('actions')
   @ApiOperation({ summary: 'Get admin action logs' })
-  @ApiQuery({ name: 'limit', required: false, description: 'Number of actions to return', type: Number })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Number of actions to return',
+    type: Number,
+  })
   @ApiResponse({
     status: 200,
     description: 'Admin actions retrieved successfully',
@@ -194,9 +204,9 @@ export class AdminController {
       type: 'object',
       properties: {
         message: { type: 'string' },
-        actions: { type: 'array' }
-      }
-    }
+        actions: { type: 'array' },
+      },
+    },
   })
   async getAdminActions(@Query('limit') limitStr?: string) {
     const limit = limitStr ? parseInt(limitStr, 10) : 50;
@@ -213,14 +223,14 @@ export class AdminController {
       properties: {
         message: { type: 'string' },
         export_id: { type: 'string' },
-        estimated_completion: { type: 'string' }
-      }
-    }
+        estimated_completion: { type: 'string' },
+      },
+    },
   })
   @HttpCode(HttpStatus.OK)
   async exportData(
     @Body('type') type: string,
-    @Body('format') format: string = 'csv'
+    @Body('format') format: string = 'csv',
   ) {
     return this.adminService.exportData(type, format);
   }
@@ -240,9 +250,9 @@ export class AdminController {
         max_upload_size: { type: 'string' },
         supported_image_formats: { type: 'array', items: { type: 'string' } },
         cache_enabled: { type: 'boolean' },
-        backup_frequency: { type: 'string' }
-      }
-    }
+        backup_frequency: { type: 'string' },
+      },
+    },
   })
   async getSystemSettings() {
     return this.adminService.getSystemSettings();
@@ -257,9 +267,9 @@ export class AdminController {
       type: 'object',
       properties: {
         message: { type: 'string' },
-        updated_settings: { type: 'object' }
-      }
-    }
+        updated_settings: { type: 'object' },
+      },
+    },
   })
   async updateSystemSettings(@Body() settings: Record<string, any>) {
     return this.adminService.updateSystemSettings(settings);

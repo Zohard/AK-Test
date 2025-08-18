@@ -37,11 +37,11 @@ export enum Permission {
   DELETE_BUSINESS = 'delete_business',
 
   // Super admin permissions
-  SUPER_ADMIN = 'super_admin'
+  SUPER_ADMIN = 'super_admin',
 }
 
 export const PERMISSIONS_KEY = 'permissions';
-export const Permissions = (...permissions: Permission[]) => 
+export const Permissions = (...permissions: Permission[]) =>
   SetMetadata(PERMISSIONS_KEY, permissions);
 
 // Permission groups for easier management
@@ -50,16 +50,16 @@ export const PermissionGroups = {
     Permission.VIEW_USERS,
     Permission.EDIT_USERS,
     Permission.BAN_USERS,
-    Permission.MANAGE_USER_ROLES
+    Permission.MANAGE_USER_ROLES,
   ],
-  
+
   CONTENT_MANAGER: [
     Permission.VIEW_CONTENT,
     Permission.EDIT_CONTENT,
     Permission.PUBLISH_CONTENT,
     Permission.MANAGE_CONTENT_RELATIONSHIPS,
     Permission.MANAGE_CONTENT_TAGS,
-    Permission.UPLOAD_MEDIA
+    Permission.UPLOAD_MEDIA,
   ],
 
   MODERATOR: [
@@ -67,13 +67,13 @@ export const PermissionGroups = {
     Permission.MODERATE_REVIEWS,
     Permission.MODERATE_CONTENT,
     Permission.VIEW_REPORTS,
-    Permission.PROCESS_REPORTS
+    Permission.PROCESS_REPORTS,
   ],
 
   BUSINESS_MANAGER: [
     Permission.VIEW_BUSINESS,
     Permission.EDIT_BUSINESS,
-    Permission.DELETE_BUSINESS
+    Permission.DELETE_BUSINESS,
   ],
 
   SYSTEM_ADMIN: [
@@ -81,8 +81,8 @@ export const PermissionGroups = {
     Permission.MANAGE_SYSTEM_SETTINGS,
     Permission.VIEW_AUDIT_LOGS,
     Permission.EXPORT_DATA,
-    Permission.MANAGE_BACKUPS
+    Permission.MANAGE_BACKUPS,
   ],
 
-  SUPER_ADMIN: [Permission.SUPER_ADMIN]
+  SUPER_ADMIN: [Permission.SUPER_ADMIN],
 };

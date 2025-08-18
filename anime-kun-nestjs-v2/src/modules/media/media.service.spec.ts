@@ -102,15 +102,17 @@ describe('MediaService', () => {
     it('should throw BadRequestException for invalid file type', async () => {
       const invalidFile = { ...mockFile, mimetype: 'text/plain' };
 
-      await expect(service.uploadImage(invalidFile, 'anime', 123))
-        .rejects.toThrow(BadRequestException);
+      await expect(
+        service.uploadImage(invalidFile, 'anime', 123),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException for oversized file', async () => {
       const oversizedFile = { ...mockFile, size: 10000000 };
 
-      await expect(service.uploadImage(oversizedFile, 'anime', 123))
-        .rejects.toThrow(BadRequestException);
+      await expect(
+        service.uploadImage(oversizedFile, 'anime', 123),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -125,7 +127,7 @@ describe('MediaService', () => {
       };
 
       mockPrismaService.$queryRaw.mockResolvedValue([mockMedia]);
-      
+
       // Mock the getTypeName method
       jest.spyOn(service as any, 'getTypeName').mockReturnValue('anime');
 
@@ -144,8 +146,9 @@ describe('MediaService', () => {
     it('should throw NotFoundException when media not found', async () => {
       mockPrismaService.$queryRaw.mockResolvedValue([]);
 
-      await expect(service.getMediaById(999))
-        .rejects.toThrow(NotFoundException);
+      await expect(service.getMediaById(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -241,8 +244,9 @@ describe('MediaService', () => {
         size: 1000000,
       } as Express.Multer.File;
 
-      expect(() => service['validateFile'](invalidFile))
-        .toThrow('Invalid file type');
+      expect(() => service['validateFile'](invalidFile)).toThrow(
+        'Invalid file type',
+      );
     });
 
     it('should throw error for oversized file', () => {
@@ -251,8 +255,9 @@ describe('MediaService', () => {
         size: 10000000,
       } as Express.Multer.File;
 
-      expect(() => service['validateFile'](oversizedFile))
-        .toThrow('File size exceeds limit');
+      expect(() => service['validateFile'](oversizedFile)).toThrow(
+        'File size exceeds limit',
+      );
     });
   });
 

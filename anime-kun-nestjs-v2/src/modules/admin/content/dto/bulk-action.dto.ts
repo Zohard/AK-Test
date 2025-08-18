@@ -2,26 +2,26 @@ import { IsArray, IsString, IsIn, ArrayNotEmpty, IsInt } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class BulkActionDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Array of content IDs to perform action on',
-    type: [Number] 
+    type: [Number],
   })
   @IsArray()
   @ArrayNotEmpty()
   @IsInt({ each: true })
   ids: number[];
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Action to perform',
-    enum: ['activate', 'deactivate', 'delete', 'update_status'] 
+    enum: ['activate', 'deactivate', 'delete', 'update_status'],
   })
   @IsString()
   @IsIn(['activate', 'deactivate', 'delete', 'update_status'])
   action: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Content type',
-    enum: ['anime', 'manga', 'business', 'article'] 
+    enum: ['anime', 'manga', 'business', 'article'],
   })
   @IsString()
   @IsIn(['anime', 'manga', 'business', 'article'])

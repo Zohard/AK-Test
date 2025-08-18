@@ -123,7 +123,7 @@ router.get('/', async (req, res) => {
     
     const query = `
       SELECT id_manga, nice_url, titre, auteur, annee, nb_volumes, 
-             image, nb_reviews, moyenne_notes, date_ajout
+             image, nb_reviews, moyennenotes, date_ajout
       FROM ak_mangas ${whereClause}
       ORDER BY annee DESC, titre ASC
       LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}

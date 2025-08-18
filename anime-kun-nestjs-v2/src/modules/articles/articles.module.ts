@@ -13,7 +13,7 @@ import { PrismaService } from '../../shared/services/prisma.service';
 
 @Module({
   controllers: [
-    ArticlesController, 
+    ArticlesController,
     AdminArticlesController,
     CategoriesController,
     AdminCategoriesController,
@@ -21,10 +21,10 @@ import { PrismaService } from '../../shared/services/prisma.service';
     AdminCommentsController,
   ],
   providers: [
-    ArticlesService, 
+    ArticlesService,
     CategoriesService,
     CommentsService,
-    ArticlePermissionsGuard, 
+    ArticlePermissionsGuard,
     PrismaService,
   ],
   exports: [ArticlesService, CategoriesService, CommentsService],

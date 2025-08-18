@@ -18,6 +18,8 @@ export function setupSwagger(app: INestApplication): void {
       `http://localhost:${process.env.PORT || 3003}`,
       'Development server',
     )
+    .addServer('http://localhost:3001', 'Docker Legacy API (port 3001)')
+    .addServer('http://localhost:3003', 'Docker NestJS API (port 3003)')
     .addServer('https://api.anime-kun.com', 'Production server')
     .addBearerAuth()
     .addTag('Authentication', "Endpoints d'authentification")

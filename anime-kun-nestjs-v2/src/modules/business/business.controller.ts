@@ -84,15 +84,12 @@ export class BusinessController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard, AdminGuard)
-  @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Liste de toutes les entités business (Admin seulement)',
+    summary: 'Liste de toutes les entités business',
     description:
       "Récupère la liste des entités business comme les studios d'animation, auteurs, éditeurs, etc.",
   })
   @ApiResponse({ status: 200, description: 'Liste des entités business' })
-  @ApiResponse({ status: 403, description: 'Accès admin requis' })
   async findAll(@Query() query: BusinessQueryDto) {
     return this.businessService.findAll(query);
   }
@@ -116,11 +113,8 @@ export class BusinessController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard, AdminGuard)
-  @ApiBearerAuth()
   @ApiOperation({
-    summary:
-      'Récupérer une entité business spécifique par ID (Admin seulement)',
+    summary: 'Récupérer une entité business spécifique par ID',
     description: "Récupère les détails d'une entité business spécifique",
   })
   @ApiParam({
@@ -130,7 +124,6 @@ export class BusinessController {
   })
   @ApiResponse({ status: 200, description: "Détails de l'entité business" })
   @ApiResponse({ status: 404, description: 'Entité business introuvable' })
-  @ApiResponse({ status: 403, description: 'Accès admin requis' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.businessService.findOne(id);
   }

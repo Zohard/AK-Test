@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../shared/services/prisma.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
@@ -10,16 +15,18 @@ export class ArticlesService {
   constructor(private prisma: PrismaService) {}
 
   async create(createArticleDto: CreateArticleDto, authorId: number) {
-    const { categoryIds, contentIds, contentTypes, ...articleData } = createArticleDto;
+    const { categoryIds, contentIds, contentTypes, ...articleData } =
+      createArticleDto;
 
     // Generate nice URL if not provided
-    const niceUrl = articleData.niceUrl || this.generateNiceUrl(articleData.titre);
-    
+    const niceUrl =
+      articleData.niceUrl || this.generateNiceUrl(articleData.titre);
+
     // Ensure URL uniqueness
     const existingArticle = await this.prisma.akWebzineArticle.findFirst({
-      where: { niceUrl }
+      where: { niceUrl },
     });
-    
+
     if (existingArticle) {
       throw new BadRequestException('An article with this URL already exists');
     }
@@ -37,7 +44,10 @@ export class ArticlesService {
     };
 
     // Convert boolean fields to int for database
-    if ('trackbacksOpen' in createData && typeof createData.trackbacksOpen === 'boolean') {
+    if (
+      'trackbacksOpen' in createData &&
+      typeof createData.trackbacksOpen === 'boolean'
+    ) {
       (createData as any).trackbacksOpen = createData.trackbacksOpen ? 1 : 0;
     }
     if ('onindex' in createData && typeof createData.onindex === 'boolean') {
@@ -55,9 +65,9 @@ export class ArticlesService {
             idMember: true,
             memberName: true,
             realName: true,
-          }
+          },
         },
-      }
+      },
     });
 
     // Add categories if provided
@@ -66,15 +76,35 @@ export class ArticlesService {
     }
 
     // Add content relationships if provided
-    if (contentIds && contentTypes && contentIds.length === contentTypes.length) {
-      await this.addContentRelationships(article.idArt, contentIds, contentTypes);
+    if (
+      contentIds &&
+      contentTypes &&
+      contentIds.length === contentTypes.length
+    ) {
+      await this.addContentRelationships(
+        article.idArt,
+        contentIds,
+        contentTypes,
+      );
     }
 
     return this.getById(article.idArt);
   }
 
   async findAll(query: ArticleQueryDto) {
-    const { page = 1, limit = 20, search, categoryId, authorId, status, sort, order = 'desc', onindex, tag, includeContent } = query;
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      categoryId,
+      authorId,
+      status,
+      sort,
+      order = 'desc',
+      onindex,
+      tag,
+      includeContent,
+    } = query;
     const offset = (page - 1) * limit;
 
     // Build where conditions
@@ -118,8 +148,8 @@ export class ArticlesService {
     if (categoryId) {
       where.categories = {
         some: {
-          idCat: categoryId
-        }
+          idCat: categoryId,
+        },
       };
     }
 
@@ -150,19 +180,19 @@ export class ArticlesService {
               idMember: true,
               memberName: true,
               realName: true,
-            }
+            },
           },
           categories: {
             include: {
-              category: true
-            }
+              category: true,
+            },
           },
           _count: {
             select: {
               comments: true,
               images: true,
-            }
-          }
+            },
+          },
         },
         orderBy,
         skip: offset,
@@ -172,11 +202,11 @@ export class ArticlesService {
     ]);
 
     // Transform results
-    const transformedArticles = articles.map(article => ({
+    const transformedArticles = articles.map((article) => ({
       ...article,
       content: includeContent ? article.texte : undefined,
       texte: undefined, // Remove full content unless requested
-      categories: article.categories.map(cat => cat.category),
+      categories: article.categories.map((cat) => cat.category),
       commentCount: article._count.comments,
       imageCount: article._count.images,
       _count: undefined,
@@ -205,12 +235,12 @@ export class ArticlesService {
             idMember: true,
             memberName: true,
             realName: true,
-          }
+          },
         },
         categories: {
           include: {
-            category: true
-          }
+            category: true,
+          },
         },
         comments: {
           where: { moderation: 1 }, // Only approved comments
@@ -219,10 +249,10 @@ export class ArticlesService {
               select: {
                 idMember: true,
                 memberName: true,
-              }
-            }
+              },
+            },
           },
-          orderBy: { date: 'asc' }
+          orderBy: { date: 'asc' },
         },
         images: true,
         contentRelations: true,
@@ -238,7 +268,7 @@ export class ArticlesService {
 
     return {
       ...article,
-      categories: article.categories.map(cat => cat.category),
+      categories: article.categories.map((cat) => cat.category),
       content: includeContent ? article.texte : undefined,
       texte: undefined,
     };
@@ -253,12 +283,12 @@ export class ArticlesService {
             idMember: true,
             memberName: true,
             realName: true,
-          }
+          },
         },
         categories: {
           include: {
-            category: true
-          }
+            category: true,
+          },
         },
         comments: {
           where: { moderation: 1 },
@@ -267,10 +297,10 @@ export class ArticlesService {
               select: {
                 idMember: true,
                 memberName: true,
-              }
-            }
+              },
+            },
           },
-          orderBy: { date: 'asc' }
+          orderBy: { date: 'asc' },
         },
         images: true,
         contentRelations: true,
@@ -286,15 +316,20 @@ export class ArticlesService {
 
     return {
       ...article,
-      categories: article.categories.map(cat => cat.category),
+      categories: article.categories.map((cat) => cat.category),
       content: includeContent ? article.texte : undefined,
       texte: undefined,
     };
   }
 
-  async update(id: number, updateArticleDto: UpdateArticleDto, userId: number, isAdmin: boolean = false) {
+  async update(
+    id: number,
+    updateArticleDto: UpdateArticleDto,
+    userId: number,
+    isAdmin: boolean = false,
+  ) {
     const existingArticle = await this.prisma.akWebzineArticle.findUnique({
-      where: { idArt: id }
+      where: { idArt: id },
     });
 
     if (!existingArticle) {
@@ -306,7 +341,8 @@ export class ArticlesService {
       throw new ForbiddenException('You can only edit your own articles');
     }
 
-    const { categoryIds, contentIds, contentTypes, ...articleData } = updateArticleDto;
+    const { categoryIds, contentIds, contentTypes, ...articleData } =
+      updateArticleDto;
 
     // Update nice URL if title changed
     if (articleData.titre && articleData.titre !== existingArticle.titre) {
@@ -315,7 +351,10 @@ export class ArticlesService {
 
     // Convert boolean fields to int for database
     const updateData = { ...articleData };
-    if ('trackbacksOpen' in updateData && typeof updateData.trackbacksOpen === 'boolean') {
+    if (
+      'trackbacksOpen' in updateData &&
+      typeof updateData.trackbacksOpen === 'boolean'
+    ) {
       (updateData as any).trackbacksOpen = updateData.trackbacksOpen ? 1 : 0;
     }
     if ('onindex' in updateData && typeof updateData.onindex === 'boolean') {
@@ -344,9 +383,14 @@ export class ArticlesService {
     return this.getById(id);
   }
 
-  async publish(id: number, publishDto: PublishArticleDto, userId: number, isAdmin: boolean = false) {
+  async publish(
+    id: number,
+    publishDto: PublishArticleDto,
+    userId: number,
+    isAdmin: boolean = false,
+  ) {
     const article = await this.prisma.akWebzineArticle.findUnique({
-      where: { idArt: id }
+      where: { idArt: id },
     });
 
     if (!article) {
@@ -383,7 +427,7 @@ export class ArticlesService {
 
   async remove(id: number, userId: number, isAdmin: boolean = false) {
     const article = await this.prisma.akWebzineArticle.findUnique({
-      where: { idArt: id }
+      where: { idArt: id },
     });
 
     if (!article) {
@@ -396,7 +440,7 @@ export class ArticlesService {
     }
 
     await this.prisma.akWebzineArticle.delete({
-      where: { idArt: id }
+      where: { idArt: id },
     });
 
     return { message: 'Article deleted successfully' };
@@ -415,7 +459,7 @@ export class ArticlesService {
     `;
 
     const result = (stats as any[])[0];
-    
+
     return {
       published_articles: Number(result.published_articles),
       draft_articles: Number(result.draft_articles),
@@ -438,33 +482,33 @@ export class ArticlesService {
                 idMember: true,
                 memberName: true,
                 realName: true,
-              }
+              },
             },
             categories: {
               include: {
-                category: true
-              }
+                category: true,
+              },
             },
             _count: {
               select: {
                 comments: { where: { moderation: 1 } },
                 images: true,
-              }
-            }
-          }
-        }
+              },
+            },
+          },
+        },
       },
       orderBy: { ordre: 'asc' },
       take: limit,
     });
 
-    return featured.map(item => ({
+    return featured.map((item) => ({
       ...item.article,
       featured: {
         order: item.ordre,
         dateAdded: item.dateAjout,
       },
-      categories: item.article.categories.map(cat => cat.category),
+      categories: item.article.categories.map((cat) => cat.category),
       commentCount: item.article._count.comments,
       imageCount: item.article._count.images,
       content: undefined, // Don't include full content in featured list
@@ -476,7 +520,7 @@ export class ArticlesService {
   async featureArticle(articleId: number, order?: number) {
     // Check if article exists and is published
     const article = await this.prisma.akWebzineArticle.findUnique({
-      where: { idArt: articleId }
+      where: { idArt: articleId },
     });
 
     if (!article) {
@@ -489,7 +533,7 @@ export class ArticlesService {
 
     // Check if already featured
     const existingFeature = await this.prisma.akWebzineUne.findFirst({
-      where: { idArticle: articleId, actif: 1 }
+      where: { idArticle: articleId, actif: 1 },
     });
 
     if (existingFeature) {
@@ -526,9 +570,9 @@ export class ArticlesService {
             idArt: true,
             titre: true,
             niceUrl: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     return {
@@ -539,7 +583,7 @@ export class ArticlesService {
 
   async unfeatureArticle(articleId: number) {
     const featured = await this.prisma.akWebzineUne.findFirst({
-      where: { idArticle: articleId, actif: 1 }
+      where: { idArticle: articleId, actif: 1 },
     });
 
     if (!featured) {
@@ -548,7 +592,7 @@ export class ArticlesService {
 
     await this.prisma.akWebzineUne.update({
       where: { idUne: featured.idUne },
-      data: { actif: 0 }
+      data: { actif: 0 },
     });
 
     return {
@@ -556,38 +600,44 @@ export class ArticlesService {
     };
   }
 
-  async reorderFeaturedArticles(articleOrders: Array<{ articleId: number; order: number }>) {
-    const results: Array<{ articleId: number; status: string; message?: string }> = [];
+  async reorderFeaturedArticles(
+    articleOrders: Array<{ articleId: number; order: number }>,
+  ) {
+    const results: Array<{
+      articleId: number;
+      status: string;
+      message?: string;
+    }> = [];
 
     for (const { articleId, order } of articleOrders) {
       try {
         const featured = await this.prisma.akWebzineUne.findFirst({
-          where: { idArticle: articleId, actif: 1 }
+          where: { idArticle: articleId, actif: 1 },
         });
 
         if (!featured) {
           results.push({
             articleId,
             status: 'error',
-            message: 'Article is not featured'
+            message: 'Article is not featured',
           });
           continue;
         }
 
         await this.prisma.akWebzineUne.update({
           where: { idUne: featured.idUne },
-          data: { ordre: order }
+          data: { ordre: order },
         });
 
         results.push({
           articleId,
-          status: 'success'
+          status: 'success',
         });
       } catch (error) {
         results.push({
           articleId,
           status: 'error',
-          message: error.message
+          message: error.message,
         });
       }
     }
@@ -621,8 +671,11 @@ export class ArticlesService {
     });
   }
 
-  private async addCategoriesToArticle(articleId: number, categoryIds: number[]) {
-    const data = categoryIds.map(categoryId => ({
+  private async addCategoriesToArticle(
+    articleId: number,
+    categoryIds: number[],
+  ) {
+    const data = categoryIds.map((categoryId) => ({
       idArt: articleId,
       idCat: categoryId,
     }));
@@ -633,7 +686,10 @@ export class ArticlesService {
     });
   }
 
-  private async updateArticleCategories(articleId: number, categoryIds: number[]) {
+  private async updateArticleCategories(
+    articleId: number,
+    categoryIds: number[],
+  ) {
     // Remove existing categories
     await this.prisma.akWebzineArt2Cat.deleteMany({
       where: { idArt: articleId },
@@ -645,7 +701,11 @@ export class ArticlesService {
     }
   }
 
-  private async addContentRelationships(articleId: number, contentIds: number[], contentTypes: string[]) {
+  private async addContentRelationships(
+    articleId: number,
+    contentIds: number[],
+    contentTypes: string[],
+  ) {
     // Create each relationship individually since idRelation is auto-generated
     for (let i = 0; i < contentIds.length; i++) {
       await this.prisma.akWebzineToFiche.create({
@@ -654,12 +714,16 @@ export class ArticlesService {
           idWpArticle: 0, // Legacy field
           idFiche: contentIds[i],
           type: contentTypes[i],
-        }
+        },
       });
     }
   }
 
-  private async updateContentRelationships(articleId: number, contentIds: number[], contentTypes: string[]) {
+  private async updateContentRelationships(
+    articleId: number,
+    contentIds: number[],
+    contentTypes: string[],
+  ) {
     // Remove existing relationships
     await this.prisma.akWebzineToFiche.deleteMany({
       where: { idArticle: articleId },

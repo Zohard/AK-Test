@@ -3,7 +3,11 @@ import { PrismaService } from '../../shared/services/prisma.service';
 import { AuditLogService } from '../services/audit-log.service';
 
 export interface ModerationJobData {
-  type: 'review_submitted' | 'content_reported' | 'bulk_moderation' | 'auto_moderation';
+  type:
+    | 'review_submitted'
+    | 'content_reported'
+    | 'bulk_moderation'
+    | 'auto_moderation';
   payload: any;
   priority?: number;
   delay?: number;
@@ -15,7 +19,7 @@ export class SimpleModerationProcessor {
 
   constructor(
     private prisma: PrismaService,
-    private auditLogService: AuditLogService
+    private auditLogService: AuditLogService,
   ) {}
 
   async processJob(jobData: ModerationJobData): Promise<any> {
@@ -40,12 +44,14 @@ export class SimpleModerationProcessor {
     }
   }
 
-  private async processReviewSubmitted(jobData: ModerationJobData): Promise<void> {
+  private async processReviewSubmitted(
+    jobData: ModerationJobData,
+  ): Promise<void> {
     const { reviewId, userId, contentId, contentType } = jobData.payload;
 
     // Auto-moderation checks
     const autoModerationResult = await this.performAutoModeration(reviewId);
-    
+
     if (autoModerationResult.action === 'approve') {
       // Auto-approve the review
       await this.prisma.$queryRaw`
@@ -69,32 +75,49 @@ export class SimpleModerationProcessor {
         WHERE id = ${reviewId}
       `;
 
-      this.logger.log(`Review ${reviewId} auto-rejected: ${autoModerationResult.reason}`);
+      this.logger.log(
+        `Review ${reviewId} auto-rejected: ${autoModerationResult.reason}`,
+      );
     } else {
       // Keep in moderation queue
       this.logger.log(`Review ${reviewId} requires manual moderation`);
     }
   }
 
-  private async processContentReported(jobData: ModerationJobData): Promise<void> {
+  private async processContentReported(
+    jobData: ModerationJobData,
+  ): Promise<void> {
     const { reportId, contentType, contentId, reason } = jobData.payload;
-    this.logger.log(`Processing content report for ${contentType} ${contentId}`);
+    this.logger.log(
+      `Processing content report for ${contentType} ${contentId}`,
+    );
     // Implementation would go here
   }
 
-  private async processBulkModeration(jobData: ModerationJobData): Promise<void> {
-    const { action, targetIds, targetType, moderatorId, reason } = jobData.payload;
-    this.logger.log(`Processing bulk ${action} on ${targetIds.length} ${targetType}s`);
+  private async processBulkModeration(
+    jobData: ModerationJobData,
+  ): Promise<void> {
+    const { action, targetIds, targetType, moderatorId, reason } =
+      jobData.payload;
+    this.logger.log(
+      `Processing bulk ${action} on ${targetIds.length} ${targetType}s`,
+    );
     // Implementation would go here
   }
 
-  private async processAutoModeration(jobData: ModerationJobData): Promise<void> {
+  private async processAutoModeration(
+    jobData: ModerationJobData,
+  ): Promise<void> {
     const { contentType, contentId, rules } = jobData.payload;
-    this.logger.log(`Processing auto-moderation for ${contentType} ${contentId}`);
+    this.logger.log(
+      `Processing auto-moderation for ${contentType} ${contentId}`,
+    );
     // Implementation would go here
   }
 
-  private async performAutoModeration(reviewId: number): Promise<{ action: 'approve' | 'reject' | 'manual'; reason?: string }> {
+  private async performAutoModeration(
+    reviewId: number,
+  ): Promise<{ action: 'approve' | 'reject' | 'manual'; reason?: string }> {
     // Get review content
     const review = await this.prisma.$queryRaw`
       SELECT critique, notation, user_id
@@ -131,6 +154,6 @@ export class SimpleModerationProcessor {
       /\b(buy now|click here|limited time|act now)\b/i, // Spam phrases
     ];
 
-    return spamIndicators.some(pattern => pattern.test(content));
+    return spamIndicators.some((pattern) => pattern.test(content));
   }
 }

@@ -10,7 +10,12 @@ import {
   UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../../common/guards/jwt-auth.guard';
 import { AdminGuard } from '../../../../common/guards/admin.guard';
 import { ArticlePermissionsGuard } from '../../guards/article-permissions.guard';
@@ -40,7 +45,10 @@ export class AdminCategoriesController {
 
   @Get()
   @ApiOperation({ summary: 'Get all categories (including empty)' })
-  @ApiResponse({ status: 200, description: 'Categories retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Categories retrieved successfully',
+  })
   findAll(@Query() query: CategoryQueryDto) {
     // Allow admins to see all categories including empty ones
     if (query.includeEmpty === undefined) {
@@ -51,7 +59,10 @@ export class AdminCategoriesController {
 
   @Get('stats')
   @ApiOperation({ summary: 'Get categories statistics' })
-  @ApiResponse({ status: 200, description: 'Statistics retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Statistics retrieved successfully',
+  })
   getStats() {
     return this.categoriesService.getStats();
   }

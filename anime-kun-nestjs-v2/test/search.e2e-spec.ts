@@ -51,7 +51,8 @@ describe('Search E2E', () => {
 
       const mockCounts = [{ anime_count: 1, manga_count: 1 }];
 
-      jest.spyOn(prismaService, '$queryRaw')
+      jest
+        .spyOn(prismaService, '$queryRaw')
         .mockResolvedValueOnce(mockAnimes)
         .mockResolvedValueOnce(mockMangas)
         .mockResolvedValueOnce(mockCounts);
@@ -85,7 +86,8 @@ describe('Search E2E', () => {
         },
       ];
 
-      jest.spyOn(prismaService, '$queryRaw')
+      jest
+        .spyOn(prismaService, '$queryRaw')
         .mockResolvedValueOnce(mockAnimes)
         .mockResolvedValueOnce([{ anime_count: 1, manga_count: 0 }]);
       jest.spyOn(prismaService, '$executeRaw').mockResolvedValue(undefined);
@@ -136,9 +138,7 @@ describe('Search E2E', () => {
     });
 
     it('should require search query', () => {
-      return request(app.getHttpServer())
-        .get('/api/search')
-        .expect(400);
+      return request(app.getHttpServer()).get('/api/search').expect(400);
     });
   });
 
@@ -212,7 +212,9 @@ describe('Search E2E', () => {
         .get('/api/search/popular?type=anime')
         .expect(200)
         .expect((res) => {
-          expect(res.body.popular.every(item => item.type === 'anime')).toBe(true);
+          expect(res.body.popular.every((item) => item.type === 'anime')).toBe(
+            true,
+          );
         });
     });
 
@@ -241,7 +243,8 @@ describe('Search E2E', () => {
         { search_term: 'attack on titan', created_at: new Date() },
       ];
 
-      jest.spyOn(prismaService, '$queryRaw')
+      jest
+        .spyOn(prismaService, '$queryRaw')
         .mockResolvedValueOnce(mockStats)
         .mockResolvedValueOnce(mockTopSearches)
         .mockResolvedValueOnce(mockRecentSearches);
@@ -275,7 +278,9 @@ describe('Search E2E', () => {
         },
       ];
 
-      jest.spyOn(prismaService, '$queryRaw').mockResolvedValue(mockRecommendations);
+      jest
+        .spyOn(prismaService, '$queryRaw')
+        .mockResolvedValue(mockRecommendations);
 
       return request(app.getHttpServer())
         .get('/api/search/recommendations/anime/1')
@@ -300,7 +305,9 @@ describe('Search E2E', () => {
         },
       ];
 
-      jest.spyOn(prismaService, '$queryRaw').mockResolvedValue(mockRecommendations);
+      jest
+        .spyOn(prismaService, '$queryRaw')
+        .mockResolvedValue(mockRecommendations);
 
       return request(app.getHttpServer())
         .get('/api/search/recommendations/manga/1')

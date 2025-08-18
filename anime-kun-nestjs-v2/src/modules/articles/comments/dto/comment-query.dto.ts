@@ -10,7 +10,12 @@ export class CommentQueryDto {
   @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ description: 'Items per page', minimum: 1, maximum: 100, default: 20 })
+  @ApiPropertyOptional({
+    description: 'Items per page',
+    minimum: 1,
+    maximum: 100,
+    default: 20,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -24,13 +29,18 @@ export class CommentQueryDto {
   @IsInt()
   articleId?: number;
 
-  @ApiPropertyOptional({ description: 'Comment status', enum: ['all', 'approved', 'pending', 'rejected'] })
+  @ApiPropertyOptional({
+    description: 'Comment status',
+    enum: ['all', 'approved', 'pending', 'rejected'],
+  })
   @IsOptional()
   @IsString()
   @IsIn(['all', 'approved', 'pending', 'rejected'])
   status?: string = 'approved';
 
-  @ApiPropertyOptional({ description: 'Search term for comment content and author' })
+  @ApiPropertyOptional({
+    description: 'Search term for comment content and author',
+  })
   @IsOptional()
   @IsString()
   search?: string;

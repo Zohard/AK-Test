@@ -1,4 +1,12 @@
-import { IsOptional, IsString, IsInt, Min, Max, IsIn, IsBoolean } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsInt,
+  Min,
+  Max,
+  IsIn,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -10,7 +18,12 @@ export class ArticleQueryDto {
   @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ description: 'Items per page', minimum: 1, maximum: 100, default: 20 })
+  @ApiPropertyOptional({
+    description: 'Items per page',
+    minimum: 1,
+    maximum: 100,
+    default: 20,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -35,13 +48,19 @@ export class ArticleQueryDto {
   @IsInt()
   authorId?: number;
 
-  @ApiPropertyOptional({ description: 'Article status', enum: ['all', 'published', 'draft', 'archived'] })
+  @ApiPropertyOptional({
+    description: 'Article status',
+    enum: ['all', 'published', 'draft', 'archived'],
+  })
   @IsOptional()
   @IsString()
   @IsIn(['all', 'published', 'draft', 'archived'])
   status?: string = 'published';
 
-  @ApiPropertyOptional({ description: 'Sort field', enum: ['date', 'title', 'views', 'comments'] })
+  @ApiPropertyOptional({
+    description: 'Sort field',
+    enum: ['date', 'title', 'views', 'comments'],
+  })
   @IsOptional()
   @IsString()
   @IsIn(['date', 'title', 'views', 'comments'])

@@ -63,7 +63,8 @@ describe('Notifications E2E', () => {
 
       const mockCount = [{ total: 1 }];
 
-      jest.spyOn(prismaService, '$queryRaw')
+      jest
+        .spyOn(prismaService, '$queryRaw')
         .mockResolvedValueOnce(mockNotifications)
         .mockResolvedValueOnce(mockCount);
 
@@ -97,9 +98,7 @@ describe('Notifications E2E', () => {
     it('should require authentication', () => {
       mockJwtGuard.canActivate.mockReturnValueOnce(false);
 
-      return request(app.getHttpServer())
-        .get('/api/notifications')
-        .expect(401);
+      return request(app.getHttpServer()).get('/api/notifications').expect(401);
     });
   });
 
@@ -226,7 +225,8 @@ describe('Notifications E2E', () => {
         },
       ];
 
-      jest.spyOn(prismaService, '$queryRaw')
+      jest
+        .spyOn(prismaService, '$queryRaw')
         .mockResolvedValueOnce(mockPreferences)
         .mockResolvedValueOnce(mockUser);
       jest.spyOn(prismaService, '$executeRaw').mockResolvedValue(undefined);
@@ -273,11 +273,7 @@ describe('Notifications E2E', () => {
 
   describe('/api/notifications/broadcast (POST)', () => {
     it('should broadcast notification to all users (admin only)', () => {
-      const mockUsers = [
-        { id_member: 1 },
-        { id_member: 2 },
-        { id_member: 3 },
-      ];
+      const mockUsers = [{ id_member: 1 }, { id_member: 2 }, { id_member: 3 }];
 
       jest.spyOn(prismaService, '$queryRaw').mockResolvedValue(mockUsers);
       jest.spyOn(prismaService, '$executeRaw').mockResolvedValue(undefined);

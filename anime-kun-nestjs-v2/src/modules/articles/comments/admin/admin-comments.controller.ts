@@ -11,7 +11,12 @@ import {
   Request,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../../common/guards/jwt-auth.guard';
 import { AdminGuard } from '../../../../common/guards/admin.guard';
 import { CommentsService } from '../comments.service';
@@ -36,14 +41,20 @@ export class AdminCommentsController {
 
   @Get('stats')
   @ApiOperation({ summary: 'Get comments statistics' })
-  @ApiResponse({ status: 200, description: 'Statistics retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Statistics retrieved successfully',
+  })
   getStats() {
     return this.commentsService.getStats();
   }
 
   @Get('pending')
   @ApiOperation({ summary: 'Get comments pending moderation' })
-  @ApiResponse({ status: 200, description: 'Pending comments retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Pending comments retrieved successfully',
+  })
   getPending(@Query() query: CommentQueryDto) {
     query.status = 'pending';
     return this.commentsService.findAll(query);
@@ -51,7 +62,10 @@ export class AdminCommentsController {
 
   @Get('spam')
   @ApiOperation({ summary: 'Get rejected/spam comments' })
-  @ApiResponse({ status: 200, description: 'Spam comments retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Spam comments retrieved successfully',
+  })
   getSpam(@Query() query: CommentQueryDto) {
     query.status = 'rejected';
     return this.commentsService.findAll(query);
@@ -74,7 +88,12 @@ export class AdminCommentsController {
     @Body() updateCommentDto: UpdateCommentDto,
     @Request() req,
   ) {
-    return this.commentsService.update(id, updateCommentDto, req.user.sub, true);
+    return this.commentsService.update(
+      id,
+      updateCommentDto,
+      req.user.sub,
+      true,
+    );
   }
 
   @Patch(':id/moderate')
@@ -109,10 +128,7 @@ export class AdminCommentsController {
   @Post('bulk-delete')
   @ApiOperation({ summary: 'Bulk delete comments (Admin only)' })
   @ApiResponse({ status: 200, description: 'Comments deleted successfully' })
-  async bulkDelete(
-    @Body() body: { commentIds: number[] },
-    @Request() req,
-  ) {
+  async bulkDelete(@Body() body: { commentIds: number[] }, @Request() req) {
     const { commentIds } = body;
     const results: Array<{ id: number; status: string; message: string }> = [];
 
@@ -121,10 +137,10 @@ export class AdminCommentsController {
         await this.commentsService.remove(commentId, req.user.sub, true);
         results.push({ id: commentId, status: 'success', message: 'Deleted' });
       } catch (error) {
-        results.push({ 
-          id: commentId, 
-          status: 'error', 
-          message: error.message 
+        results.push({
+          id: commentId,
+          status: 'error',
+          message: error.message,
         });
       }
     }

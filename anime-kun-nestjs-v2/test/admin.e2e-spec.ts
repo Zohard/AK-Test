@@ -40,7 +40,7 @@ describe('Admin Module (e2e)', () => {
           expect(res.body).toHaveProperty('moderation');
           expect(res.body).toHaveProperty('recent_activity');
           expect(res.body).toHaveProperty('system_health');
-          
+
           expect(res.body.users).toHaveProperty('total_users');
           expect(res.body.content).toHaveProperty('active_animes');
           expect(res.body.moderation).toHaveProperty('pending_reviews');
@@ -55,9 +55,7 @@ describe('Admin Module (e2e)', () => {
     });
 
     it('/admin/dashboard (GET) - should deny access without token', () => {
-      return request(app.getHttpServer())
-        .get('/admin/dashboard')
-        .expect(401);
+      return request(app.getHttpServer()).get('/admin/dashboard').expect(401);
     });
   });
 
@@ -128,7 +126,7 @@ describe('Admin Module (e2e)', () => {
           .set('Authorization', `Bearer ${adminToken}`)
           .send({
             real_name: 'Updated Test User',
-            bio: 'Updated bio for testing'
+            bio: 'Updated bio for testing',
           })
           .expect(200);
       }
@@ -140,7 +138,7 @@ describe('Admin Module (e2e)', () => {
           .post(`/admin/users/${testUserId}/ban`)
           .set('Authorization', `Bearer ${adminToken}`)
           .send({
-            reason: 'Test ban reason'
+            reason: 'Test ban reason',
           })
           .expect(200)
           .expect((res) => {
@@ -226,7 +224,7 @@ describe('Admin Module (e2e)', () => {
         .send({
           ids: [1, 2, 3],
           action: 'activate',
-          contentType: 'anime'
+          contentType: 'anime',
         })
         .expect(200)
         .expect((res) => {
@@ -282,7 +280,7 @@ describe('Admin Module (e2e)', () => {
           contentType: 'anime',
           contentId: 1,
           reason: 'inappropriate_content',
-          details: 'Test report for inappropriate content'
+          details: 'Test report for inappropriate content',
         })
         .expect(201)
         .expect((res) => {
@@ -297,7 +295,7 @@ describe('Admin Module (e2e)', () => {
         .send({
           reviewIds: [1, 2, 3],
           action: 'approve',
-          reason: 'Bulk approval for testing'
+          reason: 'Bulk approval for testing',
         })
         .expect(200)
         .expect((res) => {
@@ -350,7 +348,7 @@ describe('Admin Module (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           site_name: 'Anime-Kun Test',
-          maintenance_mode: false
+          maintenance_mode: false,
         })
         .expect(200)
         .expect((res) => {
@@ -365,7 +363,7 @@ describe('Admin Module (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           type: 'users',
-          format: 'csv'
+          format: 'csv',
         })
         .expect(200)
         .expect((res) => {
@@ -391,7 +389,7 @@ describe('Admin Module (e2e)', () => {
         .send({
           ids: [],
           action: 'invalid_action',
-          contentType: 'anime'
+          contentType: 'anime',
         })
         .expect(400);
     });
@@ -403,7 +401,7 @@ describe('Admin Module (e2e)', () => {
         .send({
           contentType: 'invalid_type',
           contentId: 'not_a_number',
-          reason: ''
+          reason: '',
         })
         .expect(400);
     });
@@ -416,7 +414,7 @@ describe('Admin Module (e2e)', () => {
       .post('/auth/login')
       .send({
         member_name: 'admin_test',
-        password: 'admin_password'
+        password: 'admin_password',
       });
 
     if (adminLoginResponse.status === 200) {
@@ -428,7 +426,7 @@ describe('Admin Module (e2e)', () => {
         .post('/auth/login')
         .send({
           member_name: 'admin_test',
-          password: 'admin_password'
+          password: 'admin_password',
         });
       adminToken = retryLogin.body.access_token;
     }
@@ -438,7 +436,7 @@ describe('Admin Module (e2e)', () => {
       .post('/auth/login')
       .send({
         member_name: 'regular_test',
-        password: 'user_password'
+        password: 'user_password',
       });
 
     if (userLoginResponse.status === 200) {
@@ -449,7 +447,7 @@ describe('Admin Module (e2e)', () => {
         .post('/auth/login')
         .send({
           member_name: 'regular_test',
-          password: 'user_password'
+          password: 'user_password',
         });
       regularUserToken = retryLogin.body.access_token;
     }

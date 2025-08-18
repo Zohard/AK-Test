@@ -10,27 +10,27 @@ import {
   UseGuards,
   Request,
   HttpCode,
-  HttpStatus
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiParam
+  ApiParam,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { AdminGuard } from '../../../common/guards/admin.guard';
 import { AdminModerationService } from './admin-moderation.service';
-import { 
-  ReviewModerationActionDto, 
-  BulkModerationDto, 
-  ModerationQueueQueryDto 
+import {
+  ReviewModerationActionDto,
+  BulkModerationDto,
+  ModerationQueueQueryDto,
 } from './dto/review-moderation.dto';
-import { 
-  ContentModerationActionDto, 
-  ReportContentDto, 
-  ModerationReportQueryDto 
+import {
+  ContentModerationActionDto,
+  ReportContentDto,
+  ModerationReportQueryDto,
 } from './dto/content-moderation.dto';
 
 @ApiTags('Admin - Moderation')
@@ -38,7 +38,9 @@ import {
 @UseGuards(JwtAuthGuard, AdminGuard)
 @Controller('admin/moderation')
 export class AdminModerationController {
-  constructor(private readonly adminModerationService: AdminModerationService) {}
+  constructor(
+    private readonly adminModerationService: AdminModerationService,
+  ) {}
 
   @Get('queue')
   @ApiOperation({ summary: 'Get moderation queue for reviews' })
@@ -61,9 +63,9 @@ export class AdminModerationController {
               statut: { type: 'number' },
               author_name: { type: 'string' },
               content_title: { type: 'string' },
-              content_type: { type: 'string' }
-            }
-          }
+              content_type: { type: 'string' },
+            },
+          },
         },
         pagination: {
           type: 'object',
@@ -72,11 +74,11 @@ export class AdminModerationController {
             totalPages: { type: 'number' },
             totalItems: { type: 'number' },
             hasNext: { type: 'boolean' },
-            hasPrevious: { type: 'boolean' }
-          }
-        }
-      }
-    }
+            hasPrevious: { type: 'boolean' },
+          },
+        },
+      },
+    },
   })
   async getModerationQueue(@Query() query: ModerationQueueQueryDto) {
     return this.adminModerationService.getModerationQueue(query);
@@ -94,16 +96,18 @@ export class AdminModerationController {
         approved_reviews: { type: 'number' },
         rejected_reviews: { type: 'number' },
         pending_reports: { type: 'number' },
-        resolved_reports: { type: 'number' }
-      }
-    }
+        resolved_reports: { type: 'number' },
+      },
+    },
   })
   async getModerationStats() {
     return this.adminModerationService.getModerationStats();
   }
 
   @Post('reviews/:id/moderate')
-  @ApiOperation({ summary: 'Moderate a review (approve, reject, edit, delete)' })
+  @ApiOperation({
+    summary: 'Moderate a review (approve, reject, edit, delete)',
+  })
   @ApiParam({ name: 'id', description: 'Review ID' })
   @ApiResponse({ status: 200, description: 'Review moderated successfully' })
   @ApiResponse({ status: 404, description: 'Review not found' })
@@ -111,9 +115,13 @@ export class AdminModerationController {
   async moderateReview(
     @Param('id', ParseIntPipe) id: number,
     @Body() actionDto: ReviewModerationActionDto,
-    @Request() req: any
+    @Request() req: any,
   ) {
-    return this.adminModerationService.moderateReview(id, actionDto, req.user.id);
+    return this.adminModerationService.moderateReview(
+      id,
+      actionDto,
+      req.user.id,
+    );
   }
 
   @Post('reviews/bulk-moderate')
@@ -122,9 +130,12 @@ export class AdminModerationController {
   @HttpCode(HttpStatus.OK)
   async bulkModerateReviews(
     @Body() bulkActionDto: BulkModerationDto,
-    @Request() req: any
+    @Request() req: any,
   ) {
-    return this.adminModerationService.bulkModerateReviews(bulkActionDto, req.user.id);
+    return this.adminModerationService.bulkModerateReviews(
+      bulkActionDto,
+      req.user.id,
+    );
   }
 
   @Post('reports')
@@ -133,7 +144,7 @@ export class AdminModerationController {
   @ApiResponse({ status: 404, description: 'Content not found' })
   async reportContent(
     @Body() reportDto: ReportContentDto,
-    @Request() req: any
+    @Request() req: any,
   ) {
     return this.adminModerationService.reportContent(reportDto, req.user.id);
   }
@@ -160,20 +171,20 @@ export class AdminModerationController {
               reporter_name: { type: 'string' },
               moderator_name: { type: 'string' },
               created_at: { type: 'number' },
-              resolved_at: { type: 'number' }
-            }
-          }
+              resolved_at: { type: 'number' },
+            },
+          },
         },
         pagination: {
           type: 'object',
           properties: {
             currentPage: { type: 'number' },
             totalPages: { type: 'number' },
-            totalItems: { type: 'number' }
-          }
-        }
-      }
-    }
+            totalItems: { type: 'number' },
+          },
+        },
+      },
+    },
   })
   async getModerationReports(@Query() query: ModerationReportQueryDto) {
     return this.adminModerationService.getModerationReports(query);
@@ -187,8 +198,12 @@ export class AdminModerationController {
   async processReport(
     @Param('id', ParseIntPipe) id: number,
     @Body() actionDto: ContentModerationActionDto,
-    @Request() req: any
+    @Request() req: any,
   ) {
-    return this.adminModerationService.processContentReport(id, actionDto, req.user.id);
+    return this.adminModerationService.processContentReport(
+      id,
+      actionDto,
+      req.user.id,
+    );
   }
 }

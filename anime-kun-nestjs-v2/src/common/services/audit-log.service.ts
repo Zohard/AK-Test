@@ -92,16 +92,16 @@ export class AuditLogService {
     date_from?: Date;
     date_to?: Date;
   }) {
-    const { 
-      page = 1, 
-      limit = 50, 
-      admin_id, 
-      action, 
-      target_type, 
-      date_from, 
-      date_to 
+    const {
+      page = 1,
+      limit = 50,
+      admin_id,
+      action,
+      target_type,
+      date_from,
+      date_to,
     } = params;
-    
+
     const offset = (page - 1) * limit;
 
     // Build WHERE conditions
@@ -139,7 +139,10 @@ export class AuditLogService {
       paramIndex++;
     }
 
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+    const whereClause =
+      whereConditions.length > 0
+        ? `WHERE ${whereConditions.join(' AND ')}`
+        : '';
 
     // Get audit logs with admin details
     const logsQuery = `
@@ -165,7 +168,7 @@ export class AuditLogService {
 
     const [logs, countResult] = await Promise.all([
       this.prisma.$queryRawUnsafe(logsQuery, ...queryParams),
-      this.prisma.$queryRawUnsafe(countQuery, ...queryParams.slice(0, -2))
+      this.prisma.$queryRawUnsafe(countQuery, ...queryParams.slice(0, -2)),
     ]);
 
     const total = Number((countResult as any)[0]?.total || 0);
@@ -178,8 +181,8 @@ export class AuditLogService {
         totalPages,
         totalItems: total,
         hasNext: page < totalPages,
-        hasPrevious: page > 1
-      }
+        hasPrevious: page > 1,
+      },
     };
   }
 
@@ -228,9 +231,9 @@ export class AuditLogService {
     const { format = 'json', ...filterParams } = params;
 
     // Get all matching logs (without pagination)
-    const result = await this.getAuditLogs({ 
-      ...filterParams, 
-      limit: 10000 // Large limit for export
+    const result = await this.getAuditLogs({
+      ...filterParams,
+      limit: 10000, // Large limit for export
     });
 
     if (format === 'csv') {
@@ -241,7 +244,7 @@ export class AuditLogService {
       format: 'json',
       data: result.logs,
       total_records: result.pagination.totalItems,
-      exported_at: new Date().toISOString()
+      exported_at: new Date().toISOString(),
     };
   }
 
@@ -259,22 +262,24 @@ export class AuditLogService {
       'Target ID',
       'Reason',
       'IP Address',
-      'Created At'
+      'Created At',
     ];
 
     const csvRows = [
       headers.join(','),
-      ...logs.map(log => [
-        log.id,
-        log.admin_id,
-        log.admin_name || '',
-        log.action,
-        log.target_type || '',
-        log.target_id || '',
-        (log.reason || '').replace(/,/g, ';'), // Replace commas to avoid CSV issues
-        log.ip_address || '',
-        log.created_at
-      ].join(','))
+      ...logs.map((log) =>
+        [
+          log.id,
+          log.admin_id,
+          log.admin_name || '',
+          log.action,
+          log.target_type || '',
+          log.target_id || '',
+          (log.reason || '').replace(/,/g, ';'), // Replace commas to avoid CSV issues
+          log.ip_address || '',
+          log.created_at,
+        ].join(','),
+      ),
     ];
 
     return csvRows.join('\n');
@@ -282,29 +287,35 @@ export class AuditLogService {
 
   // Helper method to create audit log decorator
   static createLogDecorator(action: string, target_type?: string) {
-    return function(target: any, propertyName: string, descriptor: PropertyDescriptor) {
+    return function (
+      target: any,
+      propertyName: string,
+      descriptor: PropertyDescriptor,
+    ) {
       const method = descriptor.value;
 
-      descriptor.value = async function(...args: any[]) {
-        const request = args.find(arg => arg && arg.user);
+      descriptor.value = async function (...args: any[]) {
+        const request = args.find((arg) => arg && arg.user);
         const result = await method.apply(this, args);
 
         if (request && request.user) {
-          const auditService = this.auditLogService || 
-            (this.moduleRef && this.moduleRef.get(AuditLogService, { strict: false }));
-          
+          const auditService =
+            this.auditLogService ||
+            (this.moduleRef &&
+              this.moduleRef.get(AuditLogService, { strict: false }));
+
           if (auditService) {
             await auditService.logAction({
               admin_id: request.user.id,
               action,
               target_type,
-              target_id: args.find(arg => typeof arg === 'number'),
+              target_id: args.find((arg) => typeof arg === 'number'),
               ip_address: request.ip,
               user_agent: request.get('User-Agent'),
               metadata: {
                 method: propertyName,
-                arguments: args.filter(arg => arg !== request)
-              }
+                arguments: args.filter((arg) => arg !== request),
+              },
             });
           }
         }

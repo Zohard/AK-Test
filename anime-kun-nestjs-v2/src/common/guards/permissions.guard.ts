@@ -1,19 +1,27 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PERMISSIONS_KEY, Permission } from '../decorators/permissions.decorator';
+import {
+  PERMISSIONS_KEY,
+  Permission,
+} from '../decorators/permissions.decorator';
 import { PrismaService } from '../../shared/services/prisma.service';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
-    private prisma: PrismaService
+    private prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredPermissions = this.reflector.getAllAndOverride<Permission[]>(
       PERMISSIONS_KEY,
-      [context.getHandler(), context.getClass()]
+      [context.getHandler(), context.getClass()],
     );
 
     if (!requiredPermissions) {
@@ -28,23 +36,32 @@ export class PermissionsGuard implements CanActivate {
     }
 
     // Super admin bypass
-    if (user.id_group === 1 || await this.hasPermission(user.id, Permission.SUPER_ADMIN)) {
+    if (
+      user.id_group === 1 ||
+      (await this.hasPermission(user.id, Permission.SUPER_ADMIN))
+    ) {
       return true;
     }
 
     // Check if user has any of the required permissions
-    const hasPermission = await this.checkUserPermissions(user.id, requiredPermissions);
-    
+    const hasPermission = await this.checkUserPermissions(
+      user.id,
+      requiredPermissions,
+    );
+
     if (!hasPermission) {
       throw new ForbiddenException(
-        `Insufficient permissions. Required: ${requiredPermissions.join(', ')}`
+        `Insufficient permissions. Required: ${requiredPermissions.join(', ')}`,
       );
     }
 
     return true;
   }
 
-  private async checkUserPermissions(userId: number, requiredPermissions: Permission[]): Promise<boolean> {
+  private async checkUserPermissions(
+    userId: number,
+    requiredPermissions: Permission[],
+  ): Promise<boolean> {
     for (const permission of requiredPermissions) {
       if (await this.hasPermission(userId, permission)) {
         return true; // User has at least one required permission
@@ -53,7 +70,10 @@ export class PermissionsGuard implements CanActivate {
     return false;
   }
 
-  private async hasPermission(userId: number, permission: Permission): Promise<boolean> {
+  private async hasPermission(
+    userId: number,
+    permission: Permission,
+  ): Promise<boolean> {
     try {
       // Get user's group and any additional permissions
       const userInfo = await this.prisma.$queryRaw`
@@ -94,16 +114,18 @@ export class PermissionsGuard implements CanActivate {
     // Define permissions for each group
     const groupPermissions = {
       1: [Permission.SUPER_ADMIN], // Administrators
-      2: [ // Moderators
+      2: [
+        // Moderators
         Permission.VIEW_MODERATION_QUEUE,
         Permission.MODERATE_REVIEWS,
         Permission.MODERATE_CONTENT,
         Permission.VIEW_REPORTS,
         Permission.PROCESS_REPORTS,
         Permission.VIEW_CONTENT,
-        Permission.EDIT_CONTENT
+        Permission.EDIT_CONTENT,
       ],
-      3: [ // Content Managers
+      3: [
+        // Content Managers
         Permission.VIEW_CONTENT,
         Permission.EDIT_CONTENT,
         Permission.PUBLISH_CONTENT,
@@ -111,18 +133,21 @@ export class PermissionsGuard implements CanActivate {
         Permission.MANAGE_CONTENT_TAGS,
         Permission.UPLOAD_MEDIA,
         Permission.VIEW_BUSINESS,
-        Permission.EDIT_BUSINESS
+        Permission.EDIT_BUSINESS,
       ],
-      4: [ // Premium users (limited admin access)
-        Permission.VIEW_CONTENT
-      ]
+      4: [
+        // Premium users (limited admin access)
+        Permission.VIEW_CONTENT,
+      ],
     };
 
     const permissions = groupPermissions[groupId] || [];
     return permissions.includes(permission);
   }
 
-  private async getUserSpecificPermissions(userId: number): Promise<Permission[]> {
+  private async getUserSpecificPermissions(
+    userId: number,
+  ): Promise<Permission[]> {
     try {
       // Check for user-specific permission overrides
       const userPermissions = await this.prisma.$queryRaw`

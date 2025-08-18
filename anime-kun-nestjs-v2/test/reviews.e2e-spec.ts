@@ -48,15 +48,11 @@ describe('Reviews (e2e)', () => {
     });
 
     it('should filter by anime ID', () => {
-      return request(app.getHttpServer())
-        .get('/reviews?idAnime=1')
-        .expect(200);
+      return request(app.getHttpServer()).get('/reviews?idAnime=1').expect(200);
     });
 
     it('should filter by manga ID', () => {
-      return request(app.getHttpServer())
-        .get('/reviews?idManga=1')
-        .expect(200);
+      return request(app.getHttpServer()).get('/reviews?idManga=1').expect(200);
     });
 
     it('should search in reviews', () => {
@@ -126,9 +122,7 @@ describe('Reviews (e2e)', () => {
 
   describe('/reviews/:id (GET)', () => {
     it('should return 404 for non-existent review', () => {
-      return request(app.getHttpServer())
-        .get('/reviews/999999')
-        .expect(404);
+      return request(app.getHttpServer()).get('/reviews/999999').expect(404);
     });
   });
 
@@ -145,9 +139,7 @@ describe('Reviews (e2e)', () => {
 
   describe('/reviews/:id (DELETE) - Auth required', () => {
     it('should require authentication', () => {
-      return request(app.getHttpServer())
-        .delete('/reviews/1')
-        .expect(401);
+      return request(app.getHttpServer()).delete('/reviews/1').expect(401);
     });
   });
 
@@ -176,7 +168,9 @@ describe('Reviews (e2e)', () => {
         .expect(200);
 
       if (response.body.reviews.length > 0) {
-        const reviewWithAnime = response.body.reviews.find((r: any) => r.animeId);
+        const reviewWithAnime = response.body.reviews.find(
+          (r: any) => r.animeId,
+        );
         if (reviewWithAnime) {
           expect(reviewWithAnime).toHaveProperty('anime');
         }
@@ -191,7 +185,9 @@ describe('Reviews (e2e)', () => {
         .expect(200);
 
       if (response.body.reviews.length > 0) {
-        const reviewWithManga = response.body.reviews.find((r: any) => r.mangaId);
+        const reviewWithManga = response.body.reviews.find(
+          (r: any) => r.mangaId,
+        );
         if (reviewWithManga) {
           expect(reviewWithManga).toHaveProperty('manga');
         }

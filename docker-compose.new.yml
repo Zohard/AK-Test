@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  anime-kun-postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: anime_user
+      POSTGRES_PASSWORD: anime_password
+      POSTGRES_DB: anime_kun
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - anime-kun-network
+
+  # NestJS Backend API
+  nestjs-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.nestjs
+    depends_on:
+      - anime-kun-postgres
+    ports:
+      - "3003:3003"
+    volumes:
+      - nestjs_uploads:/app/uploads
+    environment:
+      - DATABASE_URL=postgresql://anime_user:anime_password@anime-kun-postgres:5432/anime_kun
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - PORT=3003
+      - NODE_ENV=production
+    restart: unless-stopped
+    networks:
+      - anime-kun-network
+
+  # Nuxt 3 Frontend V2
+  frontendv2:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontendv2
+    depends_on:
+      - nestjs-api
+    ports:
+      - "3000:3000"
+    environment:
+      - API_BASE_URL=http://nestjs-api:3003
+      - NITRO_PORT=3000
+      - NUXT_PUBLIC_API_BASE=http://nestjs-api:3003
+    restart: unless-stopped
+    networks:
+      - anime-kun-network
+
+  # Legacy API (for backward compatibility)
+  legacy-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    depends_on:
+      - anime-kun-postgres
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./api:/app
+      - legacy_uploads:/app/uploads
+      - /app/node_modules
+    environment:
+      - DB_HOST=anime-kun-postgres
+      - DB_USER=anime_user
+      - DB_PASSWORD=anime_password
+      - DB_NAME=anime_kun
+      - DB_PORT=5432
+      - PORT=3000
+      - NODE_ENV=development
+    restart: unless-stopped
+    networks:
+      - anime-kun-network
+
+  # Legacy Frontend (for backward compatibility)
+  legacy-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    depends_on:
+      - legacy-api
+    ports:
+      - "3002:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - API_BASE_URL=http://legacy-api:3000
+      - CHOKIDAR_USEPOLLING=true
+    restart: unless-stopped
+    networks:
+      - anime-kun-network
+
+  # Database Administration
+  adminer:
+    image: adminer:4
+    ports:
+      - "8081:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=anime-kun-postgres
+      - ADMINER_DESIGN=pepa-linha
+    restart: unless-stopped
+    networks:
+      - anime-kun-network
+
+  # Nginx Reverse Proxy (optional, for production routing)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontendv2
+      - nestjs-api
+    restart: unless-stopped
+    networks:
+      - anime-kun-network
+
+volumes:
+  db_data:
+    driver: local
+  nestjs_uploads:
+    driver: local
+  legacy_uploads:
+    driver: local
+
+networks:
+  anime-kun-network:
+    driver: bridge

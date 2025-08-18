@@ -1,4 +1,12 @@
-import { IsString, IsOptional, IsArray, IsBoolean, IsInt, Length, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsArray,
+  IsBoolean,
+  IsInt,
+  Length,
+  MaxLength,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateArticleDto {
@@ -50,13 +58,19 @@ export class CreateArticleDto {
   @IsInt({ each: true })
   categoryIds?: number[];
 
-  @ApiPropertyOptional({ description: 'Content relationship IDs', type: [Number] })
+  @ApiPropertyOptional({
+    description: 'Content relationship IDs',
+    type: [Number],
+  })
   @IsOptional()
   @IsArray()
   @IsInt({ each: true })
   contentIds?: number[];
 
-  @ApiPropertyOptional({ description: 'Content relationship types', type: [String] })
+  @ApiPropertyOptional({
+    description: 'Content relationship types',
+    type: [String],
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -72,7 +86,10 @@ export class CreateArticleDto {
   @IsBoolean()
   onindex?: boolean;
 
-  @ApiPropertyOptional({ description: 'Convert newlines to breaks', default: true })
+  @ApiPropertyOptional({
+    description: 'Convert newlines to breaks',
+    default: true,
+  })
   @IsOptional()
   @IsBoolean()
   nl2br?: boolean;

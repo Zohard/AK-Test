@@ -20,8 +20,14 @@ import {
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AdminGuard } from '../../common/guards/admin.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { NotificationsService, NotificationData } from './notifications.service';
-import { UpdatePreferencesDto, SendNotificationDto } from './dto/notifications.dto';
+import {
+  NotificationsService,
+  NotificationData,
+} from './notifications.service';
+import {
+  UpdatePreferencesDto,
+  SendNotificationDto,
+} from './dto/notifications.dto';
 
 @ApiTags('Notifications')
 @Controller('notifications')
@@ -34,7 +40,11 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Get user notifications' })
   @ApiQuery({ name: 'page', required: false, description: 'Page number' })
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page' })
-  @ApiQuery({ name: 'unreadOnly', required: false, description: 'Show only unread notifications' })
+  @ApiQuery({
+    name: 'unreadOnly',
+    required: false,
+    description: 'Show only unread notifications',
+  })
   @ApiResponse({ status: 200, description: 'User notifications retrieved' })
   async getUserNotifications(
     @CurrentUser() user: any,
@@ -83,7 +93,9 @@ export class NotificationsController {
 
     return {
       success,
-      message: success ? 'Preferences updated successfully' : 'Failed to update preferences',
+      message: success
+        ? 'Preferences updated successfully'
+        : 'Failed to update preferences',
     };
   }
 
@@ -94,11 +106,16 @@ export class NotificationsController {
     @Param('id', ParseIntPipe) notificationId: number,
     @CurrentUser() user: any,
   ) {
-    const success = await this.notificationsService.markAsRead(notificationId, user.id);
-    
+    const success = await this.notificationsService.markAsRead(
+      notificationId,
+      user.id,
+    );
+
     return {
       success,
-      message: success ? 'Notification marked as read' : 'Failed to mark as read',
+      message: success
+        ? 'Notification marked as read'
+        : 'Failed to mark as read',
     };
   }
 
@@ -107,10 +124,12 @@ export class NotificationsController {
   @ApiResponse({ status: 200, description: 'All notifications marked as read' })
   async markAllAsRead(@CurrentUser() user: any) {
     const success = await this.notificationsService.markAllAsRead(user.id);
-    
+
     return {
       success,
-      message: success ? 'All notifications marked as read' : 'Failed to mark all as read',
+      message: success
+        ? 'All notifications marked as read'
+        : 'Failed to mark all as read',
     };
   }
 
@@ -124,13 +143,16 @@ export class NotificationsController {
     // Ensure priority is set
     const notification: NotificationData = {
       ...notificationData,
-      priority: notificationData.priority || 'medium'
+      priority: notificationData.priority || 'medium',
     };
-    const success = await this.notificationsService.sendNotification(notification);
-    
+    const success =
+      await this.notificationsService.sendNotification(notification);
+
     return {
       success,
-      message: success ? 'Notification sent successfully' : 'Failed to send notification',
+      message: success
+        ? 'Notification sent successfully'
+        : 'Failed to send notification',
     };
   }
 
@@ -144,7 +166,11 @@ export class NotificationsController {
         type: { type: 'string', enum: ['new_anime', 'new_manga', 'marketing'] },
         title: { type: 'string' },
         message: { type: 'string' },
-        priority: { type: 'string', enum: ['low', 'medium', 'high'], default: 'medium' },
+        priority: {
+          type: 'string',
+          enum: ['low', 'medium', 'high'],
+          default: 'medium',
+        },
         data: { type: 'object' },
       },
       required: ['type', 'title', 'message'],
@@ -152,7 +178,8 @@ export class NotificationsController {
   })
   @ApiResponse({ status: 201, description: 'Broadcast notification sent' })
   async broadcastNotification(
-    @Body() broadcastData: {
+    @Body()
+    broadcastData: {
       type: 'new_anime' | 'new_manga' | 'marketing';
       title: string;
       message: string;
@@ -176,12 +203,13 @@ export class NotificationsController {
         data: broadcastData.data,
       };
 
-      const success = await this.notificationsService.sendNotification(notificationData);
+      const success =
+        await this.notificationsService.sendNotification(notificationData);
       results.push({ userId: user.id_member, success });
     }
 
-    const successCount = results.filter(r => r.success).length;
-    
+    const successCount = results.filter((r) => r.success).length;
+
     return {
       message: `Broadcast completed`,
       totalUsers: results.length,

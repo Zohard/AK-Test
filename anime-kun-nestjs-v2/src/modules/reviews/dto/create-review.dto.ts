@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsInt, Min, Max, IsOptional, MinLength, ValidateIf } from 'class-validator';
+import {
+  IsString,
+  IsInt,
+  Min,
+  Max,
+  IsOptional,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateReviewDto {
@@ -34,7 +42,7 @@ export class CreateReviewDto {
   notation: number;
 
   @ApiPropertyOptional({
-    description: 'ID de l\'anime (requis si pas de mangaId)',
+    description: "ID de l'anime (requis si pas de mangaId)",
     example: 1,
   })
   @IsOptional()
@@ -44,7 +52,7 @@ export class CreateReviewDto {
   idAnime?: number;
 
   @ApiPropertyOptional({
-    description: 'ID du manga (requis si pas d\'animeId)',
+    description: "ID du manga (requis si pas d'animeId)",
     example: 1,
   })
   @IsOptional()

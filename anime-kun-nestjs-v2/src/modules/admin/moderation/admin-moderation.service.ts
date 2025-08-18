@@ -1,14 +1,18 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../shared/services/prisma.service';
-import { 
-  ReviewModerationActionDto, 
-  BulkModerationDto, 
-  ModerationQueueQueryDto 
+import {
+  ReviewModerationActionDto,
+  BulkModerationDto,
+  ModerationQueueQueryDto,
 } from './dto/review-moderation.dto';
-import { 
-  ContentModerationActionDto, 
-  ReportContentDto, 
-  ModerationReportQueryDto 
+import {
+  ContentModerationActionDto,
+  ReportContentDto,
+  ModerationReportQueryDto,
 } from './dto/content-moderation.dto';
 
 @Injectable()
@@ -17,7 +21,13 @@ export class AdminModerationService {
 
   // Review Moderation
   async getModerationQueue(query: ModerationQueueQueryDto) {
-    const { page = 1, limit = 20, status = 'pending', contentType = 'all', search } = query;
+    const {
+      page = 1,
+      limit = 20,
+      status = 'pending',
+      contentType = 'all',
+      search,
+    } = query;
     const offset = (page - 1) * limit;
 
     // Build WHERE conditions
@@ -28,9 +38,9 @@ export class AdminModerationService {
     // Status filter
     if (status !== 'all') {
       const statusMap = {
-        'pending': 1,
-        'approved': 0,
-        'rejected': 2
+        pending: 1,
+        approved: 0,
+        rejected: 2,
       };
       whereConditions.push(`c.statut = $${paramIndex}`);
       params.push(statusMap[status]);
@@ -48,12 +58,17 @@ export class AdminModerationService {
 
     // Search filter
     if (search) {
-      whereConditions.push(`(c.titre ILIKE $${paramIndex} OR c.critique ILIKE $${paramIndex})`);
+      whereConditions.push(
+        `(c.titre ILIKE $${paramIndex} OR c.critique ILIKE $${paramIndex})`,
+      );
       params.push(`%${search}%`);
       paramIndex++;
     }
 
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+    const whereClause =
+      whereConditions.length > 0
+        ? `WHERE ${whereConditions.join(' AND ')}`
+        : '';
 
     // Get reviews in moderation queue
     const reviewsQuery = `
@@ -100,7 +115,7 @@ export class AdminModerationService {
 
     const [reviews, countResult] = await Promise.all([
       this.prisma.$queryRawUnsafe(reviewsQuery, ...params),
-      this.prisma.$queryRawUnsafe(countQuery, ...params.slice(0, -2))
+      this.prisma.$queryRawUnsafe(countQuery, ...params.slice(0, -2)),
     ]);
 
     const total = Number((countResult as any)[0]?.total || 0);
@@ -113,12 +128,16 @@ export class AdminModerationService {
         totalPages,
         totalItems: total,
         hasNext: page < totalPages,
-        hasPrevious: page > 1
-      }
+        hasPrevious: page > 1,
+      },
     };
   }
 
-  async moderateReview(reviewId: number, actionDto: ReviewModerationActionDto, moderatorId: number) {
+  async moderateReview(
+    reviewId: number,
+    actionDto: ReviewModerationActionDto,
+    moderatorId: number,
+  ) {
     const { action, reason, new_title, new_content, new_rating } = actionDto;
 
     // Check if review exists
@@ -140,7 +159,10 @@ export class AdminModerationService {
           WHERE id = ${reviewId}
         `;
         // Update content rating statistics
-        await this.updateContentRatingStats(reviewData.anime_id, reviewData.manga_id);
+        await this.updateContentRatingStats(
+          reviewData.anime_id,
+          reviewData.manga_id,
+        );
         break;
 
       case 'reject':
@@ -157,7 +179,10 @@ export class AdminModerationService {
           DELETE FROM ak_critique WHERE id = ${reviewId}
         `;
         // Update content rating statistics
-        await this.updateContentRatingStats(reviewData.anime_id, reviewData.manga_id);
+        await this.updateContentRatingStats(
+          reviewData.anime_id,
+          reviewData.manga_id,
+        );
         break;
 
       case 'edit':
@@ -205,7 +230,10 @@ export class AdminModerationService {
 
           await this.prisma.$executeRawUnsafe(updateQuery, ...updateParams);
           // Update content rating statistics
-          await this.updateContentRatingStats(reviewData.anime_id, reviewData.manga_id);
+          await this.updateContentRatingStats(
+            reviewData.anime_id,
+            reviewData.manga_id,
+          );
         }
         break;
 
@@ -220,32 +248,43 @@ export class AdminModerationService {
       target_type: 'review',
       target_id: reviewId,
       reason,
-      metadata: { new_title, new_content, new_rating }
+      metadata: { new_title, new_content, new_rating },
     });
 
     return { message: `Review ${action}ed successfully` };
   }
 
-  async bulkModerateReviews(bulkActionDto: BulkModerationDto, moderatorId: number) {
+  async bulkModerateReviews(
+    bulkActionDto: BulkModerationDto,
+    moderatorId: number,
+  ) {
     const { reviewIds, action, reason } = bulkActionDto;
-    const results: Array<{reviewId: number, status: string, message: string}> = [];
+    const results: Array<{
+      reviewId: number;
+      status: string;
+      message: string;
+    }> = [];
 
     for (const reviewId of reviewIds) {
       try {
         await this.moderateReview(reviewId, { action, reason }, moderatorId);
-        results.push({ reviewId, status: 'success', message: `${action}ed successfully` });
+        results.push({
+          reviewId,
+          status: 'success',
+          message: `${action}ed successfully`,
+        });
       } catch (error) {
-        results.push({ 
-          reviewId, 
-          status: 'error', 
-          message: error.message || 'Unknown error' 
+        results.push({
+          reviewId,
+          status: 'error',
+          message: error.message || 'Unknown error',
         });
       }
     }
 
     return {
       message: 'Bulk moderation completed',
-      results
+      results,
     };
   }
 
@@ -281,7 +320,13 @@ export class AdminModerationService {
   }
 
   async getModerationReports(query: ModerationReportQueryDto) {
-    const { page = 1, limit = 20, status = 'pending', contentType = 'all', reason } = query;
+    const {
+      page = 1,
+      limit = 20,
+      status = 'pending',
+      contentType = 'all',
+      reason,
+    } = query;
     const offset = (page - 1) * limit;
 
     // Build WHERE conditions
@@ -307,7 +352,10 @@ export class AdminModerationService {
       paramIndex++;
     }
 
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+    const whereClause =
+      whereConditions.length > 0
+        ? `WHERE ${whereConditions.join(' AND ')}`
+        : '';
 
     const reportsQuery = `
       SELECT 
@@ -331,12 +379,16 @@ export class AdminModerationService {
       pagination: {
         currentPage: page,
         totalPages: Math.ceil((reports as any[]).length / limit),
-        totalItems: (reports as any[]).length
-      }
+        totalItems: (reports as any[]).length,
+      },
     };
   }
 
-  async processContentReport(reportId: number, actionDto: ContentModerationActionDto, moderatorId: number) {
+  async processContentReport(
+    reportId: number,
+    actionDto: ContentModerationActionDto,
+    moderatorId: number,
+  ) {
     const { action, reason } = actionDto;
 
     // Update report status
@@ -369,14 +421,14 @@ export class AdminModerationService {
     `;
 
     const result = (stats as any[])[0];
-    
+
     // Convert BigInt values to regular numbers for JSON serialization
     return {
       pending_reviews: Number(result.pending_reviews),
-      approved_reviews: Number(result.approved_reviews), 
+      approved_reviews: Number(result.approved_reviews),
       rejected_reviews: Number(result.rejected_reviews),
       pending_reports: Number(result.pending_reports),
-      resolved_reports: Number(result.resolved_reports)
+      resolved_reports: Number(result.resolved_reports),
     };
   }
 
@@ -426,7 +478,7 @@ export class AdminModerationService {
       business: 'ak_business',
       article: 'ak_webzine_articles',
       review: 'ak_critique',
-      user: 'smf_members'
+      user: 'smf_members',
     };
 
     const tableName = tableMap[contentType];
@@ -437,11 +489,13 @@ export class AdminModerationService {
     const idColumn = contentType === 'user' ? 'id_member' : 'id';
     const content = await this.prisma.$queryRawUnsafe(
       `SELECT 1 FROM ${tableName} WHERE ${idColumn} = $1`,
-      contentId
+      contentId,
     );
 
     if (!content || (content as any[]).length === 0) {
-      throw new NotFoundException(`${contentType} with ID ${contentId} not found`);
+      throw new NotFoundException(
+        `${contentType} with ID ${contentId} not found`,
+      );
     }
   }
 

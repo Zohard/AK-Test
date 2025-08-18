@@ -18,14 +18,14 @@ export const AuditLog = (action: string, target_type?: string) =>
 export class AuditLogInterceptor implements NestInterceptor {
   constructor(
     private reflector: Reflector,
-    private auditLogService: AuditLogService
+    private auditLogService: AuditLogService,
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const auditConfig = this.reflector.getAllAndOverride<{ action: string; target_type?: string }>(
-      AUDIT_LOG_KEY,
-      [context.getHandler(), context.getClass()]
-    );
+    const auditConfig = this.reflector.getAllAndOverride<{
+      action: string;
+      target_type?: string;
+    }>(AUDIT_LOG_KEY, [context.getHandler(), context.getClass()]);
 
     if (!auditConfig) {
       return next.handle();
@@ -42,10 +42,8 @@ export class AuditLogInterceptor implements NestInterceptor {
       tap(async (response) => {
         try {
           // Extract target ID from request parameters or response
-          const targetId = request.params?.id || 
-                          request.body?.id || 
-                          response?.id ||
-                          null;
+          const targetId =
+            request.params?.id || request.body?.id || response?.id || null;
 
           // Use simple logging for interceptor (no user-agent/IP by default)
           await this.auditLogService.logSimpleAction({
@@ -57,24 +55,26 @@ export class AuditLogInterceptor implements NestInterceptor {
               method: request.method,
               url: request.url,
               body: this.sanitizeBody(request.body),
-              params: request.params
-            }
+              params: request.params,
+            },
           });
         } catch (error) {
           // Don't fail the request if audit logging fails
           console.error('Audit logging error:', error);
         }
-      })
+      }),
     );
   }
 
   private getClientIp(request: any): string {
-    return request.ip ||
-           request.connection?.remoteAddress ||
-           request.socket?.remoteAddress ||
-           request.headers['x-forwarded-for']?.split(',')[0] ||
-           request.headers['x-real-ip'] ||
-           'unknown';
+    return (
+      request.ip ||
+      request.connection?.remoteAddress ||
+      request.socket?.remoteAddress ||
+      request.headers['x-forwarded-for']?.split(',')[0] ||
+      request.headers['x-real-ip'] ||
+      'unknown'
+    );
   }
 
   private sanitizeBody(body: any): any {
@@ -84,7 +84,7 @@ export class AuditLogInterceptor implements NestInterceptor {
     const sensitiveFields = ['password', 'token', 'secret', 'key'];
     const sanitized = { ...body };
 
-    sensitiveFields.forEach(field => {
+    sensitiveFields.forEach((field) => {
       if (sanitized[field]) {
         sanitized[field] = '[REDACTED]';
       }

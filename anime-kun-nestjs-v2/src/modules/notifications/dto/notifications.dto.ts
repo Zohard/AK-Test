@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsString, IsNumber, IsEnum, IsOptional, IsObject } from 'class-validator';
+import {
+  IsBoolean,
+  IsString,
+  IsNumber,
+  IsEnum,
+  IsOptional,
+  IsObject,
+} from 'class-validator';
 
 export class UpdatePreferencesDto {
   @ApiProperty({
@@ -67,11 +74,31 @@ export class SendNotificationDto {
 
   @ApiProperty({
     description: 'Notification type',
-    enum: ['new_review', 'new_anime', 'new_manga', 'review_moderated', 'security_alert', 'marketing'],
+    enum: [
+      'new_review',
+      'new_anime',
+      'new_manga',
+      'review_moderated',
+      'security_alert',
+      'marketing',
+    ],
     example: 'new_review',
   })
-  @IsEnum(['new_review', 'new_anime', 'new_manga', 'review_moderated', 'security_alert', 'marketing'])
-  type: 'new_review' | 'new_anime' | 'new_manga' | 'review_moderated' | 'security_alert' | 'marketing';
+  @IsEnum([
+    'new_review',
+    'new_anime',
+    'new_manga',
+    'review_moderated',
+    'security_alert',
+    'marketing',
+  ])
+  type:
+    | 'new_review'
+    | 'new_anime'
+    | 'new_manga'
+    | 'review_moderated'
+    | 'security_alert'
+    | 'marketing';
 
   @ApiProperty({
     description: 'Notification title',
@@ -93,7 +120,7 @@ export class SendNotificationDto {
     example: 'medium',
     required: false,
   })
-@IsOptional()
+  @IsOptional()
   @IsEnum(['low', 'medium', 'high'])
   priority: 'low' | 'medium' | 'high' = 'medium';
 

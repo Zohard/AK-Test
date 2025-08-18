@@ -1,4 +1,11 @@
-import { IsOptional, IsString, IsInt, Min, Max, IsBoolean } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsInt,
+  Min,
+  Max,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -10,7 +17,12 @@ export class CategoryQueryDto {
   @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ description: 'Items per page', minimum: 1, maximum: 100, default: 50 })
+  @ApiPropertyOptional({
+    description: 'Items per page',
+    minimum: 1,
+    maximum: 100,
+    default: 50,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -23,7 +35,10 @@ export class CategoryQueryDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ description: 'Include categories with no articles', default: false })
+  @ApiPropertyOptional({
+    description: 'Include categories with no articles',
+    default: false,
+  })
   @IsOptional()
   @Type(() => Boolean)
   @IsBoolean()

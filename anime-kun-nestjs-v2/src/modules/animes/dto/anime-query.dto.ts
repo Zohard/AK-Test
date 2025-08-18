@@ -43,7 +43,6 @@ export class AnimeQueryDto {
   @IsString()
   search?: string;
 
-
   @ApiPropertyOptional({
     description: 'Filtrer par studio',
     example: 'pierrot',

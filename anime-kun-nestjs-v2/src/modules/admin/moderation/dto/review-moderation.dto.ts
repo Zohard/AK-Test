@@ -2,37 +2,37 @@ import { IsInt, IsString, IsIn, IsOptional, IsBoolean } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ReviewModerationActionDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Action to take on the review',
-    enum: ['approve', 'reject', 'delete', 'edit'] 
+    enum: ['approve', 'reject', 'delete', 'edit'],
   })
   @IsString()
   @IsIn(['approve', 'reject', 'delete', 'edit'])
   action: string;
 
-  @ApiPropertyOptional({ 
-    description: 'Reason for the moderation action' 
+  @ApiPropertyOptional({
+    description: 'Reason for the moderation action',
   })
   @IsOptional()
   @IsString()
   reason?: string;
 
-  @ApiPropertyOptional({ 
-    description: 'New title if editing' 
+  @ApiPropertyOptional({
+    description: 'New title if editing',
   })
   @IsOptional()
   @IsString()
   new_title?: string;
 
-  @ApiPropertyOptional({ 
-    description: 'New content if editing' 
+  @ApiPropertyOptional({
+    description: 'New content if editing',
   })
   @IsOptional()
   @IsString()
   new_content?: string;
 
-  @ApiPropertyOptional({ 
-    description: 'New rating if editing' 
+  @ApiPropertyOptional({
+    description: 'New rating if editing',
   })
   @IsOptional()
   @IsInt()
@@ -40,23 +40,23 @@ export class ReviewModerationActionDto {
 }
 
 export class BulkModerationDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Array of review IDs to moderate',
-    type: [Number] 
+    type: [Number],
   })
   @IsInt({ each: true })
   reviewIds: number[];
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Action to take on all reviews',
-    enum: ['approve', 'reject', 'delete'] 
+    enum: ['approve', 'reject', 'delete'],
   })
   @IsString()
   @IsIn(['approve', 'reject', 'delete'])
   action: string;
 
-  @ApiPropertyOptional({ 
-    description: 'Reason for the bulk moderation action' 
+  @ApiPropertyOptional({
+    description: 'Reason for the bulk moderation action',
   })
   @IsOptional()
   @IsString()
@@ -64,43 +64,43 @@ export class BulkModerationDto {
 }
 
 export class ModerationQueueQueryDto {
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Filter by review status',
-    enum: ['pending', 'approved', 'rejected', 'all'] 
+    enum: ['pending', 'approved', 'rejected', 'all'],
   })
   @IsOptional()
   @IsIn(['pending', 'approved', 'rejected', 'all'])
   status?: string = 'pending';
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Filter by content type',
-    enum: ['anime', 'manga', 'all'] 
+    enum: ['anime', 'manga', 'all'],
   })
   @IsOptional()
   @IsIn(['anime', 'manga', 'all'])
   contentType?: string = 'all';
 
-  @ApiPropertyOptional({ 
-    description: 'Search term for review title or content' 
+  @ApiPropertyOptional({
+    description: 'Search term for review title or content',
   })
   @IsOptional()
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ 
-    description: 'Page number for pagination', 
-    minimum: 1, 
-    default: 1 
+  @ApiPropertyOptional({
+    description: 'Page number for pagination',
+    minimum: 1,
+    default: 1,
   })
   @IsOptional()
   @IsInt()
   page?: number = 1;
 
-  @ApiPropertyOptional({ 
-    description: 'Number of items per page', 
-    minimum: 1, 
+  @ApiPropertyOptional({
+    description: 'Number of items per page',
+    minimum: 1,
     maximum: 100,
-    default: 20 
+    default: 20,
   })
   @IsOptional()
   @IsInt()

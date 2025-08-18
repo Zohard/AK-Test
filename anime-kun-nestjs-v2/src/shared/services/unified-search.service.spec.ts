@@ -75,9 +75,7 @@ describe('UnifiedSearchService', () => {
         },
       ];
 
-      const mockCounts = [
-        { anime_count: 1, manga_count: 1 },
-      ];
+      const mockCounts = [{ anime_count: 1, manga_count: 1 }];
 
       mockPrismaService.$queryRaw
         .mockResolvedValueOnce(mockAnimes)
@@ -118,7 +116,7 @@ describe('UnifiedSearchService', () => {
 
     it('should filter by anime type only', async () => {
       const animeQuery = { ...mockSearchQuery, type: 'anime' as const };
-      
+
       mockPrismaService.$queryRaw.mockResolvedValue([]);
 
       await service.search(animeQuery);
@@ -128,7 +126,7 @@ describe('UnifiedSearchService', () => {
 
     it('should filter by manga type only', async () => {
       const mangaQuery = { ...mockSearchQuery, type: 'manga' as const };
-      
+
       mockPrismaService.$queryRaw.mockResolvedValue([]);
 
       await service.search(mangaQuery);
@@ -156,9 +154,13 @@ describe('UnifiedSearchService', () => {
     });
 
     it('should handle search errors gracefully', async () => {
-      mockPrismaService.$queryRaw.mockRejectedValue(new Error('Database error'));
+      mockPrismaService.$queryRaw.mockRejectedValue(
+        new Error('Database error'),
+      );
 
-      await expect(service.search(mockSearchQuery)).rejects.toThrow('Database error');
+      await expect(service.search(mockSearchQuery)).rejects.toThrow(
+        'Database error',
+      );
     });
   });
 
@@ -166,7 +168,9 @@ describe('UnifiedSearchService', () => {
     it('should return autocomplete suggestions', async () => {
       const mockSuggestions = ['Naruto', 'Naruto Shippuden', 'Naruto Manga'];
 
-      jest.spyOn(service as any, 'generateSuggestions').mockResolvedValue(mockSuggestions);
+      jest
+        .spyOn(service as any, 'generateSuggestions')
+        .mockResolvedValue(mockSuggestions);
 
       const result = await service.getAutocomplete('naru');
 
@@ -184,7 +188,7 @@ describe('UnifiedSearchService', () => {
       const result = await service.getAutocomplete('naru', 5);
 
       expect(mockPrismaService.$queryRaw).toHaveBeenCalledWith(
-        expect.stringContaining('LIMIT 5')
+        expect.stringContaining('LIMIT 5'),
       );
     });
   });
@@ -218,7 +222,7 @@ describe('UnifiedSearchService', () => {
       await service.getPopularSearches('anime');
 
       expect(mockPrismaService.$queryRaw).toHaveBeenCalledWith(
-        expect.stringContaining('WHERE type = \'anime\'')
+        expect.stringContaining("WHERE type = 'anime'"),
       );
     });
   });
@@ -235,7 +239,9 @@ describe('UnifiedSearchService', () => {
       ];
 
       mockPrismaService.$queryRaw.mockResolvedValue(mockStats);
-      jest.spyOn(service, 'getPopularSearches').mockResolvedValue(mockTopSearches);
+      jest
+        .spyOn(service, 'getPopularSearches')
+        .mockResolvedValue(mockTopSearches);
 
       const result = await service.getSearchAnalytics();
 
@@ -248,11 +254,13 @@ describe('UnifiedSearchService', () => {
     });
 
     it('should handle analytics query errors', async () => {
-      mockPrismaService.$queryRaw.mockRejectedValue(new Error('Database error'));
+      mockPrismaService.$queryRaw.mockRejectedValue(
+        new Error('Database error'),
+      );
       jest.spyOn(service, 'getPopularSearches').mockResolvedValue([]);
 
       const result = await service.getSearchAnalytics();
-      
+
       expect(result).toEqual({
         totalSearches: 0,
         uniqueQueries: 0,
@@ -261,5 +269,4 @@ describe('UnifiedSearchService', () => {
       });
     });
   });
-
 });

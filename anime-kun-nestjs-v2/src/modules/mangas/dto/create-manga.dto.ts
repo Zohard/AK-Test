@@ -16,7 +16,6 @@ export class CreateMangaDto {
   @IsString()
   titre: string;
 
-
   @ApiPropertyOptional({
     description: 'Année de sortie',
     example: '1997',
@@ -64,8 +63,6 @@ export class CreateMangaDto {
   @IsOptional()
   @IsString()
   nbVolumes?: string;
-
-
 
   @ApiPropertyOptional({
     description: 'Statut (0 = en attente, 1 = validé, 2 = refusé)',

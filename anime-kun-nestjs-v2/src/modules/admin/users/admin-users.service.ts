@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../shared/services/prisma.service';
 import { UserAdminQueryDto } from './dto/user-admin-query.dto';
 import { UpdateUserAdminDto } from './dto/update-user-admin.dto';
@@ -9,7 +13,14 @@ export class AdminUsersService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(query: UserAdminQueryDto) {
-    const { page = 1, limit = 20, search, group, sort = 'date_registered', order = 'DESC' } = query;
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      group,
+      sort = 'date_registered',
+      order = 'DESC',
+    } = query;
     const offset = (page - 1) * limit;
 
     // Build WHERE conditions
@@ -19,7 +30,7 @@ export class AdminUsersService {
 
     if (search) {
       whereConditions.push(
-        `(u.member_name ILIKE $${paramIndex} OR u.real_name ILIKE $${paramIndex} OR u.email_address ILIKE $${paramIndex})`
+        `(u.member_name ILIKE $${paramIndex} OR u.real_name ILIKE $${paramIndex} OR u.email_address ILIKE $${paramIndex})`,
       );
       params.push(`%${search}%`);
       paramIndex++;
@@ -45,10 +56,20 @@ export class AdminUsersService {
       }
     }
 
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-    
+    const whereClause =
+      whereConditions.length > 0
+        ? `WHERE ${whereConditions.join(' AND ')}`
+        : '';
+
     // Validate sort fields
-    const validSortFields = ['id_member', 'member_name', 'email_address', 'date_registered', 'last_login', 'posts'];
+    const validSortFields = [
+      'id_member',
+      'member_name',
+      'email_address',
+      'date_registered',
+      'last_login',
+      'posts',
+    ];
     const sortField = validSortFields.includes(sort) ? sort : 'date_registered';
     const sortOrder = order === 'ASC' ? 'ASC' : 'DESC';
 
@@ -87,7 +108,7 @@ export class AdminUsersService {
 
     const [users, countResult] = await Promise.all([
       this.prisma.$queryRawUnsafe(usersQuery, ...params),
-      this.prisma.$queryRawUnsafe(countQuery, ...params.slice(0, -2))
+      this.prisma.$queryRawUnsafe(countQuery, ...params.slice(0, -2)),
     ]);
 
     const total = Number((countResult as any)[0]?.total || 0);
@@ -100,8 +121,8 @@ export class AdminUsersService {
         totalPages,
         totalItems: total,
         hasNext: page < totalPages,
-        hasPrevious: page > 1
-      }
+        hasPrevious: page > 1,
+      },
     };
   }
 
@@ -159,13 +180,13 @@ export class AdminUsersService {
 
     return {
       user: convertBigIntToNumber(userData),
-      recent_activity: convertBigIntToNumber(recentActivity)
+      recent_activity: convertBigIntToNumber(recentActivity),
     };
   }
 
   async update(id: number, updateData: UpdateUserAdminDto, adminId: number) {
     const user = await this.findOne(id);
-    
+
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
@@ -176,7 +197,12 @@ export class AdminUsersService {
 
     // Build dynamic update query
     Object.entries(updateData).forEach(([key, value]) => {
-      if (value !== undefined && key !== 'groups' && key !== 'is_banned' && key !== 'ban_reason') {
+      if (
+        value !== undefined &&
+        key !== 'groups' &&
+        key !== 'is_banned' &&
+        key !== 'ban_reason'
+      ) {
         updateFields.push(`${key} = $${paramIndex}`);
         params.push(value);
         paramIndex++;
@@ -201,16 +227,23 @@ export class AdminUsersService {
 
     // Handle ban/unban
     if (updateData.is_banned !== undefined) {
-      await this.updateBanStatus(id, updateData.is_banned, updateData.ban_reason);
+      await this.updateBanStatus(
+        id,
+        updateData.is_banned,
+        updateData.ban_reason,
+      );
     }
 
     // Log the admin action
-    await this.logUserAction({
-      action: 'edit_profile',
-      target_user_id: id,
-      reason: 'Profile updated by admin',
-      metadata: updateData
-    }, adminId);
+    await this.logUserAction(
+      {
+        action: 'edit_profile',
+        target_user_id: id,
+        reason: 'Profile updated by admin',
+        metadata: updateData,
+      },
+      adminId,
+    );
 
     return this.findOne(id);
   }
@@ -223,12 +256,15 @@ export class AdminUsersService {
     `;
 
     // Log the ban action
-    await this.logUserAction({
-      action: 'ban',
-      target_user_id: id,
-      reason,
-      metadata: { banned_by: adminId }
-    }, adminId);
+    await this.logUserAction(
+      {
+        action: 'ban',
+        target_user_id: id,
+        reason,
+        metadata: { banned_by: adminId },
+      },
+      adminId,
+    );
 
     return { message: 'User banned successfully' };
   }
@@ -241,12 +277,15 @@ export class AdminUsersService {
     `;
 
     // Log the unban action
-    await this.logUserAction({
-      action: 'unban',
-      target_user_id: id,
-      reason: 'User unbanned by admin',
-      metadata: { unbanned_by: adminId }
-    }, adminId);
+    await this.logUserAction(
+      {
+        action: 'unban',
+        target_user_id: id,
+        reason: 'User unbanned by admin',
+        metadata: { unbanned_by: adminId },
+      },
+      adminId,
+    );
 
     return { message: 'User unbanned successfully' };
   }
@@ -254,13 +293,13 @@ export class AdminUsersService {
   async deleteUser(id: number, adminId: number) {
     // Check if user exists
     const user = await this.findOne(id);
-    
+
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
     // Don't allow deletion of admin users
-    if ((user.user as any).id_group === 1) {
+    if (user.user.id_group === 1) {
       throw new BadRequestException('Cannot delete administrator users');
     }
 
@@ -275,12 +314,15 @@ export class AdminUsersService {
     `;
 
     // Log the deletion
-    await this.logUserAction({
-      action: 'delete',
-      target_user_id: id,
-      reason: 'User deleted by admin',
-      metadata: { deleted_by: adminId }
-    }, adminId);
+    await this.logUserAction(
+      {
+        action: 'delete',
+        target_user_id: id,
+        reason: 'User deleted by admin',
+        metadata: { deleted_by: adminId },
+      },
+      adminId,
+    );
 
     return { message: 'User deleted successfully' };
   }
@@ -298,7 +340,7 @@ export class AdminUsersService {
     `;
 
     const result = (stats as any[])[0];
-    
+
     // Convert BigInt values to regular numbers for JSON serialization
     return {
       total_users: Number(result.total_users),
@@ -306,7 +348,7 @@ export class AdminUsersService {
       banned_users: Number(result.banned_users),
       admin_users: Number(result.admin_users),
       moderator_users: Number(result.moderator_users),
-      new_users_month: Number(result.new_users_month)
+      new_users_month: Number(result.new_users_month),
     };
   }
 
@@ -316,10 +358,10 @@ export class AdminUsersService {
     // For now, just update the primary group
     if (groups.length > 0) {
       const groupMapping: Record<string, number> = {
-        'administrator': 1,
-        'moderator': 2,
-        'premium': 4,
-        'regular': 0
+        administrator: 1,
+        moderator: 2,
+        premium: 4,
+        regular: 0,
       };
 
       const groupId = groupMapping[groups[0]];
@@ -333,9 +375,13 @@ export class AdminUsersService {
     }
   }
 
-  private async updateBanStatus(userId: number, isBanned: boolean, reason?: string) {
+  private async updateBanStatus(
+    userId: number,
+    isBanned: boolean,
+    reason?: string,
+  ) {
     const activationStatus = isBanned ? 0 : 1;
-    
+
     await this.prisma.$executeRaw`
       UPDATE smf_members 
       SET is_activated = ${activationStatus}
@@ -346,9 +392,12 @@ export class AdminUsersService {
   private async logUserAction(actionLog: UserActionLogDto, adminId: number) {
     // Simple audit logging without request context
     try {
-      const metadataJson = actionLog.metadata ? JSON.stringify(actionLog.metadata) : null;
-      
-      await this.prisma.$executeRawUnsafe(`
+      const metadataJson = actionLog.metadata
+        ? JSON.stringify(actionLog.metadata)
+        : null;
+
+      await this.prisma.$executeRawUnsafe(
+        `
         INSERT INTO admin_audit_log (
           admin_id,
           action,
@@ -358,7 +407,14 @@ export class AdminUsersService {
           metadata,
           created_at
         ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, NOW())
-      `, adminId, actionLog.action, 'user', actionLog.target_user_id, actionLog.reason || null, metadataJson);
+      `,
+        adminId,
+        actionLog.action,
+        'user',
+        actionLog.target_user_id,
+        actionLog.reason || null,
+        metadataJson,
+      );
     } catch (error) {
       console.error('Failed to log user action:', error);
     }

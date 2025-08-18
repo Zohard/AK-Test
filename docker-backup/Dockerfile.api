@@ -1,0 +1,15 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY api/package*.json ./
+
+RUN npm install
+
+COPY api/ .
+
+RUN mkdir -p /app/uploads/screenshots /app/uploads/anime /app/uploads/manga
+
+EXPOSE 3000
+
+CMD ["node", "server.js"]
