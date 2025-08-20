@@ -169,80 +169,90 @@
                   
                   <!-- Staff Tab -->
                   <div v-show="activeTab === 'staff'" class="info staff">
-                    <div class="space-y-6">
-                      <!-- Basic Staff Info -->
-                      <div class="space-y-3">
-                        <div v-if="anime.studio">
-                          <span class="font-medium text-gray-700 dark:text-gray-300">Studio d'animation :</span>
-                          <span class="ml-2 text-gray-900 dark:text-white">{{ anime.studio }}</span>
-                        </div>
-                        <div v-if="anime.realisateur">
-                          <span class="font-medium text-gray-700 dark:text-gray-300">Réalisation :</span>
-                          <span class="ml-2 text-gray-900 dark:text-white">{{ anime.realisateur }}</span>
+                    <!-- Loading state -->
+                    <div v-if="loadingStaff" class="flex items-center justify-center py-8">
+                      <div class="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
+                      <span class="ml-3 text-gray-600 dark:text-gray-300">Chargement du staff...</span>
+                    </div>
+                    
+                    <!-- Staff content -->
+                    <div v-else-if="groupedStaff.length > 0" class="space-y-6">
+                      <!-- Basic anime info (studio/director) -->
+                      <div v-if="anime.studio || anime.realisateur" class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Informations principales</h4>
+                        <div class="space-y-2">
+                          <div v-if="anime.studio">
+                            <span class="font-medium text-gray-700 dark:text-gray-300">Studio d'animation :</span>
+                            <span class="ml-2 text-gray-900 dark:text-white">{{ anime.studio }}</span>
+                          </div>
+                          <div v-if="anime.realisateur">
+                            <span class="font-medium text-gray-700 dark:text-gray-300">Réalisation :</span>
+                            <span class="ml-2 text-gray-900 dark:text-white">{{ anime.realisateur }}</span>
+                          </div>
                         </div>
                       </div>
-
-                      <!-- Business Relations -->
-                      <div v-if="anime.businessRelations && anime.businessRelations.length" class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                          Staff et équipe technique
-                        </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div
-                            v-for="relation in anime.businessRelations"
-                            :key="relation.idRelation"
-                            class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                          >
-                            <div class="flex items-start space-x-3">
-                              <!-- Business Image placeholder -->
-                              <div class="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <Icon name="heroicons:building-office" class="w-6 h-6 text-gray-400" />
-                              </div>
-                              
-                              <div class="flex-1 min-w-0">
-                                <div class="flex items-start justify-between">
-                                  <div class="flex-1">
-                                    <NuxtLink
-                                      v-if="relation.business"
-                                      :to="buildBusinessUrl(relation.business)"
-                                      class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium text-sm hover:underline"
-                                    >
-                                      {{ relation.business.denomination || 'Business sans nom' }}
-                                    </NuxtLink>
-                                    <span v-else class="text-gray-900 dark:text-white font-medium text-sm">
-                                      Business #{{ relation.idBusiness }}
-                                    </span>
-                                    
-                                    <div class="mt-1">
-                                      <span v-if="relation.type" class="inline-block px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
-                                        {{ relation.type }}
-                                      </span>
-                                    </div>
-                                    
-                                    <p v-if="relation.precisions" class="mt-2 text-xs text-gray-600 dark:text-gray-400">
-                                      {{ relation.precisions }}
-                                    </p>
-                                  </div>
-                                  
-                                  <div class="ml-2">
-                                    <NuxtLink
-                                      v-if="relation.business"
-                                      :to="buildBusinessUrl(relation.business)"
-                                      class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                                    >
-                                      <Icon name="heroicons:arrow-top-right-on-square" class="w-4 h-4" />
-                                    </NuxtLink>
-                                  </div>
+                      
+                      <!-- Detailed staff list -->
+                      <div class="space-y-4">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Équipe de production</h4>
+                        <div 
+                          v-for="group in groupedStaff" 
+                          :key="group.fonction"
+                          class="border border-gray-200 dark:border-gray-600 rounded-lg p-4"
+                        >
+                          <h5 class="font-semibold text-blue-600 dark:text-blue-400 mb-3 text-sm uppercase tracking-wide">
+                            {{ group.fonction }}
+                          </h5>
+                          <div class="space-y-2">
+                            <div 
+                              v-for="member in group.members" 
+                              :key="`${member.idbusiness}-${member.type}`"
+                              class="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                            >
+                              <div class="flex-1">
+                                <div class="font-medium text-gray-900 dark:text-white">
+                                  {{ decodeHtmlEntities(member.denomination) }}
                                 </div>
+                                <div v-if="member.precisions" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                  {{ decodeHtmlEntities(member.precisions) }}
+                                </div>
+                                <div v-if="member.businesstype" class="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                  Type: {{ decodeHtmlEntities(member.businesstype) }}
+                                </div>
+                                <div v-if="member.autresdenominations" class="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                  {{ decodeHtmlEntities(member.autresdenominations) }}
+                                </div>
+                              </div>
+                              <div v-if="member.siteofficiel" class="mt-2 sm:mt-0 sm:ml-4">
+                                <a 
+                                  :href="member.siteofficiel" 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  class="inline-flex items-center px-3 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                                >
+                                  <Icon name="heroicons:link" class="w-3 h-3 mr-1" />
+                                  Site officiel
+                                </a>
                               </div>
                             </div>
                           </div>
                         </div>
                       </div>
-
-                      <!-- No staff info message -->
-                      <div v-if="!anime.studio && !anime.realisateur && (!anime.businessRelations || !anime.businessRelations.length)" class="text-gray-500 dark:text-gray-400 italic text-center py-8">
-                        Aucune information sur le staff disponible.
+                    </div>
+                    
+                    <!-- Empty state -->
+                    <div v-else class="text-center py-8">
+                      <Icon name="heroicons:users" class="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <div class="text-gray-500 dark:text-gray-400">
+                        <p class="font-medium mb-1">Aucune information détaillée sur le staff</p>
+                        <p class="text-sm">
+                          <span v-if="anime.studio || anime.realisateur">
+                            Consultez les informations principales ci-dessus.
+                          </span>
+                          <span v-else>
+                            Les informations sur l'équipe de production ne sont pas encore disponibles.
+                          </span>
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -391,6 +401,8 @@
                   :src="screenshot.thumb" 
                   :alt="`${anime.titre} - Screenshot #${index + 1}`"
                   class="w-full h-16 object-cover rounded-lg transition-transform group-hover:scale-105"
+                  @error="onScreenshotError"
+                  @load="onScreenshotLoad"
                 />
                 <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity rounded-lg"></div>
               </div>
@@ -487,8 +499,10 @@ useHead({
 const anime = ref<Anime | null>(null)
 const reviews = ref<Review[]>([])
 const similarAnimes = ref<Anime[]>([])
+const staff = ref<any[]>([])
 const loading = ref(true)
 const loadingReviews = ref(false)
+const loadingStaff = ref(false)
 const error = ref('')
 
 const activeTab = ref('synopsis')
@@ -496,13 +510,8 @@ const showAddReview = ref(false)
 const lightboxOpen = ref(false)
 const currentScreenshotIndex = ref(0)
 
-// Mock screenshots for demo
-const screenshots = ref([
-  {
-    thumb: `/images/anime/screenshots/${animeId.value}-1-thumb.jpg`,
-    full: `/images/anime/screenshots/${animeId.value}-1.jpg`
-  }
-])
+// Screenshots will be loaded from API or media service
+const screenshots = ref([])
 
 // Tabs configuration
 const tabs = [
@@ -522,10 +531,43 @@ const newReview = ref({
 // Composables
 const animeAPI = useAnimeAPI()
 const reviewsAPI = useReviewsAPI()
+const config = useRuntimeConfig()
 
 // Computed
 const currentScreenshot = computed(() => {
   return screenshots.value[currentScreenshotIndex.value]
+})
+
+// Helper function to decode HTML entities
+const decodeHtmlEntities = (text: string) => {
+  if (!text) return text
+  
+  // Create a temporary div element to decode HTML entities
+  const div = document.createElement('div')
+  div.innerHTML = text
+  return div.textContent || div.innerText || text
+}
+
+const groupedStaff = computed(() => {
+  console.log('Computing groupedStaff, staff.value:', staff.value)
+  if (!staff.value || staff.value.length === 0) return []
+  
+  const grouped = {}
+  staff.value.forEach(member => {
+    const fonction = member.type || 'Autre'
+    if (!grouped[fonction]) {
+      grouped[fonction] = []
+    }
+    grouped[fonction].push(member)
+  })
+  
+  const result = Object.keys(grouped).map(fonction => ({
+    fonction,
+    members: grouped[fonction]
+  })).sort((a, b) => a.fonction.localeCompare(b.fonction))
+  
+  console.log('Grouped staff result:', result)
+  return result
 })
 
 // Methods
@@ -588,6 +630,8 @@ const loadAnime = async () => {
       // Load related data
       loadReviews()
       loadSimilarAnimes()
+      loadStaff()
+      loadScreenshots()
     }
     
   } catch (err: any) {
@@ -627,6 +671,50 @@ const loadSimilarAnimes = async () => {
     similarAnimes.value = allAnimes.filter((a: Anime) => a.id !== anime.value!.id).slice(0, 6)
   } catch (err) {
     console.error('Error loading similar animes:', err)
+  }
+}
+
+const loadStaff = async () => {
+  console.log('loadStaff called, anime.value:', anime.value)
+  if (!anime.value) {
+    console.log('No anime.value, returning')
+    return
+  }
+  
+  console.log('anime.value.id:', anime.value.id)
+  
+  try {
+    loadingStaff.value = true
+    const apiUrl = `${config.public.apiBase}/api/animes/${anime.value.id}/staff`
+    console.log('Loading staff from:', apiUrl)
+    const response = await $fetch(apiUrl)
+    console.log('Staff API response:', response)
+    staff.value = response.staff || []
+    console.log('Staff value set to:', staff.value)
+  } catch (err) {
+    console.error('Error loading staff:', err)
+  } finally {
+    loadingStaff.value = false
+  }
+}
+
+const loadScreenshots = async () => {
+  if (!anime.value) return
+  
+  try {
+    // Try to load media from the media API
+    const response = await $fetch(`${config.public.apiBase}/api/media/content/${anime.value.id}?type=anime`)
+    const mediaItems = (response as any[]) || []
+    
+    // Convert media items to screenshot format
+    screenshots.value = mediaItems.map((item: any) => ({
+      thumb: `${config.public.apiBase}/api/media/serve/anime/${item.filename}`,
+      full: `${config.public.apiBase}/api/media/serve/anime/${item.filename}`
+    }))
+  } catch (err) {
+    // If no media found, just keep screenshots empty
+    console.log('No screenshots found for anime:', anime.value.id)
+    screenshots.value = []
   }
 }
 
@@ -679,6 +767,24 @@ const closeLightbox = () => {
 const onImageError = (event: Event) => {
   const img = event.target as HTMLImageElement
   img.src = '/images/placeholder-anime.jpg'
+}
+
+const onScreenshotError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  // Hide the screenshot container if image fails to load
+  const container = img.closest('.relative.group.cursor-pointer')
+  if (container) {
+    (container as HTMLElement).style.display = 'none'
+  }
+}
+
+const onScreenshotLoad = (event: Event) => {
+  // Screenshot loaded successfully - ensure it's visible
+  const img = event.target as HTMLImageElement
+  const container = img.closest('.relative.group.cursor-pointer')
+  if (container) {
+    (container as HTMLElement).style.display = 'block'
+  }
 }
 
 // Image URL composable

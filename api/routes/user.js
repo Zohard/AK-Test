@@ -427,4 +427,423 @@ router.put('/me', authMiddleware, [
   }
 });
 
+/**
+ * @swagger
+ * /api/users/{id}/stats:
+ *   get:
+ *     summary: Get user statistics
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totalReviews:
+ *                   type: integer
+ *                 animeCount:
+ *                   type: integer
+ *                 mangaCount:
+ *                   type: integer
+ *                 genreStats:
+ *                   type: array
+ *                 ratingStats:
+ *                   type: array
+ *       403:
+ *         description: Access denied
+ *       500:
+ *         description: Server error
+ */
+router.get('/:id/stats', authMiddleware, async (req, res) => {
+  console.log('User stats endpoint called for user ID:', req.params.id);
+  try {
+    const { id } = req.params;
+    
+    // Check if user can access this profile
+    if (parseInt(id) !== req.user.id && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+    
+    // Get total reviews
+    const reviewsResult = await pool.query(
+      'SELECT COUNT(*) as total FROM ak_critique WHERE id_membre = $1',
+      [id]
+    );
+    
+    // Get anime collection count
+    let animeResult = { rows: [{ total: 0 }] };
+    try {
+      animeResult = await pool.query(
+        'SELECT COUNT(*) as total FROM collection_animes WHERE id_membre = $1',
+        [id]
+      );
+    } catch (err) {
+      console.log('collection_animes table not found, trying fallback tables');
+      try {
+        animeResult = await pool.query(
+          'SELECT COUNT(*) as total FROM anime_collection WHERE id_membre = $1',
+          [id]
+        );
+      } catch (err2) {
+        try {
+          animeResult = await pool.query(
+            'SELECT COUNT(*) as total FROM ak_collection WHERE id_membre = $1 AND type = \'anime\'',
+            [id]
+          );
+        } catch (err3) {
+          console.log('No anime collection table found');
+        }
+      }
+    }
+    
+    // Get manga collection count
+    let mangaResult = { rows: [{ total: 0 }] };
+    try {
+      mangaResult = await pool.query(
+        'SELECT COUNT(*) as total FROM collection_mangas WHERE id_membre = $1',
+        [id]
+      );
+    } catch (err) {
+      console.log('collection_mangas table not found, trying fallback tables');
+      try {
+        mangaResult = await pool.query(
+          'SELECT COUNT(*) as total FROM manga_collection WHERE id_membre = $1',
+          [id]
+        );
+      } catch (err2) {
+        try {
+          mangaResult = await pool.query(
+            'SELECT COUNT(*) as total FROM ak_collection WHERE id_membre = $1 AND type = \'manga\'',
+            [id]
+          );
+        } catch (err3) {
+          console.log('No manga collection table found');
+        }
+      }
+    }
+    
+    // Get genre statistics (most reviewed genres)
+    const genreStats = await pool.query(`
+      SELECT 
+        COALESCE(a.genre1, m.genre1, 'Non spécifié') as name,
+        COUNT(*) as count
+      FROM ak_critique c
+      LEFT JOIN ak_animes a ON c.id_anime = a.id_anime
+      LEFT JOIN ak_mangas m ON c.id_manga = m.id_manga
+      WHERE c.id_membre = $1
+      GROUP BY COALESCE(a.genre1, m.genre1)
+      ORDER BY count DESC
+      LIMIT 10
+    `, [id]);
+    
+    // Get rating distribution
+    const ratingStats = await pool.query(`
+      SELECT 
+        notation as rating,
+        COUNT(*) as count
+      FROM ak_critique 
+      WHERE id_membre = $1 
+      GROUP BY notation 
+      ORDER BY notation DESC
+    `, [id]);
+    
+    res.json({
+      totalReviews: parseInt(reviewsResult.rows[0].total),
+      animeCount: parseInt(animeResult.rows[0]?.total || 0),
+      mangaCount: parseInt(mangaResult.rows[0]?.total || 0),
+      genreStats: genreStats.rows,
+      ratingStats: ratingStats.rows
+    });
+    
+  } catch (error) {
+    console.error('User stats error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des statistiques' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/users/{id}/activity:
+ *   get:
+ *     summary: Get user recent activity
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: User ID
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of activities to return
+ *     responses:
+ *       200:
+ *         description: User recent activity
+ *       403:
+ *         description: Access denied
+ *       500:
+ *         description: Server error
+ */
+router.get('/:id/activity', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    // Check if user can access this profile
+    if (parseInt(id) !== req.user.id && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+    
+    // Get recent reviews
+    const recentReviews = await pool.query(`
+      SELECT 
+        'review' as type,
+        c.date_critique as date,
+        COALESCE(a.titre, m.titre) as title,
+        c.id_critique as id
+      FROM ak_critique c
+      LEFT JOIN ak_animes a ON c.id_anime = a.id_anime
+      LEFT JOIN ak_mangas m ON c.id_manga = m.id_manga
+      WHERE c.id_membre = $1
+      ORDER BY c.date_critique DESC
+      LIMIT $2
+    `, [id, limit]);
+    
+    // Get recent collection additions (check multiple possible table structures)
+    let recentCollections = { rows: [] };
+    
+    // Try collection_animes and collection_mangas tables first
+    try {
+      const animeCollections = await pool.query(`
+        SELECT 
+          'anime_added' as type,
+          now() as date,
+          a.titre as title,
+          ac.id_anime as id
+        FROM collection_animes ac
+        LEFT JOIN ak_animes a ON ac.id_anime = a.id_anime
+        WHERE ac.id_membre = $1
+        ORDER BY ac.id_collection DESC
+        LIMIT $2
+      `, [id, Math.ceil(limit / 2)]);
+      
+      const mangaCollections = await pool.query(`
+        SELECT 
+          'manga_added' as type,
+          now() as date,
+          m.titre as title,
+          mc.id_manga as id
+        FROM collection_mangas mc
+        LEFT JOIN ak_mangas m ON mc.id_manga = m.id_manga
+        WHERE mc.id_membre = $1
+        ORDER BY mc.id_collection DESC
+        LIMIT $2
+      `, [id, Math.floor(limit / 2)]);
+      
+      recentCollections.rows = [
+        ...animeCollections.rows,
+        ...mangaCollections.rows
+      ];
+      
+    } catch (err) {
+      console.log('collection_animes/collection_mangas tables not found, trying fallback tables');
+      try {
+        recentCollections = await pool.query(`
+          SELECT 
+            CASE WHEN type = 'anime' THEN 'anime_added' ELSE 'manga_added' END as type,
+            date_added as date,
+            titre as title,
+            id as id
+          FROM ak_collection col
+          LEFT JOIN ak_animes a ON col.id_item = a.id_anime AND col.type = 'anime'
+          LEFT JOIN ak_mangas m ON col.id_item = m.id_manga AND col.type = 'manga'
+          WHERE col.id_membre = $1
+          ORDER BY col.date_added DESC
+          LIMIT $2
+        `, [id, limit]);
+      } catch (err2) {
+        console.log('No collection tables found, skipping collection activity');
+      }
+    }
+    
+    // Combine and sort activities
+    const allActivities = [
+      ...recentReviews.rows,
+      ...recentCollections.rows
+    ].sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, limit);
+    
+    res.json({
+      activities: allActivities
+    });
+    
+  } catch (error) {
+    console.error('User activity error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération de l\'activité' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/users/{id}/recommendations:
+ *   get:
+ *     summary: Get personalized recommendations for user
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: User ID
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 12
+ *         description: Number of recommendations to return
+ *     responses:
+ *       200:
+ *         description: Personalized recommendations
+ *       403:
+ *         description: Access denied
+ *       500:
+ *         description: Server error
+ */
+router.get('/:id/recommendations', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const limit = parseInt(req.query.limit) || 12;
+    
+    // Check if user can access this profile
+    if (parseInt(id) !== req.user.id && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+    
+    // Get user's most reviewed genres
+    const userGenres = await pool.query(`
+      SELECT 
+        COALESCE(a.genre1, m.genre1) as genre,
+        COUNT(*) as count
+      FROM ak_critique c
+      LEFT JOIN ak_animes a ON c.id_anime = a.id_anime
+      LEFT JOIN ak_mangas m ON c.id_manga = m.id_manga
+      WHERE c.id_membre = $1 
+        AND COALESCE(a.genre1, m.genre1) IS NOT NULL
+      GROUP BY COALESCE(a.genre1, m.genre1)
+      ORDER BY count DESC
+      LIMIT 3
+    `, [id]);
+    
+    let recommendations = [];
+    
+    if (userGenres.rows.length > 0) {
+      const topGenres = userGenres.rows.map(g => g.genre);
+      
+      // Get anime recommendations based on favorite genres
+      const animeRecs = await pool.query(`
+        SELECT 
+          id_anime as id,
+          titre,
+          image,
+          'anime' as type,
+          niceUrl
+        FROM ak_animes 
+        WHERE genre1 = ANY($1) 
+          AND statut = 1 
+          AND id_anime NOT IN (
+            SELECT id_anime FROM ak_critique WHERE id_membre = $2 AND id_anime IS NOT NULL
+          )
+        ORDER BY RANDOM()
+        LIMIT $3
+      `, [topGenres, id, Math.ceil(limit / 2)]);
+      
+      // Get manga recommendations based on favorite genres
+      const mangaRecs = await pool.query(`
+        SELECT 
+          id_manga as id,
+          titre,
+          image,
+          'manga' as type,
+          niceUrl
+        FROM ak_mangas 
+        WHERE genre1 = ANY($1) 
+          AND statut = 1 
+          AND id_manga NOT IN (
+            SELECT id_manga FROM ak_critique WHERE id_membre = $2 AND id_manga IS NOT NULL
+          )
+        ORDER BY RANDOM()
+        LIMIT $3
+      `, [topGenres, id, Math.floor(limit / 2)]);
+      
+      recommendations = [
+        ...animeRecs.rows,
+        ...mangaRecs.rows
+      ];
+    }
+    
+    // If not enough recommendations, add popular items
+    if (recommendations.length < limit) {
+      const remaining = limit - recommendations.length;
+      const popularItems = await pool.query(`
+        (SELECT 
+          id_anime as id,
+          titre,
+          image,
+          'anime' as type,
+          niceUrl
+        FROM ak_animes 
+        WHERE statut = 1 
+        ORDER BY note_moyenne DESC, id_anime DESC
+        LIMIT $1)
+        UNION ALL
+        (SELECT 
+          id_manga as id,
+          titre,
+          image,
+          'manga' as type,
+          niceUrl
+        FROM ak_mangas 
+        WHERE statut = 1 
+        ORDER BY note_moyenne DESC, id_manga DESC
+        LIMIT $1)
+        ORDER BY RANDOM()
+        LIMIT $2
+      `, [Math.ceil(remaining / 2), remaining]);
+      
+      recommendations = [
+        ...recommendations,
+        ...popularItems.rows
+      ];
+    }
+    
+    res.json({
+      items: recommendations.slice(0, limit)
+    });
+    
+  } catch (error) {
+    console.error('User recommendations error:', error);
+    res.status(500).json({ error: 'Erreur lors de la génération des recommandations' });
+  }
+});
+
 module.exports = router;

@@ -27,22 +27,22 @@
       <form class="mt-8 space-y-6" @submit.prevent="handleLogin">
         <div class="rounded-md shadow-sm space-y-4">
           <div>
-            <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Adresse email
+            <label for="emailOrUsername" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Email ou nom d'utilisateur
             </label>
             <input
-              id="email"
-              v-model="form.email"
-              name="email"
-              type="email"
-              autocomplete="email"
+              id="emailOrUsername"
+              v-model="form.emailOrUsername"
+              name="emailOrUsername"
+              type="text"
+              autocomplete="username"
               required
               class="form-input"
-              placeholder="votre@email.com"
-              :class="{ 'border-red-500': errors.email }"
+              placeholder="votre@email.com ou votre nom d'utilisateur"
+              :class="{ 'border-red-500': errors.emailOrUsername }"
             />
-            <p v-if="errors.email" class="mt-1 text-sm text-red-600 dark:text-red-400">
-              {{ errors.email }}
+            <p v-if="errors.emailOrUsername" class="mt-1 text-sm text-red-600 dark:text-red-400">
+              {{ errors.emailOrUsername }}
             </p>
           </div>
 
@@ -195,7 +195,7 @@ if (authStore.isAuthenticated) {
 
 // Form state
 const form = reactive({
-  email: '',
+  emailOrUsername: '',
   password: '',
   rememberMe: false
 })
@@ -204,22 +204,34 @@ const showPassword = ref(false)
 const loading = ref(false)
 const loginError = ref('')
 const errors = reactive({
-  email: '',
+  emailOrUsername: '',
   password: ''
 })
 
+// Helper function to check if input is email
+const isEmail = (value: string) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
+
 // Validation
 const validateForm = () => {
-  errors.email = ''
+  errors.emailOrUsername = ''
   errors.password = ''
   
-  if (!form.email) {
-    errors.email = 'L\'adresse email est requise'
+  if (!form.emailOrUsername) {
+    errors.emailOrUsername = 'L\'email ou nom d\'utilisateur est requis'
     return false
   }
   
-  if (!form.email.includes('@')) {
-    errors.email = 'Adresse email invalide'
+  // If it looks like an email, validate email format
+  if (form.emailOrUsername.includes('@') && !isEmail(form.emailOrUsername)) {
+    errors.emailOrUsername = 'Format d\'email invalide'
+    return false
+  }
+  
+  // If it's not an email, it should be a username (minimum 3 characters)
+  if (!form.emailOrUsername.includes('@') && form.emailOrUsername.length < 3) {
+    errors.emailOrUsername = 'Le nom d\'utilisateur doit contenir au moins 3 caractères'
     return false
   }
   
@@ -244,10 +256,13 @@ const handleLogin = async () => {
   loginError.value = ''
   
   try {
-    await authStore.login({
-      email: form.email,
+    // Send emailOrUsername field as expected by the API
+    const credentials: any = {
+      emailOrUsername: form.emailOrUsername,
       password: form.password
-    })
+    }
+    
+    await authStore.login(credentials)
     
     // Redirect to intended page or home
     const redirectTo = route.query.redirect as string || '/'
@@ -267,7 +282,7 @@ const hideImage = (event: Event) => {
 if (process.dev) {
   onMounted(() => {
     // Uncomment for testing
-    // form.email = 'test@example.com'
+    // form.emailOrUsername = 'test@example.com' // or 'username'
     // form.password = 'password123'
   })
 }

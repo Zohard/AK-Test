@@ -437,6 +437,89 @@ router.get('/autocomplete', async (req, res) => {
 
 /**
  * @swagger
+ * /api/animes/{id}/staff:
+ *   get:
+ *     summary: Get staff list for a specific anime
+ *     tags: [Animes]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Anime ID
+ *     responses:
+ *       200:
+ *         description: Staff list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 anime_id:
+ *                   type: integer
+ *                 staff:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       business_id:
+ *                         type: integer
+ *                       business_name:
+ *                         type: string
+ *                       fonction:
+ *                         type: string
+ *                       precisions:
+ *                         type: string
+ *                       business_type:
+ *                         type: string
+ *                       site_officiel:
+ *                         type: string
+ *       404:
+ *         description: Anime not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/:id/staff', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // First check if anime exists
+    const animeCheck = await pool.query(`
+      SELECT id_anime FROM ak_animes WHERE id_anime = $1 AND statut = 1
+    `, [id]);
+    
+    if (animeCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Anime introuvable' });
+    }
+    
+    // Get staff information  
+    const staff = await pool.query(`
+      SELECT 
+        bta.id_business as business_id,
+        b.denomination as business_name,
+        bta.type as fonction,
+        bta.precisions,
+        b.type as business_type,
+        b.site_officiel
+      FROM ak_business_to_animes bta
+      JOIN ak_business b ON bta.id_business = b.id_business
+      WHERE bta.id_anime = $1 AND b.statut = 1
+      ORDER BY bta.type, b.denomination
+    `, [id]);
+    
+    res.json({
+      anime_id: parseInt(id),
+      staff: staff.rows
+    });
+  } catch (error) {
+    console.error('Staff fetch error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération du staff' });
+  }
+});
+
+/**
+ * @swagger
  * /api/animes/{id}/relations:
  *   get:
  *     summary: Get relations for a specific anime

@@ -115,12 +115,77 @@ export class MediaService {
       ORDER BY upload_date DESC
     `;
 
-    return (media as any[]).map((item) => ({
-      id: Number(item.id),
-      filename: item.filename,
-      uploadDate: item.upload_date,
-      url: `/uploads/${item.filename}`,
-    }));
+    // Filter files and check if they exist in the correct directory
+    const existingMedia: any[] = [];
+    
+    for (const item of media as any[]) {
+      try {
+        let filePath: string;
+        let cleanFilename: string;
+        
+        // Handle different path structures
+        if (item.filename.startsWith('screenshots/')) {
+          // Database has 'screenshots/filename.jpg' - file is in uploads/screenshots/
+          cleanFilename = item.filename.replace(/^screenshots\//, '');
+          filePath = path.join(this.uploadPath, 'screenshots', cleanFilename);
+        } else {
+          // Database has just 'filename.jpg' - check type-specific directory first
+          cleanFilename = item.filename;
+          filePath = path.join(this.uploadPath, type, cleanFilename);
+        }
+        
+        // Check if file exists
+        try {
+          await fs.access(filePath);
+          
+          // File exists, add to results
+          existingMedia.push({
+            id: Number(item.id),
+            filename: item.filename.startsWith('screenshots/') ? cleanFilename : item.filename,
+            uploadDate: item.upload_date,
+            url: `/uploads/${item.filename.startsWith('screenshots/') ? cleanFilename : item.filename}`,
+          });
+        } catch {
+          // File doesn't exist, try alternative locations
+          if (item.filename.startsWith('screenshots/')) {
+            // Try in type-specific directory
+            const altPath = path.join(this.uploadPath, type, cleanFilename);
+            try {
+              await fs.access(altPath);
+              existingMedia.push({
+                id: Number(item.id),
+                filename: cleanFilename,
+                uploadDate: item.upload_date,
+                url: `/uploads/${cleanFilename}`,
+              });
+            } catch {
+              // File doesn't exist anywhere, skip it
+              continue;
+            }
+          } else {
+            // Try in screenshots directory
+            const altPath = path.join(this.uploadPath, 'screenshots', cleanFilename);
+            try {
+              await fs.access(altPath);
+              existingMedia.push({
+                id: Number(item.id),
+                filename: item.filename,
+                uploadDate: item.upload_date,
+                url: `/uploads/${item.filename}`,
+              });
+            } catch {
+              // File doesn't exist anywhere, skip it
+              continue;
+            }
+          }
+        }
+      } catch (error) {
+        // Error checking file, skip it
+        continue;
+      }
+    }
+    
+    return existingMedia;
   }
 
   async deleteMedia(id: number, userId: number) {
@@ -220,18 +285,50 @@ export class MediaService {
   }
 
   async serveImage(type: string, filename: string) {
-    // For backwards compatibility, try to find in type-specific directory first
-    let filePath = path.join(this.uploadPath, type, filename);
-
+    // Try different locations based on file structure
+    let filePath: string;
+    
+    // 1. Try type-specific directory first (uploads/manga/, uploads/anime/)
+    filePath = path.join(this.uploadPath, type, filename);
     try {
       await fs.access(filePath);
     } catch {
-      // If not found in type directory, try root uploads directory
-      filePath = path.join(this.uploadPath, filename);
+      // 2. Try screenshots directory (uploads/screenshots/)
+      filePath = path.join(this.uploadPath, 'screenshots', filename);
       try {
         await fs.access(filePath);
       } catch {
-        throw new NotFoundException('Image not found');
+        // 3. Try root uploads directory
+        filePath = path.join(this.uploadPath, filename);
+        try {
+          await fs.access(filePath);
+        } catch {
+          // 4. If filename has subdirectory, try extracting just the filename
+          const baseFilename = path.basename(filename);
+          if (baseFilename !== filename) {
+            try {
+              // Try in screenshots directory
+              filePath = path.join(this.uploadPath, 'screenshots', baseFilename);
+              await fs.access(filePath);
+            } catch {
+              try {
+                // Try in type-specific directory
+                filePath = path.join(this.uploadPath, type, baseFilename);
+                await fs.access(filePath);
+              } catch {
+                try {
+                  // Try in root
+                  filePath = path.join(this.uploadPath, baseFilename);
+                  await fs.access(filePath);
+                } catch {
+                  throw new NotFoundException('Image not found');
+                }
+              }
+            }
+          } else {
+            throw new NotFoundException('Image not found');
+          }
+        }
       }
     }
 

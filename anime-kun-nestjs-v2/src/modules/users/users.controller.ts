@@ -134,4 +134,28 @@ export class UsersController {
   async getUserStats(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.getUserStats(id);
   }
+
+  @Get(':id/activity')
+  @ApiOperation({ summary: "Activité récente d'un utilisateur" })
+  @ApiParam({ name: 'id', description: "ID de l'utilisateur", type: 'number' })
+  @ApiResponse({ status: 200, description: "Activité récente de l'utilisateur" })
+  @ApiResponse({ status: 404, description: 'Utilisateur introuvable' })
+  async getUserActivity(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.usersService.getUserActivity(id, limit || 10);
+  }
+
+  @Get(':id/recommendations')
+  @ApiOperation({ summary: "Recommandations personnalisées pour un utilisateur" })
+  @ApiParam({ name: 'id', description: "ID de l'utilisateur", type: 'number' })
+  @ApiResponse({ status: 200, description: "Recommandations personnalisées" })
+  @ApiResponse({ status: 404, description: 'Utilisateur introuvable' })
+  async getUserRecommendations(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.usersService.getUserRecommendations(id, limit || 12);
+  }
 }

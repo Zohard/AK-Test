@@ -99,8 +99,18 @@
               @click="showUserMenu = !showUserMenu"
               class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
-              <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                <span class="text-white text-sm font-medium">
+              <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center overflow-hidden">
+                <img 
+                  v-if="authStore.user?.avatar && !avatarError" 
+                  :src="authStore.user.avatar" 
+                  :alt="authStore.userDisplayName"
+                  class="w-full h-full object-cover"
+                  @error="avatarError = true"
+                />
+                <span 
+                  v-else
+                  class="text-white text-sm font-medium"
+                >
                   {{ authStore.userDisplayName.charAt(0).toUpperCase() }}
                 </span>
               </div>
@@ -113,27 +123,43 @@
               class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
             >
               <div class="p-2">
-                <div class="px-3 py-2 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-200 dark:border-gray-700">
-                  {{ authStore.userDisplayName }}
-                </div>
                 <NuxtLink 
                   to="/profile"
                   class="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                  @click="showUserMenu = false"
                 >
                   <Icon name="heroicons:user" class="w-4 h-4 mr-2" />
-                  Profil
+                  Mon profil
                 </NuxtLink>
                 <NuxtLink 
-                  to="/settings"
+                  to="/messages"
                   class="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                  @click="showUserMenu = false"
                 >
-                  <Icon name="heroicons:cog-6-tooth" class="w-4 h-4 mr-2" />
-                  Paramètres
+                  <Icon name="heroicons:envelope" class="w-4 h-4 mr-2" />
+                  Messagerie
+                </NuxtLink>
+                <NuxtLink 
+                  to="/my-collections"
+                  class="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                  @click="showUserMenu = false"
+                >
+                  <Icon name="heroicons:rectangle-stack" class="w-4 h-4 mr-2" />
+                  Mes collections
+                </NuxtLink>
+                <NuxtLink 
+                  to="/my-lists"
+                  class="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                  @click="showUserMenu = false"
+                >
+                  <Icon name="heroicons:list-bullet" class="w-4 h-4 mr-2" />
+                  Mes listes
                 </NuxtLink>
                 <div v-if="authStore.isAdmin" class="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">
                   <NuxtLink 
                     to="/admin"
                     class="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                    @click="showUserMenu = false"
                   >
                     <Icon name="heroicons:cog-8-tooth" class="w-4 h-4 mr-2" />
                     Administration
@@ -227,6 +253,7 @@ const authStore = useAuthStore()
 const showNotifications = ref(false)
 const showUserMenu = ref(false)
 const showMobileMenu = ref(false)
+const avatarError = ref(false)
 
 // Mock notifications data - will be replaced with real data
 const notifications = ref<{id: number; message: string}[]>([])

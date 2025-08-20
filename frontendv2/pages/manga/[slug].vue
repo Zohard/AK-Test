@@ -3,7 +3,7 @@
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-12">
       <div class="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
-      <span class="ml-3 text-gray-600 dark:text-gray-300">Chargement de l'anime...</span>
+      <span class="ml-3 text-gray-600 dark:text-gray-300">Chargement du manga...</span>
     </div>
 
     <!-- Error State -->
@@ -19,7 +19,7 @@
               {{ error }}
             </div>
             <div class="mt-4">
-              <button @click="loadAnime" class="btn-primary">
+              <button @click="loadManga" class="btn-primary">
                 Réessayer
               </button>
             </div>
@@ -28,8 +28,8 @@
       </div>
     </div>
 
-    <!-- Anime Details -->
-    <div v-else-if="anime" class="container mx-auto px-4 py-8">
+    <!-- Manga Details -->
+    <div v-else-if="manga" class="container mx-auto px-4 py-8">
       <!-- Breadcrumb -->
       <nav class="flex mb-8" aria-label="Breadcrumb">
         <ol class="flex items-center space-x-4">
@@ -42,8 +42,8 @@
           <li>
             <div class="flex items-center">
               <Icon name="heroicons:chevron-right" class="h-5 w-5 text-gray-400" />
-              <NuxtLink to="/animes" class="ml-4 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
-                Animes
+              <NuxtLink to="/mangas" class="ml-4 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+                Mangas
               </NuxtLink>
             </div>
           </li>
@@ -51,7 +51,7 @@
             <div class="flex items-center">
               <Icon name="heroicons:chevron-right" class="h-5 w-5 text-gray-400" />
               <span class="ml-4 text-sm font-medium text-gray-900 dark:text-white">
-                {{ anime.titre }}
+                {{ manga.titre }}
               </span>
             </div>
           </li>
@@ -61,9 +61,9 @@
       <!-- Main Content -->
       <div class="main bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
         
-        <!-- Anime Header -->
+        <!-- Manga Header -->
         <div class="fiche p-8">
-          <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-6">{{ anime.titre }}</h1>
+          <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-6">{{ manga.titre }}</h1>
           
           <!-- General Information -->
           <div class="general grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
@@ -72,43 +72,46 @@
             <div class="principal lg:col-span-1">
               <div class="img-fiche mb-6">
                 <img 
-                  :src="getImageUrl(anime.image, 'anime')" 
-                  :alt="anime.titre"
+                  :src="getImageUrl(manga.image, 'manga')" 
+                  :alt="manga.titre"
                   class="w-full max-w-sm mx-auto rounded-lg shadow-md"
                   @error="onImageError"
                 />
               </div>
               
-              <!-- Anime Details List -->
+              <!-- Manga Details List -->
               <div class="space-y-3 text-sm">
-                <div v-if="anime.annee" class="flex">
+                <div v-if="manga.annee" class="flex">
                   <span class="font-medium text-gray-700 dark:text-gray-300 mr-2">Année :</span>
-                  <span class="text-gray-900 dark:text-white">{{ anime.annee }}</span>
+                  <span class="text-gray-900 dark:text-white">{{ manga.annee }}</span>
                 </div>
                 
-                <div v-if="anime.titreOrig" class="flex">
+                <div v-if="manga.titreOrig" class="flex">
                   <span class="font-medium text-gray-700 dark:text-gray-300 mr-2">Titre original :</span>
-                  <span class="text-gray-900 dark:text-white">{{ anime.titreOrig }}</span>
+                  <span class="text-gray-900 dark:text-white">{{ manga.titreOrig }}</span>
                 </div>
                 
-                <div v-if="anime.nbEp" class="flex">
-                  <span class="font-medium text-gray-700 dark:text-gray-300 mr-2">Nombre d'épisodes :</span>
-                  <span class="text-gray-900 dark:text-white">{{ anime.nbEp }}</span>
+                <div v-if="manga.auteur" class="flex">
+                  <span class="font-medium text-gray-700 dark:text-gray-300 mr-2">Auteur :</span>
+                  <span class="text-gray-900 dark:text-white">{{ manga.auteur }}</span>
                 </div>
                 
-                <div v-if="anime.studio" class="flex">
-                  <span class="font-medium text-gray-700 dark:text-gray-300 mr-2">Studio :</span>
-                  <span class="text-gray-900 dark:text-white">{{ anime.studio }}</span>
+                <div v-if="manga.nbVolumes" class="flex">
+                  <span class="font-medium text-gray-700 dark:text-gray-300 mr-2">Nombre de volumes :</span>
+                  <span class="text-gray-900 dark:text-white">{{ manga.nbVolumes }}</span>
                 </div>
                 
-                <div v-if="anime.realisateur" class="flex">
-                  <span class="font-medium text-gray-700 dark:text-gray-300 mr-2">Réalisation :</span>
-                  <span class="text-gray-900 dark:text-white">{{ anime.realisateur }}</span>
+                <div v-if="manga.editeur" class="flex">
+                  <span class="font-medium text-gray-700 dark:text-gray-300 mr-2">Éditeur :</span>
+                  <span class="text-gray-900 dark:text-white">{{ manga.editeur }}</span>
+                </div>
+
+                <div v-if="manga.dessinateur" class="flex">
+                  <span class="font-medium text-gray-700 dark:text-gray-300 mr-2">Dessinateur :</span>
+                  <span class="text-gray-900 dark:text-white">{{ manga.dessinateur }}</span>
                 </div>
                 
-                <!-- Remove genre tags section as it's not available in the current database schema -->
-                
-                <div v-if="anime.moyenneNotes" class="flex items-center">
+                <div v-if="manga.moyenneNotes" class="flex items-center">
                   <span class="font-medium text-gray-700 dark:text-gray-300 mr-2">Note moyenne :</span>
                   <div class="flex items-center">
                     <div class="flex text-yellow-400">
@@ -116,13 +119,13 @@
                         v-for="i in 5" 
                         :key="i" 
                         name="heroicons:star-solid" 
-                        :class="i <= Math.round(anime.moyenneNotes / 2) ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'"
+                        :class="i <= Math.round(manga.moyenneNotes / 2) ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'"
                         class="h-4 w-4"
                       />
                     </div>
-                    <span class="ml-2 text-gray-900 dark:text-white">{{ (anime.moyenneNotes / 2).toFixed(1) }}/5</span>
-                    <span v-if="anime.nbReviews" class="ml-1 text-gray-500 dark:text-gray-400 text-xs">
-                      ({{ anime.nbReviews }} avis)
+                    <span class="ml-2 text-gray-900 dark:text-white">{{ (manga.moyenneNotes / 2).toFixed(1) }}/5</span>
+                    <span v-if="manga.nbReviews" class="ml-1 text-gray-500 dark:text-gray-400 text-xs">
+                      ({{ manga.nbReviews }} avis)
                     </span>
                   </div>
                 </div>
@@ -161,28 +164,11 @@
                   
                   <!-- Synopsis Tab -->
                   <div v-show="activeTab === 'synopsis'" class="info synopsis">
-                    <div v-if="anime.synopsis" class="prose dark:prose-invert max-w-none">
-                      <p v-html="formatSynopsis(anime.synopsis)"></p>
+                    <div v-if="manga.synopsis" class="prose dark:prose-invert max-w-none">
+                      <p v-html="formatSynopsis(manga.synopsis)"></p>
                     </div>
                     <div v-else class="text-gray-500 dark:text-gray-400 italic">
-                      Aucun synopsis disponible pour cet anime.
-                    </div>
-                  </div>
-                  
-                  <!-- Staff Tab -->
-                  <div v-show="activeTab === 'staff'" class="info staff">
-                    <div class="space-y-3">
-                      <div v-if="anime.studio">
-                        <span class="font-medium text-gray-700 dark:text-gray-300">Studio d'animation :</span>
-                        <span class="ml-2 text-gray-900 dark:text-white">{{ anime.studio }}</span>
-                      </div>
-                      <div v-if="anime.realisateur">
-                        <span class="font-medium text-gray-700 dark:text-gray-300">Réalisation :</span>
-                        <span class="ml-2 text-gray-900 dark:text-white">{{ anime.realisateur }}</span>
-                      </div>
-                      <div v-if="!anime.studio && !anime.realisateur" class="text-gray-500 dark:text-gray-400 italic">
-                        Aucune information sur le staff disponible.
-                      </div>
+                      Aucun synopsis disponible pour ce manga.
                     </div>
                   </div>
                   
@@ -191,7 +177,7 @@
                     <div class="space-y-4">
                       <div class="flex items-center justify-between">
                         <h3 class="text-lg font-medium text-gray-900 dark:text-white">
-                          Critiques ({{ anime.nbReviews || 0 }})
+                          Critiques ({{ manga.nbReviews || 0 }})
                         </h3>
                         <button 
                           @click="showAddReview = !showAddReview"
@@ -232,7 +218,7 @@
                               v-model="newReview.critique"
                               rows="4"
                               class="form-input"
-                              placeholder="Partagez votre avis sur cet anime..."
+                              placeholder="Partagez votre avis sur ce manga..."
                               required
                             ></textarea>
                           </div>
@@ -288,7 +274,7 @@
                       </div>
                       
                       <div v-else-if="!loadingReviews" class="text-center py-8 text-gray-500 dark:text-gray-400">
-                        Aucune critique pour cet anime. Soyez le premier à donner votre avis !
+                        Aucune critique pour ce manga. Soyez le premier à donner votre avis !
                       </div>
                       
                       <div v-if="loadingReviews" class="text-center py-4">
@@ -318,7 +304,7 @@
           
           <!-- Screenshots Section -->
           <div v-if="screenshots.length" class="screenshots mt-8">
-            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Screenshots</h3>
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Illustrations</h3>
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               <div 
                 v-for="(screenshot, index) in screenshots" 
@@ -328,8 +314,10 @@
               >
                 <img 
                   :src="screenshot.thumb" 
-                  :alt="`${anime.titre} - Screenshot #${index + 1}`"
+                  :alt="`${manga.titre} - Illustration #${index + 1}`"
                   class="w-full h-16 object-cover rounded-lg transition-transform group-hover:scale-105"
+                  @error="onScreenshotError"
+                  @load="onScreenshotLoad"
                 />
                 <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity rounded-lg"></div>
               </div>
@@ -338,20 +326,20 @@
           
         </div>
         
-        <!-- Similar Animes Section -->
-        <div v-if="similarAnimes.length" class="simama bg-gray-50 dark:bg-gray-800 p-8">
+        <!-- Similar Mangas Section -->
+        <div v-if="similarMangas.length" class="simama bg-gray-50 dark:bg-gray-800 p-8">
           <div class="similaires-main">
             <div class="bloc sim">
-              <h4 class="text-xl font-semibold text-gray-900 dark:text-white mb-6">Animes similaires</h4>
+              <h4 class="text-xl font-semibold text-gray-900 dark:text-white mb-6">Mangas similaires</h4>
               <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 <NuxtLink
-                  v-for="similar in similarAnimes"
+                  v-for="similar in similarMangas"
                   :key="similar.id"
-                  :to="`/animes/detail-${similar.id}`"
+                  :to="buildMangaUrl(similar)"
                   class="group"
                 >
                   <img 
-                    :src="getImageUrl(similar.image, 'anime')" 
+                    :src="getImageUrl(similar.image, 'manga')" 
                     :alt="similar.titre"
                     class="w-full aspect-[3/4] object-cover rounded-lg transition-transform group-hover:scale-105"
                   />
@@ -362,10 +350,10 @@
               </div>
               <div class="mt-6 text-center">
                 <NuxtLink 
-                  :to="`/animes/similaires/${anime.id}`"
+                  :to="`/mangas/similaires/${manga.id}`"
                   class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm"
                 >
-                  Plus d'animes similaires »
+                  Plus de mangas similaires »
                 </NuxtLink>
               </div>
             </div>
@@ -391,7 +379,7 @@
         <img 
           v-if="currentScreenshot"
           :src="currentScreenshot.full" 
-          :alt="`${anime?.titre} - Screenshot`"
+          :alt="`${manga?.titre} - Illustration`"
           class="max-w-full max-h-full object-contain"
         />
       </div>
@@ -400,24 +388,32 @@
 </template>
 
 <script setup lang="ts">
-import type { Anime, Review } from '~/types'
+import type { Manga, Review } from '~/types'
 
 // Route parameters
 const route = useRoute()
-const animeId = computed(() => route.params.id as string)
+const slug = computed(() => route.params.slug as string)
 
-// Page metadata - will be updated when anime loads
+// Extract ID from slug (e.g., "one-piece-123" -> "123")
+const mangaId = computed(() => {
+  const parts = slug.value.split('-')
+  const lastPart = parts[parts.length - 1]
+  // Check if last part is a number
+  return /^\d+$/.test(lastPart) ? lastPart : null
+})
+
+// Page metadata - will be updated when manga loads
 useHead({
   title: 'Chargement...',
   meta: [
-    { name: 'description', content: 'Chargement des détails de l\'anime...' }
+    { name: 'description', content: 'Chargement des détails du manga...' }
   ]
 })
 
 // State
-const anime = ref<Anime | null>(null)
+const manga = ref<Manga | null>(null)
 const reviews = ref<Review[]>([])
-const similarAnimes = ref<Anime[]>([])
+const similarMangas = ref<Manga[]>([])
 const loading = ref(true)
 const loadingReviews = ref(false)
 const error = ref('')
@@ -427,18 +423,12 @@ const showAddReview = ref(false)
 const lightboxOpen = ref(false)
 const currentScreenshotIndex = ref(0)
 
-// Mock screenshots for demo
-const screenshots = ref([
-  {
-    thumb: `/images/anime/screenshots/${animeId.value}-1-thumb.jpg`,
-    full: `/images/anime/screenshots/${animeId.value}-1.jpg`
-  }
-])
+// Screenshots will be loaded from API or media service
+const screenshots = ref([])
 
 // Tabs configuration
 const tabs = [
   { id: 'synopsis', label: 'Synopsis' },
-  { id: 'staff', label: 'Staff' },
   { id: 'reviews', label: 'Critiques' },
   { id: 'relations', label: 'Relations' },
   { id: 'notes', label: 'Notes' }
@@ -451,8 +441,9 @@ const newReview = ref({
 })
 
 // Composables
-const animeAPI = useAnimeAPI()
+const mangaAPI = useMangaAPI()
 const reviewsAPI = useReviewsAPI()
+const config = useRuntimeConfig()
 
 // Computed
 const currentScreenshot = computed(() => {
@@ -460,49 +451,77 @@ const currentScreenshot = computed(() => {
 })
 
 // Methods
-const loadAnime = async () => {
+const buildMangaUrl = (manga: Manga) => {
+  // Create SEO-friendly URL: /manga/nice-url-id
+  const niceUrl = manga.niceUrl || createSlug(manga.titre)
+  return `/manga/${niceUrl}-${manga.id}`
+}
+
+const createSlug = (title: string) => {
+  return title
+    .toLowerCase()
+    .replace(/[àáâãäå]/g, 'a')
+    .replace(/[èéêë]/g, 'e')
+    .replace(/[ìíîï]/g, 'i')
+    .replace(/[òóôõö]/g, 'o')
+    .replace(/[ùúûü]/g, 'u')
+    .replace(/[ýÿ]/g, 'y')
+    .replace(/[ñ]/g, 'n')
+    .replace(/[ç]/g, 'c')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+const loadManga = async () => {
+  if (!mangaId.value) {
+    error.value = 'ID manga invalide dans l\'URL'
+    loading.value = false
+    return
+  }
+
   try {
     loading.value = true
     error.value = ''
     
-    console.log('Loading anime with ID:', animeId.value)
-    const response = await animeAPI.fetchAnimeById(parseInt(animeId.value))
-    console.log('Anime API response:', response)
-    anime.value = response as Anime
+    console.log('Loading manga with ID:', mangaId.value)
+    const response = await mangaAPI.fetchMangaById(parseInt(mangaId.value))
+    console.log('Manga API response:', response)
+    manga.value = response as Manga
     
     // Update page metadata
-    if (anime.value) {
+    if (manga.value) {
       useHead({
-        title: `${anime.value.titre} - Anime-Kun V2`,
+        title: `${manga.value.titre} - Anime-Kun V2`,
         meta: [
-          { name: 'description', content: anime.value.synopsis || `Découvrez ${anime.value.titre}, un anime${anime.value.annee ? ` de ${anime.value.annee}` : ''}.` },
-          { property: 'og:title', content: anime.value.titre },
-          { property: 'og:description', content: anime.value.synopsis || `Découvrez ${anime.value.titre}` },
-          { property: 'og:image', content: getImageUrl(anime.value.image, 'anime') },
-          { property: 'og:type', content: 'video.tv_show' }
+          { name: 'description', content: manga.value.synopsis || `Découvrez ${manga.value.titre}, un manga${manga.value.annee ? ` de ${manga.value.annee}` : ''}.` },
+          { property: 'og:title', content: manga.value.titre },
+          { property: 'og:description', content: manga.value.synopsis || `Découvrez ${manga.value.titre}` },
+          { property: 'og:image', content: getImageUrl(manga.value.image, 'manga') },
+          { property: 'og:type', content: 'book' }
         ]
       })
       
       // Load related data
       loadReviews()
-      loadSimilarAnimes()
+      loadSimilarMangas()
+      loadScreenshots()
     }
     
   } catch (err: any) {
-    console.error('Error loading anime:', err)
-    error.value = err.message || 'Erreur lors du chargement de l\'anime'
+    console.error('Error loading manga:', err)
+    error.value = err.message || 'Erreur lors du chargement du manga'
   } finally {
     loading.value = false
   }
 }
 
 const loadReviews = async () => {
-  if (!anime.value) return
+  if (!manga.value) return
   
   try {
     loadingReviews.value = true
     const response = await reviewsAPI.fetchReviews({
-      idAnime: anime.value.id,
+      idManga: manga.value.id,
       limit: 10
     })
     reviews.value = (response as any).reviews || (response as any).data || []
@@ -513,39 +532,75 @@ const loadReviews = async () => {
   }
 }
 
-const loadSimilarAnimes = async () => {
-  if (!anime.value) return
+const loadSimilarMangas = async () => {
+  if (!manga.value) return
   
   try {
-    const response = await animeAPI.fetchAnimes({
-      studio: anime.value.studio, // Use studio instead of genre for similarity
+    const response = await mangaAPI.fetchMangas({
+      auteur: manga.value.auteur,
       limit: 6
     })
-    const allAnimes = (response as any).animes || (response as any).data || []
-    // Filter out current anime
-    similarAnimes.value = allAnimes.filter((a: Anime) => a.id !== anime.value!.id).slice(0, 6)
+    const allMangas = (response as any).mangas || (response as any).data || []
+    similarMangas.value = allMangas.filter((m: Manga) => m.id !== manga.value!.id).slice(0, 6)
   } catch (err) {
-    console.error('Error loading similar animes:', err)
+    console.error('Error loading similar mangas:', err)
+  }
+}
+
+const loadScreenshots = async () => {
+  if (!manga.value) return
+  
+  try {
+    // Try to load media from the media API
+    const response = await $fetch(`${config.public.apiBase}/api/media/content/${manga.value.id}?type=manga`)
+    const mediaItems = (response as any[]) || []
+    
+    // Since database contains broken references, skip API screenshots entirely
+    // and go straight to showing manga cover as fallback
+    screenshots.value = []
+    
+    // If no valid screenshots found, add the manga cover as a fallback illustration
+    if (screenshots.value.length === 0 && manga.value.image) {
+      const coverUrl = getImageUrl(manga.value.image, 'manga')
+      if (coverUrl) {
+        screenshots.value = [{
+          thumb: coverUrl,
+          full: coverUrl
+        }]
+      }
+    }
+  } catch (err) {
+    // If no media found, add the manga cover as a fallback illustration
+    console.log('No screenshots found for manga:', manga.value.id)
+    if (manga.value.image) {
+      const coverUrl = getImageUrl(manga.value.image, 'manga')
+      if (coverUrl) {
+        screenshots.value = [{
+          thumb: coverUrl,
+          full: coverUrl
+        }]
+      }
+    } else {
+      screenshots.value = []
+    }
   }
 }
 
 const submitReview = async () => {
-  if (!anime.value) return
+  if (!manga.value) return
   
   try {
     await reviewsAPI.createReview({
       ...newReview.value,
-      idAnime: anime.value.id
+      idManga: manga.value.id
     })
     
-    // Reset form and reload reviews
     newReview.value = { critique: '', notation: 5 }
     showAddReview.value = false
     loadReviews()
     
-    // Update anime review count
-    if (anime.value.nbReviews !== undefined) {
-      anime.value.nbReviews++
+    if (manga.value.nbReviews !== undefined) {
+      manga.value.nbReviews++
     }
     
   } catch (err: any) {
@@ -579,22 +634,41 @@ const closeLightbox = () => {
 
 const onImageError = (event: Event) => {
   const img = event.target as HTMLImageElement
-  img.src = '/images/placeholder-anime.jpg'
+  img.src = '/images/placeholder-manga.jpg'
+}
+
+const onScreenshotError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  // Hide the screenshot container if image fails to load
+  const container = img.closest('.relative.group.cursor-pointer')
+  if (container) {
+    (container as HTMLElement).style.display = 'none'
+  }
+}
+
+const onScreenshotLoad = (event: Event) => {
+  // Screenshot loaded successfully - ensure it's visible
+  const img = event.target as HTMLImageElement
+  const container = img.closest('.relative.group.cursor-pointer')
+  if (container) {
+    (container as HTMLElement).style.display = 'block'
+  }
 }
 
 // Image URL composable
 const { getImageUrl } = useImageUrl()
 
-// Load anime on mount
+// Load manga on mount
 onMounted(() => {
-  console.log('Anime details page mounted with ID:', animeId.value)
-  loadAnime()
+  console.log('Manga details page mounted with slug:', slug.value)
+  console.log('Extracted manga ID:', mangaId.value)
+  loadManga()
 })
 
 // Watch for route changes
-watch(() => route.params.id, () => {
-  if (route.params.id) {
-    loadAnime()
+watch(() => route.params.slug, () => {
+  if (route.params.slug) {
+    loadManga()
   }
 })
 </script>

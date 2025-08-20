@@ -67,6 +67,8 @@ test-*.js
 # Images (too large for repo)
 frontend/public/images/
 !frontend/public/images/.gitkeep
+frontendv2/public/images/
+!frontendv2/public/images/.gitkeep
 
 # Zone Identifier files (Windows WSL)
 *.Zone.Identifier
