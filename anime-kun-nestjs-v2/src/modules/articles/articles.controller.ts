@@ -27,15 +27,22 @@ import {
   CanPublishArticles,
 } from './decorators/article-permissions.decorator';
 import { ArticlesService } from './articles.service';
+import { CommentsService } from './comments/comments.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { ArticleQueryDto } from './dto/article-query.dto';
 import { PublishArticleDto } from './dto/publish-article.dto';
+import { CreateCommentDto } from './comments/dto/create-comment.dto';
+import { UpdateCommentDto } from './comments/dto/update-comment.dto';
+import { CommentQueryDto } from './comments/dto/comment-query.dto';
 
 @ApiTags('Articles')
 @Controller('articles')
 export class ArticlesController {
-  constructor(private readonly articlesService: ArticlesService) {}
+  constructor(
+    private readonly articlesService: ArticlesService,
+    private readonly commentsService: CommentsService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, ArticlePermissionsGuard)
@@ -189,5 +196,43 @@ export class ArticlesController {
     return this.articlesService
       .getById(id, false)
       .then(() => ({ success: true }));
+  }
+
+  // ============ COMMENTS ENDPOINTS ============
+
+  @Get(':id/comments')
+  @ApiOperation({ summary: 'Get comments for a specific article' })
+  @ApiResponse({ status: 200, description: 'Comments retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Article not found' })
+  getArticleComments(
+    @Param('id', ParseIntPipe) articleId: number,
+    @Query() query: CommentQueryDto,
+  ) {
+    query.status = 'approved';
+    query.articleId = articleId;
+    return this.commentsService.findAll(query);
+  }
+
+  @Post(':id/comments')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a comment on an article' })
+  @ApiResponse({ status: 201, description: 'Comment created successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Article not found' })
+  @ApiResponse({ status: 400, description: 'Invalid comment or spam detected' })
+  createArticleComment(
+    @Param('id', ParseIntPipe) articleId: number,
+    @Body() createCommentDto: CreateCommentDto,
+    @Request() req,
+  ) {
+    // Ensure the articleId in the DTO matches the URL param
+    createCommentDto.articleId = articleId;
+    return this.commentsService.create(
+      createCommentDto,
+      req.user?.sub,
+      req.ip,
+      req.headers['user-agent'],
+    );
   }
 }

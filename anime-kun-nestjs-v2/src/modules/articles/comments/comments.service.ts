@@ -44,9 +44,9 @@ export class CommentsService {
     }
 
     // Determine moderation status
-    // - Registered users: auto-approve
-    // - Anonymous users: require moderation
-    const moderation = userId ? 1 : 0;
+    // - Registered users: auto-approve (0 = approved)
+    // - Anonymous users: require moderation (1 = pending)
+    const moderation = userId ? 0 : 1;
 
     // Get next ID
     const lastComment = await this.prisma.akWebzineComment.findFirst({
@@ -87,7 +87,7 @@ export class CommentsService {
     });
 
     // Update article comment count if approved
-    if (moderation === 1) {
+    if (moderation === 0) {
       await this.updateArticleCommentCount(articleId);
     }
 
@@ -115,9 +115,9 @@ export class CommentsService {
 
     // Status filter
     if (status === 'approved') {
-      where.moderation = 1;
-    } else if (status === 'pending') {
       where.moderation = 0;
+    } else if (status === 'pending') {
+      where.moderation = 1;
     } else if (status === 'rejected') {
       where.moderation = -1;
     }
@@ -270,7 +270,7 @@ export class CommentsService {
 
     const oldStatus = comment.moderation;
     const newStatus =
-      status === 'approved' ? 1 : status === 'rejected' ? -1 : 0;
+      status === 'approved' ? 0 : status === 'rejected' ? -1 : 1;
 
     await this.prisma.akWebzineComment.update({
       where: { id },
@@ -309,7 +309,7 @@ export class CommentsService {
     });
 
     // Update article comment count
-    if (comment.idArticle && comment.moderation === 1) {
+    if (comment.idArticle && comment.moderation === 0) {
       await this.updateArticleCommentCount(comment.idArticle);
     }
 
@@ -319,8 +319,8 @@ export class CommentsService {
   async getStats() {
     const stats = await this.prisma.$queryRaw`
       SELECT 
-        (SELECT COUNT(*) FROM ak_webzine_com WHERE moderation = 1) as approved_comments,
-        (SELECT COUNT(*) FROM ak_webzine_com WHERE moderation = 0) as pending_comments,
+        (SELECT COUNT(*) FROM ak_webzine_com WHERE moderation = 0) as approved_comments,
+        (SELECT COUNT(*) FROM ak_webzine_com WHERE moderation = 1) as pending_comments,
         (SELECT COUNT(*) FROM ak_webzine_com WHERE moderation = -1) as rejected_comments,
         (SELECT COUNT(*) FROM ak_webzine_com WHERE id_membre > 0) as member_comments,
         (SELECT COUNT(*) FROM ak_webzine_com WHERE id_membre = 0) as anonymous_comments
@@ -366,7 +366,7 @@ export class CommentsService {
     const approvedCount = await this.prisma.akWebzineComment.count({
       where: {
         idArticle: articleId,
-        moderation: 1,
+        moderation: 0,
       },
     });
 
