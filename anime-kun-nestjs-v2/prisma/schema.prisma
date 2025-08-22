@@ -39,8 +39,7 @@ model SmfMember {
   passwordResetTokens AkPasswordResetToken[]
   reviews          AkCritique[]
   adminAuditLogs   AdminAuditLog[]
-  articles         AkWebzineArticle[]
-  articleComments  AkWebzineComment[]
+  wpPosts          WpPost[]
 
   @@map("smf_members")
 }
@@ -284,128 +283,136 @@ model AdminAuditLog {
 
 // Articles System Models
 
-model AkWebzineArticle {
-  idArt            Int       @id @default(autoincrement()) @map("id_art")
-  titre            String?   @db.Text
-  niceUrl          String?   @map("nice_url") @db.VarChar(255)
-  date             DateTime  @db.Timestamp
-  img              String?   @db.VarChar(255)
-  imgunebig        String?   @db.VarChar(255)
-  imgunebig2       String?   @db.VarChar(255)
-  texte            String?   @db.Text
-  auteur           Int
-  auteursMultiples String?   @map("auteurs_multiples") @db.Text
-  metaDescription  String?   @map("meta_description") @db.Text
-  tags             String?   @db.Text
-  videos           String?   @db.Text
-  nbCom            Int       @map("nb_com")
-  nbClics          Int       @map("nb_clics")
-  trackbacksOpen   Int       @map("trackbacks_open") @db.SmallInt @default(1)
-  onindex          Int       @db.SmallInt @default(0)
-  nl2br            Int       @db.SmallInt @default(1)
-  alreadyPing      Int       @map("already_ping") @db.SmallInt
-  statut           Int?      @db.SmallInt @default(0)
+// WordPress Posts (Webzine Articles)
+model WpPost {
+  ID                    BigInt    @id @default(autoincrement())
+  postAuthor           Int       @map("post_author")
+  postDate             DateTime  @map("post_date") @db.Timestamp
+  postDateGmt          DateTime  @map("post_date_gmt") @db.Timestamp
+  postContent          String?   @map("post_content") @db.Text
+  postTitle            String    @map("post_title") @db.Text
+  postExcerpt          String?   @map("post_excerpt") @db.Text
+  postStatus           String    @map("post_status") @db.VarChar(20) @default("publish")
+  commentStatus        String    @map("comment_status") @db.VarChar(20) @default("open")
+  pingStatus           String    @map("ping_status") @db.VarChar(20) @default("open")
+  postPassword         String    @map("post_password") @db.VarChar(255) @default("")
+  postName             String    @map("post_name") @db.VarChar(200) @default("")
+  toPing               String?   @map("to_ping") @db.Text
+  pinged               String?   @db.Text
+  postModified         DateTime  @map("post_modified") @db.Timestamp
+  postModifiedGmt      DateTime  @map("post_modified_gmt") @db.Timestamp
+  postContentFiltered  String?   @map("post_content_filtered") @db.Text
+  postParent           Int       @map("post_parent") @default(0)
+  guid                 String    @db.VarChar(255) @default("")
+  menuOrder            Int       @map("menu_order") @default(0)
+  postType             String    @map("post_type") @db.VarChar(20) @default("post")
+  postMimeType         String    @map("post_mime_type") @db.VarChar(100) @default("")
+  commentCount         Int       @map("comment_count") @default(0)
 
   // Relations
-  author           SmfMember @relation(fields: [auteur], references: [idMember], onDelete: Cascade)
-  categories       AkWebzineArt2Cat[]
-  comments         AkWebzineComment[]
-  images           AkWebzineImg[]
-  contentRelations AkWebzineToFiche[]
-  featuredItems    AkWebzineUne[]
+  author               SmfMember @relation(fields: [postAuthor], references: [idMember], onDelete: Cascade)
+  comments             WpComment[]
+  postMeta             WpPostMeta[]
+  termRelationships    WpTermRelationship[]
 
-  @@map("ak_webzine_articles")
+  @@map("wp_posts")
 }
 
-model AkWebzineCategory {
-  idCat         Int    @id @map("id_cat")
-  niceUrl       String? @map("nice_url") @db.VarChar(255)
-  nom           String? @db.VarChar(255)
+// WordPress Comments
+model WpComment {
+  commentID           BigInt    @id @default(autoincrement()) @map("comment_ID")
+  commentPostID       BigInt    @map("comment_post_ID")
+  commentAuthor       String?   @map("comment_author") @db.Text
+  commentAuthorEmail  String?   @map("comment_author_email") @db.VarChar(100)
+  commentAuthorUrl    String?   @map("comment_author_url") @db.VarChar(200)
+  commentAuthorIP     String?   @map("comment_author_ip") @db.VarChar(100)
+  commentDate         DateTime  @map("comment_date") @db.Timestamp
+  commentDateGmt      DateTime  @map("comment_date_gmt") @db.Timestamp
+  commentContent      String?   @map("comment_content") @db.Text
+  commentKarma        Int       @map("comment_karma") @default(0)
+  commentApproved     String    @map("comment_approved") @db.VarChar(20) @default("1")
+  commentAgent        String?   @map("comment_agent") @db.VarChar(255)
+  commentType         String?   @map("comment_type") @db.VarChar(20) @default("comment")
+  commentParent       BigInt    @map("comment_parent") @default(0)
+  userId              Int       @map("user_id") @default(0)
 
   // Relations
-  articles      AkWebzineArt2Cat[]
-  subCategories AkWebzineSousCategory[]
+  post                WpPost    @relation(fields: [commentPostID], references: [ID], onDelete: Cascade)
 
-  @@map("ak_webzine_categories")
+  @@map("wp_comments")
 }
 
-model AkWebzineArt2Cat {
-  idArt Int @map("id_art")
-  idCat Int? @map("id_cat")
+// WordPress Post Meta
+model WpPostMeta {
+  metaId              BigInt    @id @default(autoincrement()) @map("meta_id")
+  postId              BigInt    @map("post_id")
+  metaKey             String?   @map("meta_key") @db.VarChar(255)
+  metaValue           String?   @map("meta_value") @db.Text
 
   // Relations
-  article  AkWebzineArticle  @relation(fields: [idArt], references: [idArt], onDelete: Cascade)
-  category AkWebzineCategory? @relation(fields: [idCat], references: [idCat], onDelete: Cascade)
+  post                WpPost    @relation(fields: [postId], references: [ID], onDelete: Cascade)
 
-  @@id([idArt])
-  @@map("ak_webzine_art2cat")
+  @@map("wp_postmeta")
 }
 
-model AkWebzineComment {
-  id          Int       @id
-  date        DateTime  @db.Timestamp
-  nom         String?   @db.VarChar(255)
-  email       String?   @db.VarChar(255)
-  website     String?   @db.VarChar(255)
-  ip          String?   @db.VarChar(255)
-  reverseip   String?   @db.VarChar(255)
-  commentaire String?   @db.Text
-  moderation  Int       @db.SmallInt
-  idMembre    Int       @map("id_membre") @default(0)
-  idArticle   Int?      @map("id_article") @default(0)
+// WordPress Terms (Categories/Tags)
+model WpTerm {
+  termId              Int       @id @default(autoincrement()) @map("term_id")
+  name                String    @db.VarChar(200)
+  slug                String    @db.VarChar(200)
+  termGroup           Int       @map("term_group") @default(0)
 
   // Relations
-  member  SmfMember?        @relation(fields: [idMembre], references: [idMember], onDelete: Cascade)
-  article AkWebzineArticle? @relation(fields: [idArticle], references: [idArt], onDelete: Cascade)
+  termTaxonomies      WpTermTaxonomy[]
 
-  @@map("ak_webzine_com")
+  @@map("wp_terms")
 }
 
-model AkWebzineImg {
-  idImg  Int    @id @map("id_img")
-  idArt  Int    @map("id_art")
-  urlImg String? @map("url_img") @db.VarChar(255)
+// WordPress Term Taxonomy
+model WpTermTaxonomy {
+  termTaxonomyId      Int       @id @default(autoincrement()) @map("term_taxonomy_id")
+  termId              Int       @map("term_id")
+  taxonomy            String    @db.VarChar(32)
+  description         String?   @db.Text
+  parent              Int       @default(0)
+  count               Int       @default(0)
 
   // Relations
-  article AkWebzineArticle @relation(fields: [idArt], references: [idArt], onDelete: Cascade)
+  term                WpTerm    @relation(fields: [termId], references: [termId], onDelete: Cascade)
+  termRelationships   WpTermRelationship[]
 
-  @@map("ak_webzine_img")
+  @@map("wp_term_taxonomy")
 }
 
-model AkWebzineSousCategory {
-  idSousCat  Int    @id @map("id_sous_cat")
-  idCat      Int    @map("id_cat")
-  niceUrl    String? @map("nice_url") @db.VarChar(255)
-  nom        String? @db.VarChar(255)
+// WordPress Term Relationships
+model WpTermRelationship {
+  objectId            BigInt    @map("object_id")
+  termTaxonomyId      Int       @map("term_taxonomy_id")
+  termOrder           Int       @map("term_order") @default(0)
 
   // Relations
-  category   AkWebzineCategory @relation(fields: [idCat], references: [idCat], onDelete: Cascade)
+  post                WpPost    @relation(fields: [objectId], references: [ID], onDelete: Cascade)
+  termTaxonomy        WpTermTaxonomy @relation(fields: [termTaxonomyId], references: [termTaxonomyId], onDelete: Cascade)
 
-  @@map("ak_webzine_sous_categories")
+  @@id([objectId, termTaxonomyId])
+  @@map("wp_term_relationships")
 }
 
-model AkWebzineUne {
-  idUne     Int      @id @map("id_une")
-  idArticle Int      @map("id_article")
-  ordre     Int?     @default(0)
-  dateAjout DateTime @map("date_ajout") @db.Timestamp
-  actif     Int      @db.SmallInt @default(1)
+// WordPress Users
+model WpUser {
+  ID                  BigInt    @id @default(autoincrement()) @map("ID")
+  userLogin           String    @unique @map("user_login") @db.VarChar(60)
+  userPass            String    @map("user_pass") @db.VarChar(255)
+  userNicename        String    @map("user_nicename") @db.VarChar(50)
+  userEmail           String    @map("user_email") @db.VarChar(100)
+  userUrl             String?   @map("user_url") @db.VarChar(100)
+  userRegistered      DateTime  @map("user_registered") @db.Timestamp
+  userActivationKey   String?   @map("user_activation_key") @db.VarChar(255)
+  userStatus          Int       @map("user_status") @default(0)
+  displayName         String    @map("display_name") @db.VarChar(250)
 
   // Relations
-  article   AkWebzineArticle @relation(fields: [idArticle], references: [idArt], onDelete: Cascade)
 
-  @@map("ak_webzine_une")
+  @@map("wp_users")
 }
 
-model AkWebzineToFiche {
-  idRelation  Int    @id @default(autoincrement()) @map("id_relation")
-  idArticle   Int    @map("id_article")
-  idWpArticle Int    @map("id_wp_article")
-  idFiche     Int    @map("id_fiche")
-  type        String? @db.VarChar(255)
-
-  // Relations
-  article AkWebzineArticle @relation(fields: [idArticle], references: [idArt], onDelete: Cascade)
-
-  @@map("ak_webzine_to_fiches")
-}

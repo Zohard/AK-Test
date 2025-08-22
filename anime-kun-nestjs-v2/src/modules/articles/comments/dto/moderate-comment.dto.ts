@@ -17,6 +17,15 @@ export class ModerateCommentDto {
   @IsIn(['approved', 'pending', 'rejected'])
   status: string;
 
+  @ApiProperty({
+    description: 'Moderation action',
+    enum: ['approve', 'reject', 'pending'],
+  })
+  @IsNotEmpty()
+  @IsString()
+  @IsIn(['approve', 'reject', 'pending'])
+  action: string;
+
   @ApiPropertyOptional({
     description: 'Reason for moderation action',
     example: 'Spam content detected',

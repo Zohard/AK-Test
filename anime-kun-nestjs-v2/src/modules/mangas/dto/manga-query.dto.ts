@@ -72,6 +72,15 @@ export class MangaQueryDto {
   statut?: number;
 
   @ApiPropertyOptional({
+    description: 'Filtrer par genre',
+    example: 'Action',
+  })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => value === '' ? undefined : value)
+  genre?: string;
+
+  @ApiPropertyOptional({
     description: 'Champ pour le tri',
     example: 'dateAjout',
     enum: ['titre', 'dateAjout', 'annee'],

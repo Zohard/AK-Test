@@ -5,6 +5,11 @@ import { AppModule } from './app.module';
 import { setupSwagger } from './config/swagger.config';
 
 async function bootstrap() {
+  // Fix BigInt serialization globally
+  (BigInt.prototype as any).toJSON = function () {
+    return Number(this);
+  };
+
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 

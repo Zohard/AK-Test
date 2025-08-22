@@ -50,4 +50,28 @@ export class CommentQueryDto {
   @Type(() => Number)
   @IsInt()
   memberId?: number;
+
+  @ApiPropertyOptional({ description: 'User ID to filter comments' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  userId?: number;
+
+  @ApiPropertyOptional({
+    description: 'Field to sort by',
+    default: 'commentDate',
+  })
+  @IsOptional()
+  @IsString()
+  sort?: string = 'commentDate';
+
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    enum: ['asc', 'desc'],
+    default: 'desc',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['asc', 'desc'])
+  order?: string = 'desc';
 }

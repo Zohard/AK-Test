@@ -186,4 +186,6 @@ export class MediaController {
       throw new NotFoundException('Image not found');
     }
   }
+
+  // TODO: Add external image proxy endpoint later
 }

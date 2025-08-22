@@ -7,7 +7,7 @@ import {
   IsIn,
   IsBoolean,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ArticleQueryDto {
@@ -34,16 +34,19 @@ export class ArticleQueryDto {
   @ApiPropertyOptional({ description: 'Search term for title and content' })
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => value === '' ? undefined : value)
   search?: string;
 
   @ApiPropertyOptional({ description: 'Category ID to filter by' })
   @IsOptional()
+  @Transform(({ value }) => value === '' ? undefined : value)
   @Type(() => Number)
   @IsInt()
   categoryId?: number;
 
   @ApiPropertyOptional({ description: 'Author ID to filter by' })
   @IsOptional()
+  @Transform(({ value }) => value === '' ? undefined : value)
   @Type(() => Number)
   @IsInt()
   authorId?: number;
@@ -59,18 +62,38 @@ export class ArticleQueryDto {
 
   @ApiPropertyOptional({
     description: 'Sort field',
-    enum: ['date', 'title', 'views', 'comments'],
+    enum: ['date', 'title', 'titre', 'views', 'nbClics', 'comments', 'commentCount'],
   })
   @IsOptional()
   @IsString()
-  @IsIn(['date', 'title', 'views', 'comments'])
+  @IsIn(['date', 'title', 'titre', 'views', 'nbClics', 'comments', 'commentCount'])
   sort?: string = 'date';
+
+  @ApiPropertyOptional({
+    description: 'Sort field (alias for sort)',
+    enum: ['date', 'title', 'titre', 'views', 'nbClics', 'comments', 'commentCount'],
+  })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => value === '' ? undefined : value)
+  @IsIn(['date', 'title', 'titre', 'views', 'nbClics', 'comments', 'commentCount'])
+  sortBy?: string;
 
   @ApiPropertyOptional({ description: 'Sort order', enum: ['ASC', 'DESC'] })
   @IsOptional()
   @IsString()
   @IsIn(['ASC', 'DESC'])
   order?: 'ASC' | 'DESC' = 'DESC';
+
+  @ApiPropertyOptional({ 
+    description: 'Sort order (alias for order)', 
+    enum: ['ASC', 'DESC', 'asc', 'desc'] 
+  })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => value === '' ? undefined : value)
+  @IsIn(['ASC', 'DESC', 'asc', 'desc'])
+  sortOrder?: string;
 
   @ApiPropertyOptional({ description: 'Filter articles shown on index page' })
   @IsOptional()
@@ -81,6 +104,7 @@ export class ArticleQueryDto {
   @ApiPropertyOptional({ description: 'Filter by tag' })
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => value === '' ? undefined : value)
   tag?: string;
 
   @ApiPropertyOptional({ description: 'Include article content in response' })
