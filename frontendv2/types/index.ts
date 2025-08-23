@@ -236,41 +236,96 @@ export interface CreateReviewDto {
 
 export interface UpdateReviewDto extends Partial<CreateReviewDto> {}
 
-// Article types
+// Article types (based on actual API response format)
 export interface Article {
+  // Common fields (used by both ak_webzine_articles and wp_posts)
+  idArt: number
+  titre: string
+  niceUrl: string
+  date: string
+  img?: string
+  imgunebig?: string
+  imgunebig2?: string
+  auteur: number
+  metaDescription?: string
+  tags?: string
+  nbCom: number
+  nbClics: number
+  statut: number
+  author?: ArticleAuthor
+  categories?: ArticleCategory[]
+  commentCount: number
+  imageCount: number
+  contenu?: string // Full content for detail view
+  content?: string // Alternative content field
+  texte?: string // Alternative content field
+
+  // WordPress-specific fields (wp_posts)
+  ID?: number | string
+  postTitle?: string
+  postName?: string
+  postDate?: string
+  postContent?: string
+  postExcerpt?: string
+  postAuthor?: number
+  postStatus?: string
+  postModified?: string
+  commentCount?: number
+}
+
+export interface ArticleAuthor {
+  idMember: number
+  memberName: string
+  realName?: string
+}
+
+export interface ArticleCategory {
   id: number
-  title: string
-  content: string
-  excerpt?: string
-  image?: string
-  author_id: number
-  category?: string
-  tags?: string[]
-  published: boolean
-  author?: User
-  created_at: string
-  updated_at: string
+  name: string
+  slug?: string
+}
+
+export interface ArticleComment {
+  id: number
+  id_article: number
+  id_membre: number
+  nom: string
+  commentaire: string
+  date: string
+  moderation: number
+  author?: ArticleAuthor // Optional, populated from join with smf_members
 }
 
 export interface ArticleQueryParams {
   page?: number
   limit?: number
-  category?: string
-  author_id?: number
-  published?: boolean
+  categoryId?: number
+  authorId?: number
   search?: string
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
+  featured?: boolean
+}
+
+export interface ArticlesResponse {
+  articles: Article[]
+  pagination: {
+    currentPage: number
+    totalPages: number
+    totalItems: number
+    hasNext: boolean
+    hasPrevious: boolean
+  }
 }
 
 export interface CreateArticleDto {
-  title: string
-  content: string
-  excerpt?: string
-  image?: string
-  category?: string
-  tags?: string[]
-  published?: boolean
+  titre: string
+  contenu: string
+  metaDescription?: string
+  img?: string
+  tags?: string
+  categoryId?: number
+  statut?: number
 }
 
 export interface UpdateArticleDto extends Partial<CreateArticleDto> {}

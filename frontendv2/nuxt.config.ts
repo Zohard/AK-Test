@@ -49,7 +49,9 @@ export default defineNuxtConfig({
     global: true,
     dirs: [
       '~/components',
-      '~/components/global'
+      '~/components/global',
+      '~/components/articles',
+      '~/components/reviews'
     ]
   },
   app: {

@@ -15,43 +15,40 @@ export class CategoriesService {
   async create(createCategoryDto: CreateCategoryDto) {
     const { nom } = createCategoryDto;
 
-    // Generate nice URL if not provided
-    const niceUrl = createCategoryDto.niceUrl || this.generateNiceUrl(nom);
+    // Generate slug if not provided
+    const slug = createCategoryDto.niceUrl || this.generateSlug(nom);
 
-    // Ensure URL uniqueness
-    const existingCategory = await this.prisma.akWebzineCategory.findFirst({
-      where: { niceUrl },
+    // Ensure slug uniqueness
+    const existingCategory = await this.prisma.wpTerm.findFirst({
+      where: { slug },
     });
 
     if (existingCategory) {
-      throw new BadRequestException('A category with this URL already exists');
+      throw new BadRequestException('A category with this slug already exists');
     }
 
-    // Get next ID
-    const lastCategory = await this.prisma.akWebzineCategory.findFirst({
-      orderBy: { idCat: 'desc' },
-    });
-    const nextId = (lastCategory?.idCat || 0) + 1;
-
-    const category = await this.prisma.akWebzineCategory.create({
+    const category = await this.prisma.wpTerm.create({
       data: {
-        idCat: nextId,
-        nom,
-        niceUrl,
+        name: nom,
+        slug,
+        termGroup: 0,
       },
-      include: {
-        _count: {
-          select: {
-            articles: true,
-          },
-        },
+    });
+
+    // Create the taxonomy entry for this term
+    await this.prisma.wpTermTaxonomy.create({
+      data: {
+        termId: category.termId,
+        taxonomy: 'category',
+        description: '',
       },
     });
 
     return {
-      ...category,
-      articleCount: category._count.articles,
-      _count: undefined,
+      idCat: category.termId,
+      nom: category.name,
+      niceUrl: category.slug,
+      articleCount: 0,
     };
   }
 
@@ -59,44 +56,61 @@ export class CategoriesService {
     const { page = 1, limit = 50, search, includeEmpty = false } = query;
     const offset = (page - 1) * limit;
 
-    // Build where conditions
-    const where: any = {};
+    // Build where conditions for term taxonomy (categories only)
+    const where: any = {
+      termTaxonomies: {
+        some: {
+          taxonomy: 'category',
+        },
+      },
+    };
 
     // Search filter
     if (search) {
-      where.nom = { contains: search, mode: 'insensitive' };
+      where.name = { contains: search, mode: 'insensitive' };
     }
 
     // Filter out empty categories if requested
     if (!includeEmpty) {
-      where.articles = {
-        some: {},
+      where.termTaxonomies = {
+        some: {
+          taxonomy: 'category',
+          termRelationships: {
+            some: {},
+          },
+        },
       };
     }
 
     // Execute query
     const [categories, total] = await Promise.all([
-      this.prisma.akWebzineCategory.findMany({
+      this.prisma.wpTerm.findMany({
         where,
         include: {
-          _count: {
-            select: {
-              articles: true,
+          termTaxonomies: {
+            where: { taxonomy: 'category' },
+            include: {
+              _count: {
+                select: {
+                  termRelationships: true,
+                },
+              },
             },
           },
         },
-        orderBy: { nom: 'asc' },
+        orderBy: { name: 'asc' },
         skip: offset,
         take: limit,
       }),
-      this.prisma.akWebzineCategory.count({ where }),
+      this.prisma.wpTerm.count({ where }),
     ]);
 
     // Transform results
     const transformedCategories = categories.map((category) => ({
-      ...category,
-      articleCount: category._count.articles,
-      _count: undefined,
+      idCat: category.termId,
+      nom: category.name,
+      niceUrl: category.slug,
+      articleCount: category.termTaxonomies[0]?._count?.termRelationships || 0,
     }));
 
     const totalPages = Math.ceil(total / limit);
@@ -114,36 +128,41 @@ export class CategoriesService {
   }
 
   async getById(id: number) {
-    const category = await this.prisma.akWebzineCategory.findUnique({
-      where: { idCat: id },
+    const category = await this.prisma.wpTerm.findUnique({
+      where: { termId: id },
       include: {
-        _count: {
-          select: {
-            articles: true,
-          },
-        },
-        articles: {
+        termTaxonomies: {
+          where: { taxonomy: 'category' },
           include: {
-            article: {
-              select: {
-                idArt: true,
-                titre: true,
-                niceUrl: true,
-                date: true,
-                statut: true,
-                author: {
+            termRelationships: {
+              include: {
+                post: {
                   select: {
-                    idMember: true,
-                    memberName: true,
+                    ID: true,
+                    postTitle: true,
+                    postName: true,
+                    postDate: true,
+                    postStatus: true,
+                    author: {
+                      select: {
+                        idMember: true,
+                        memberName: true,
+                      },
+                    },
                   },
                 },
               },
+              take: 10,
+              orderBy: {
+                post: {
+                  postDate: 'desc',
+                },
+              },
             },
-          },
-          take: 10, // Latest 10 articles
-          orderBy: {
-            article: {
-              date: 'desc',
+            _count: {
+              select: {
+                termRelationships: true,
+              },
             },
           },
         },
@@ -154,22 +173,37 @@ export class CategoriesService {
       throw new NotFoundException('Category not found');
     }
 
+    const termTaxonomy = category.termTaxonomies[0];
+    const recentArticles = termTaxonomy?.termRelationships.map((rel) => ({
+      idArt: Number(rel.post.ID),
+      titre: rel.post.postTitle,
+      niceUrl: rel.post.postName,
+      date: rel.post.postDate.toISOString(),
+      statut: rel.post.postStatus,
+      author: rel.post.author,
+    })) || [];
+
     return {
-      ...category,
-      articleCount: category._count.articles,
-      recentArticles: category.articles.map((rel) => rel.article),
-      articles: undefined,
-      _count: undefined,
+      idCat: category.termId,
+      nom: category.name,
+      niceUrl: category.slug,
+      articleCount: termTaxonomy?._count?.termRelationships || 0,
+      recentArticles,
     };
   }
 
   async getByNiceUrl(niceUrl: string) {
-    const category = await this.prisma.akWebzineCategory.findFirst({
-      where: { niceUrl },
+    const category = await this.prisma.wpTerm.findFirst({
+      where: { slug: niceUrl },
       include: {
-        _count: {
-          select: {
-            articles: true,
+        termTaxonomies: {
+          where: { taxonomy: 'category' },
+          include: {
+            _count: {
+              select: {
+                termRelationships: true,
+              },
+            },
           },
         },
       },
@@ -180,70 +214,81 @@ export class CategoriesService {
     }
 
     return {
-      ...category,
-      articleCount: category._count.articles,
-      _count: undefined,
+      idCat: category.termId,
+      nom: category.name,
+      niceUrl: category.slug,
+      articleCount: category.termTaxonomies[0]?._count?.termRelationships || 0,
     };
   }
 
   async update(id: number, updateCategoryDto: UpdateCategoryDto) {
-    const existingCategory = await this.prisma.akWebzineCategory.findUnique({
-      where: { idCat: id },
+    const existingCategory = await this.prisma.wpTerm.findUnique({
+      where: { termId: id },
     });
 
     if (!existingCategory) {
       throw new NotFoundException('Category not found');
     }
 
-    const updateData = { ...updateCategoryDto };
+    const updateData: any = {};
 
-    // Update nice URL if name changed
-    if (updateData.nom && updateData.nom !== existingCategory.nom) {
-      updateData.niceUrl = this.generateNiceUrl(updateData.nom);
+    // Update slug if name changed
+    if (updateCategoryDto.nom && updateCategoryDto.nom !== existingCategory.name) {
+      updateData.name = updateCategoryDto.nom;
+      updateData.slug = this.generateSlug(updateCategoryDto.nom);
 
-      // Check for URL conflicts
-      const conflictingCategory = await this.prisma.akWebzineCategory.findFirst(
-        {
-          where: {
-            niceUrl: updateData.niceUrl,
-            idCat: { not: id },
-          },
+      // Check for slug conflicts
+      const conflictingCategory = await this.prisma.wpTerm.findFirst({
+        where: {
+          slug: updateData.slug,
+          termId: { not: id },
         },
-      );
+      });
 
       if (conflictingCategory) {
         throw new BadRequestException(
-          'A category with this URL already exists',
+          'A category with this slug already exists',
         );
       }
     }
 
-    const updatedCategory = await this.prisma.akWebzineCategory.update({
-      where: { idCat: id },
+    const updatedCategory = await this.prisma.wpTerm.update({
+      where: { termId: id },
       data: updateData,
       include: {
-        _count: {
-          select: {
-            articles: true,
+        termTaxonomies: {
+          where: { taxonomy: 'category' },
+          include: {
+            _count: {
+              select: {
+                termRelationships: true,
+              },
+            },
           },
         },
       },
     });
 
     return {
-      ...updatedCategory,
-      articleCount: updatedCategory._count.articles,
-      _count: undefined,
+      idCat: updatedCategory.termId,
+      nom: updatedCategory.name,
+      niceUrl: updatedCategory.slug,
+      articleCount: updatedCategory.termTaxonomies[0]?._count?.termRelationships || 0,
     };
   }
 
   async remove(id: number) {
-    const category = await this.prisma.akWebzineCategory.findUnique({
-      where: { idCat: id },
+    const category = await this.prisma.wpTerm.findUnique({
+      where: { termId: id },
       include: {
-        _count: {
-          select: {
-            articles: true,
+        termTaxonomies: {
+          where: { taxonomy: 'category' },
+          include: {
+            _count: {
+              select: {
+                termRelationships: true,
+              },
+            },
           },
         },
       },
@@ -253,14 +298,22 @@ export class CategoriesService {
       throw new NotFoundException('Category not found');
     }
 
-    if (category._count.articles > 0) {
+    const termTaxonomy = category.termTaxonomies[0];
+    if (termTaxonomy && termTaxonomy._count.termRelationships > 0) {
       throw new BadRequestException(
         'Cannot delete category that contains articles. Please move or delete all articles first.',
       );
     }
 
-    await this.prisma.akWebzineCategory.delete({
-      where: { idCat: id },
+    // Delete taxonomy first, then term
+    if (termTaxonomy) {
+      await this.prisma.wpTermTaxonomy.delete({
+        where: { termTaxonomyId: termTaxonomy.termTaxonomyId },
+      });
+    }
+
+    await this.prisma.wpTerm.delete({
+      where: { termId: id },
     });
 
     return { message: 'Category deleted successfully' };
@@ -269,13 +322,18 @@ export class CategoriesService {
   async getStats() {
     const stats = await this.prisma.$queryRaw`
       SELECT 
-        (SELECT COUNT(*) FROM ak_webzine_categories) as total_categories,
-        (SELECT COUNT(*) FROM ak_webzine_categories WHERE id_cat IN (
-          SELECT DISTINCT id_cat FROM ak_webzine_art2cat
-        )) as categories_with_articles,
-        (SELECT COUNT(*) FROM ak_webzine_categories WHERE id_cat NOT IN (
-          SELECT DISTINCT id_cat FROM ak_webzine_art2cat WHERE id_cat IS NOT NULL
-        )) as empty_categories
+        (SELECT COUNT(*) FROM wp_terms t JOIN wp_term_taxonomy tt ON t.term_id = tt.term_id WHERE tt.taxonomy = 'category') as total_categories,
+        (SELECT COUNT(DISTINCT tt.term_id) FROM wp_terms t 
+         JOIN wp_term_taxonomy tt ON t.term_id = tt.term_id 
+         JOIN wp_term_relationships tr ON tt.term_taxonomy_id = tr.term_taxonomy_id
+         WHERE tt.taxonomy = 'category') as categories_with_articles,
+        (SELECT COUNT(*) FROM wp_terms t 
+         JOIN wp_term_taxonomy tt ON t.term_id = tt.term_id 
+         WHERE tt.taxonomy = 'category' AND tt.term_id NOT IN (
+           SELECT DISTINCT tt2.term_id FROM wp_term_taxonomy tt2 
+           JOIN wp_term_relationships tr ON tt2.term_taxonomy_id = tr.term_taxonomy_id
+           WHERE tt2.taxonomy = 'category'
+         )) as empty_categories
     `;
 
     const result = (stats as any[])[0];
@@ -287,7 +345,7 @@ export class CategoriesService {
     };
   }
 
-  private generateNiceUrl(name: string): string {
+  private generateSlug(name: string): string {
     return name
       .toLowerCase()
       .normalize('NFD')

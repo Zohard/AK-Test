@@ -31,7 +31,8 @@ export function useMangaAPI() {
     error.value = null
     
     try {
-      const response = await $fetch(`/api/mangas/${id}`, {
+      const config = useRuntimeConfig()
+      const response = await $fetch(`${config.public.apiBase}/api/mangas/${id}`, {
         params: options
       })
       return response

@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen">
+  <div class="min-h-screen scroll-container">
     <TheHeader />
     <main class="main-content">
       <slot />

@@ -121,22 +121,42 @@ const debouncedSearch = useDebounceFn(async (searchQuery: string) => {
 
   loading.value = true
   try {
-    const results = await $fetch('/animes/autocomplete', {
-      params: { 
-        q: searchQuery, 
-        limit: 5 
-      }
-    })
+    const config = useRuntimeConfig()
     
-    // Transform NestJS response to match our interface
-    suggestions.value = ((results as any).data || results || []).map((item: any) => ({
+    // Search both anime and manga simultaneously  
+    const [animeResults, mangaResults] = await Promise.all([
+      $fetch(`${config.public.apiBase}/api/animes/autocomplete`, {
+        params: { q: searchQuery, limit: 3 }
+      }),
+      $fetch(`${config.public.apiBase}/api/mangas/autocomplete`, {
+        params: { q: searchQuery, limit: 3 }
+      })
+    ])
+    
+    // Process anime results
+    const animeData = (animeResults as any).data || []
+    const animeItems = Array.isArray(animeData) ? animeData.map((item: any) => ({
       id: item.id || item.id_anime,
       titre: item.titre,
       type: 'anime' as const,
       annee: item.annee,
       moyenne_notes: item.moyenne_notes || item.moyennenotes,
       image: item.image
-    }))
+    })) : []
+    
+    // Process manga results
+    const mangaData = (mangaResults as any).data || []
+    const mangaItems = Array.isArray(mangaData) ? mangaData.map((item: any) => ({
+      id: item.id || item.id_manga,
+      titre: item.titre,
+      type: 'manga' as const,
+      annee: item.annee,
+      moyenne_notes: item.moyenne_notes || item.moyennenotes,
+      image: item.image
+    })) : []
+    
+    // Combine and limit results
+    suggestions.value = [...animeItems, ...mangaItems].slice(0, 5)
   } catch (error: any) {
     console.error('Search error:', error)
     suggestions.value = []
@@ -177,8 +197,9 @@ const selectSuggestion = (suggestion: SearchResult) => {
   if (suggestion.type === 'anime') {
     const niceUrl = suggestion.niceUrl || createSlug(suggestion.titre || suggestion.title)
     navigateTo(`/anime/${niceUrl}-${suggestion.id}`)
-  } else {
-    navigateTo(`/mangas/${suggestion.id}`)
+  } else if (suggestion.type === 'manga') {
+    const niceUrl = suggestion.niceUrl || createSlug(suggestion.titre || suggestion.title)
+    navigateTo(`/manga/${niceUrl}-${suggestion.id}`)
   }
 }
 

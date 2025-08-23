@@ -90,6 +90,7 @@ export class MangasService extends BaseContentService<
       auteur,
       annee,
       statut,
+      genre,
       sortBy = 'dateAjout',
       sortOrder = 'desc',
       includeReviews = false,
@@ -123,6 +124,28 @@ export class MangasService extends BaseContentService<
 
     if (statut !== undefined) {
       where.statut = statut;
+    }
+
+    // Handle genre filtering via tags
+    if (genre) {
+      // Get manga IDs that have the specified genre tag
+      const mangaIdsWithGenre = await this.prisma.$queryRaw`
+        SELECT DISTINCT tf.id_fiche as manga_id
+        FROM ak_tags t
+        INNER JOIN ak_tag2fiche tf ON t.id_tag = tf.id_tag
+        WHERE LOWER(t.tag_name) = LOWER(${genre})
+          AND tf.type = 'manga'
+          AND t.categorie = 'Genre'
+      `;
+      
+      const mangaIds = (mangaIdsWithGenre as any[]).map(row => row.manga_id);
+      
+      if (mangaIds.length > 0) {
+        where.idManga = { in: mangaIds };
+      } else {
+        // If no mangas found with this genre, return empty result
+        where.idManga = { in: [] };
+      }
     }
 
     const orderBy = { [sortBy || 'dateAjout']: sortOrder || 'desc' };
@@ -336,11 +359,12 @@ export class MangasService extends BaseContentService<
   }
 
   private formatManga(manga: any) {
-    const { idManga, dateAjout, ...otherFields } = manga;
+    const { idManga, dateAjout, image, ...otherFields } = manga;
 
     return {
       id: idManga,
       addedDate: dateAjout?.toISOString(),
+      image: image ? `/api/media/serve/manga/${image}` : null,
       ...otherFields,
     };
   }

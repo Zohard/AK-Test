@@ -40,6 +40,10 @@ const iconComponent = computed(() => {
       'bell': defineAsyncComponent(() => import('@heroicons/vue/24/outline/BellIcon')),
       'cog-6-tooth': defineAsyncComponent(() => import('@heroicons/vue/24/outline/Cog6ToothIcon')),
       'arrow-right-on-rectangle': defineAsyncComponent(() => import('@heroicons/vue/24/outline/ArrowRightOnRectangleIcon')),
+      'newspaper': defineAsyncComponent(() => import('@heroicons/vue/24/outline/NewspaperIcon')),
+      'eye': defineAsyncComponent(() => import('@heroicons/vue/24/outline/EyeIcon')),
+      'tag': defineAsyncComponent(() => import('@heroicons/vue/24/outline/TagIcon')),
+      'document-text': defineAsyncComponent(() => import('@heroicons/vue/24/outline/DocumentTextIcon')),
     }
     
     return iconMap[iconName] || null

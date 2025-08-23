@@ -19,79 +19,46 @@ export class CommentsService {
     userId?: number,
     ipAddress?: string,
     userAgent?: string,
-  ) {
-    const { articleId, commentaire, nom, email, website } = createCommentDto;
-
-    // Validate article exists
-    const article = await this.prisma.akWebzineArticle.findUnique({
-      where: { idArt: articleId },
+  ): Promise<any> {
+    // Verify the article exists
+    const article = await this.prisma.wpPost.findUnique({
+      where: { ID: BigInt(createCommentDto.articleId) },
     });
 
     if (!article) {
       throw new NotFoundException('Article not found');
     }
 
-    // Check if article allows comments (basic spam protection)
-    if (article.statut !== 1) {
-      throw new BadRequestException(
-        'Comments are not allowed on unpublished articles',
-      );
-    }
-
-    // Basic spam detection
-    if (this.isSpamContent(commentaire)) {
-      throw new BadRequestException('Comment appears to be spam');
-    }
-
-    // Determine moderation status
-    // - Registered users: auto-approve
-    // - Anonymous users: require moderation
-    const moderation = userId ? 1 : 0;
-
-    // Get next ID
-    const lastComment = await this.prisma.akWebzineComment.findFirst({
-      orderBy: { id: 'desc' },
-    });
-    const nextId = (lastComment?.id || 0) + 1;
-
-    const comment = await this.prisma.akWebzineComment.create({
+    // Create the comment
+    const comment = await this.prisma.wpComment.create({
       data: {
-        id: nextId,
-        commentaire,
-        nom: userId ? undefined : nom, // Use member name if logged in
-        email: userId ? undefined : email,
-        website: userId ? undefined : website,
-        ip: ipAddress?.substring(0, 255),
-        reverseip: this.reverseIp(ipAddress),
-        date: new Date(),
-        moderation,
-        idMembre: userId || 0,
-        idArticle: articleId,
-      },
-      include: {
-        member: userId
-          ? {
-              select: {
-                idMember: true,
-                memberName: true,
-              },
-            }
-          : undefined,
-        article: {
-          select: {
-            idArt: true,
-            titre: true,
-          },
-        },
+        commentPostID: BigInt(createCommentDto.articleId),
+        commentAuthor: createCommentDto.nom || 'Anonymous',
+        commentAuthorEmail: createCommentDto.email || '',
+        commentAuthorUrl: createCommentDto.website || '',
+        commentAuthorIP: ipAddress || '',
+        commentContent: createCommentDto.commentaire || '',
+        commentDate: new Date(),
+        commentDateGmt: new Date(),
+        commentApproved: userId ? '1' : '0', // Auto-approve for logged users
+        commentAgent: userAgent || '',
+        commentType: '',
+        commentParent: BigInt(0),
+        userId: userId || 0,
       },
     });
 
-    // Update article comment count if approved
-    if (moderation === 1) {
-      await this.updateArticleCommentCount(articleId);
-    }
-
-    return comment;
+    return {
+      id: Number(comment.commentID),
+      articleId: Number(comment.commentPostID),
+      userId: comment.userId,
+      nom: comment.commentAuthor,
+      email: comment.commentAuthorEmail,
+      website: comment.commentAuthorUrl,
+      commentaire: comment.commentContent,
+      date: comment.commentDate.toISOString(),
+      moderation: comment.commentApproved === '1' ? 1 : 0,
+    };
   }
 
   async findAll(query: CommentQueryDto) {
@@ -99,73 +66,64 @@ export class CommentsService {
       page = 1,
       limit = 20,
       articleId,
-      status = 'approved',
-      search,
-      memberId,
+      userId,
+      status,
+      sort = 'commentDate',
+      order = 'desc',
     } = query;
+
     const offset = (page - 1) * limit;
 
     // Build where conditions
     const where: any = {};
 
-    // Article filter
     if (articleId) {
-      where.idArticle = articleId;
+      where.commentPostID = BigInt(articleId);
     }
 
-    // Status filter
+    if (userId) {
+      where.userId = userId;
+    }
+
     if (status === 'approved') {
-      where.moderation = 1;
+      where.commentApproved = '1';
     } else if (status === 'pending') {
-      where.moderation = 0;
-    } else if (status === 'rejected') {
-      where.moderation = -1;
-    }
-    // If status === 'all', don't add moderation filter
-
-    // Search filter
-    if (search) {
-      where.OR = [
-        { commentaire: { contains: search, mode: 'insensitive' } },
-        { nom: { contains: search, mode: 'insensitive' } },
-      ];
+      where.commentApproved = '0';
+    } else if (status === 'spam') {
+      where.commentApproved = 'spam';
     }
 
-    // Member filter
-    if (memberId) {
-      where.idMembre = memberId;
-    }
+    // Sort configuration
+    const orderBy: any = {};
+    orderBy[sort] = order.toLowerCase();
 
-    // Execute query
     const [comments, total] = await Promise.all([
-      this.prisma.akWebzineComment.findMany({
+      this.prisma.wpComment.findMany({
         where,
-        include: {
-          member: {
-            select: {
-              idMember: true,
-              memberName: true,
-            },
-          },
-          article: {
-            select: {
-              idArt: true,
-              titre: true,
-              niceUrl: true,
-            },
-          },
-        },
-        orderBy: { date: 'desc' },
+        orderBy,
         skip: offset,
         take: limit,
       }),
-      this.prisma.akWebzineComment.count({ where }),
+      this.prisma.wpComment.count({ where }),
     ]);
+
+    const transformedComments = comments.map((comment) => ({
+      id: Number(comment.commentID),
+      articleId: Number(comment.commentPostID),
+      userId: comment.userId,
+      nom: comment.commentAuthor,
+      email: comment.commentAuthorEmail,
+      website: comment.commentAuthorUrl,
+      commentaire: comment.commentContent,
+      date: comment.commentDate.toISOString(),
+      moderation: comment.commentApproved === '1' ? 1 : 0,
+      ip: comment.commentAuthorIP,
+    }));
 
     const totalPages = Math.ceil(total / limit);
 
     return {
-      comments,
+      comments: transformedComments,
       pagination: {
         currentPage: page,
         totalPages,
@@ -176,41 +134,37 @@ export class CommentsService {
     };
   }
 
-  async getById(id: number) {
-    const comment = await this.prisma.akWebzineComment.findUnique({
-      where: { id },
-      include: {
-        member: {
-          select: {
-            idMember: true,
-            memberName: true,
-          },
-        },
-        article: {
-          select: {
-            idArt: true,
-            titre: true,
-            niceUrl: true,
-          },
-        },
-      },
+  async findOne(id: number): Promise<any> {
+    const comment = await this.prisma.wpComment.findUnique({
+      where: { commentID: BigInt(id) },
     });
 
     if (!comment) {
       throw new NotFoundException('Comment not found');
     }
 
-    return comment;
+    return {
+      id: Number(comment.commentID),
+      articleId: Number(comment.commentPostID),
+      userId: comment.userId,
+      nom: comment.commentAuthor,
+      email: comment.commentAuthorEmail,
+      website: comment.commentAuthorUrl,
+      commentaire: comment.commentContent,
+      date: comment.commentDate.toISOString(),
+      moderation: comment.commentApproved === '1' ? 1 : 0,
+      ip: comment.commentAuthorIP,
+    };
   }
 
   async update(
     id: number,
     updateCommentDto: UpdateCommentDto,
     userId: number,
-    isAdmin: boolean = false,
-  ) {
-    const existingComment = await this.prisma.akWebzineComment.findUnique({
-      where: { id },
+    isAdmin: boolean,
+  ): Promise<any> {
+    const existingComment = await this.prisma.wpComment.findUnique({
+      where: { commentID: BigInt(id) },
     });
 
     if (!existingComment) {
@@ -218,81 +172,103 @@ export class CommentsService {
     }
 
     // Check permissions
-    if (!isAdmin && existingComment.idMembre !== userId) {
+    if (!isAdmin && existingComment.userId !== userId) {
       throw new ForbiddenException('You can only edit your own comments');
     }
 
-    // Only allow editing content for non-admin users
-    // Admins can edit everything
-    const updateData = isAdmin
-      ? updateCommentDto
-      : {
-          commentaire: updateCommentDto.commentaire,
-        };
-
-    // Basic spam detection if content is being updated
-    if (updateData.commentaire && this.isSpamContent(updateData.commentaire)) {
-      throw new BadRequestException('Comment appears to be spam');
+    const updateData: any = {};
+    if (updateCommentDto.commentaire) {
+      updateData.commentContent = updateCommentDto.commentaire;
     }
 
-    const updatedComment = await this.prisma.akWebzineComment.update({
-      where: { id },
+    const updatedComment = await this.prisma.wpComment.update({
+      where: { commentID: BigInt(id) },
       data: updateData,
-      include: {
-        member: {
-          select: {
-            idMember: true,
-            memberName: true,
-          },
-        },
-        article: {
-          select: {
-            idArt: true,
-            titre: true,
-          },
-        },
-      },
     });
 
-    return updatedComment;
+    return {
+      id: Number(updatedComment.commentID),
+      articleId: Number(updatedComment.commentPostID),
+      userId: updatedComment.userId,
+      nom: updatedComment.commentAuthor,
+      email: updatedComment.commentAuthorEmail,
+      website: updatedComment.commentAuthorUrl,
+      commentaire: updatedComment.commentContent,
+      date: updatedComment.commentDate.toISOString(),
+      moderation: updatedComment.commentApproved === '1' ? 1 : 0,
+    };
   }
 
-  async moderate(id: number, moderateDto: ModerateCommentDto) {
-    const { status, reason } = moderateDto;
+  async moderate(
+    id: number,
+    moderateDto: ModerateCommentDto,
+    userId: number,
+    isAdmin: boolean,
+  ): Promise<any> {
+    if (!isAdmin) {
+      throw new ForbiddenException('Only administrators can moderate comments');
+    }
 
-    const comment = await this.prisma.akWebzineComment.findUnique({
-      where: { id },
+    const comment = await this.prisma.wpComment.findUnique({
+      where: { commentID: BigInt(id) },
     });
 
     if (!comment) {
       throw new NotFoundException('Comment not found');
     }
 
-    const oldStatus = comment.moderation;
-    const newStatus =
-      status === 'approved' ? 1 : status === 'rejected' ? -1 : 0;
-
-    await this.prisma.akWebzineComment.update({
-      where: { id },
-      data: {
-        moderation: newStatus,
-      },
-    });
-
-    // Update article comment count if status changed
-    if (oldStatus !== newStatus && comment.idArticle) {
-      await this.updateArticleCommentCount(comment.idArticle);
+    let commentApproved = '0';
+    if (moderateDto.action === 'approve') {
+      commentApproved = '1';
+    } else if (moderateDto.action === 'reject') {
+      commentApproved = 'spam';
     }
 
+    await this.prisma.wpComment.update({
+      where: { commentID: BigInt(id) },
+      data: { commentApproved },
+    });
+
+    return { message: `Comment ${moderateDto.action}d successfully` };
+  }
+
+  async getById(id: number): Promise<any> {
+    return this.findOne(id);
+  }
+
+  async bulkModerate(
+    commentIds: number[],
+    status: string,
+    reason?: string,
+  ): Promise<any> {
+    const action = status === 'approved' ? 'approve' : status === 'rejected' ? 'reject' : 'pending';
+    
+    const results = await Promise.all(
+      commentIds.map(async (id) => {
+        try {
+          await this.prisma.wpComment.update({
+            where: { commentID: BigInt(id) },
+            data: { commentApproved: status === 'approved' ? '1' : status === 'rejected' ? 'spam' : '0' },
+          });
+          return { id, success: true };
+        } catch (error) {
+          return { id, success: false, error: error.message };
+        }
+      })
+    );
+
+    const successful = results.filter(r => r.success).length;
+    const failed = results.filter(r => !r.success).length;
+
     return {
-      message: `Comment ${status} successfully`,
-      reason: reason || undefined,
+      message: `Bulk moderation completed. ${successful} successful, ${failed} failed.`,
+      results,
     };
   }
 
-  async remove(id: number, userId: number, isAdmin: boolean = false) {
-    const comment = await this.prisma.akWebzineComment.findUnique({
-      where: { id },
+  async remove(id: number, userId: number, isAdmin: boolean): Promise<any> {
+    const comment = await this.prisma.wpComment.findUnique({
+      where: { commentID: BigInt(id) },
     });
 
     if (!comment) {
@@ -300,18 +276,13 @@ export class CommentsService {
     }
 
     // Check permissions
-    if (!isAdmin && comment.idMembre !== userId) {
+    if (!isAdmin && comment.userId !== userId) {
       throw new ForbiddenException('You can only delete your own comments');
     }
 
-    await this.prisma.akWebzineComment.delete({
-      where: { id },
+    await this.prisma.wpComment.delete({
+      where: { commentID: BigInt(id) },
     });
-
-    // Update article comment count
-    if (comment.idArticle && comment.moderation === 1) {
-      await this.updateArticleCommentCount(comment.idArticle);
-    }
 
     return { message: 'Comment deleted successfully' };
   }
@@ -319,11 +290,11 @@ export class CommentsService {
   async getStats() {
     const stats = await this.prisma.$queryRaw`
       SELECT 
-        (SELECT COUNT(*) FROM ak_webzine_com WHERE moderation = 1) as approved_comments,
-        (SELECT COUNT(*) FROM ak_webzine_com WHERE moderation = 0) as pending_comments,
-        (SELECT COUNT(*) FROM ak_webzine_com WHERE moderation = -1) as rejected_comments,
-        (SELECT COUNT(*) FROM ak_webzine_com WHERE id_membre > 0) as member_comments,
-        (SELECT COUNT(*) FROM ak_webzine_com WHERE id_membre = 0) as anonymous_comments
+        (SELECT COUNT(*) FROM wp_comments WHERE comment_approved = '1') as approved_comments,
+        (SELECT COUNT(*) FROM wp_comments WHERE comment_approved = '0') as pending_comments,
+        (SELECT COUNT(*) FROM wp_comments WHERE comment_approved = 'spam') as rejected_comments,
+        (SELECT COUNT(*) FROM wp_comments WHERE user_id > 0) as member_comments,
+        (SELECT COUNT(*) FROM wp_comments WHERE user_id = 0) as anonymous_comments
     `;
 
     const result = (stats as any[])[0];
@@ -335,86 +306,5 @@ export class CommentsService {
       member_comments: Number(result.member_comments),
       anonymous_comments: Number(result.anonymous_comments),
     };
-  }
-
-  async bulkModerate(commentIds: number[], status: string, reason?: string) {
-    const moderationValue =
-      status === 'approved' ? 1 : status === 'rejected' ? -1 : 0;
-
-    const results: Array<{ id: number; status: string; message?: string }> = [];
-
-    for (const commentId of commentIds) {
-      try {
-        await this.moderate(commentId, { status, reason });
-        results.push({ id: commentId, status: 'success' });
-      } catch (error) {
-        results.push({
-          id: commentId,
-          status: 'error',
-          message: error.message,
-        });
-      }
-    }
-
-    return {
-      message: 'Bulk moderation completed',
-      results,
-    };
-  }
-
-  private async updateArticleCommentCount(articleId: number) {
-    const approvedCount = await this.prisma.akWebzineComment.count({
-      where: {
-        idArticle: articleId,
-        moderation: 1,
-      },
-    });
-
-    await this.prisma.akWebzineArticle.update({
-      where: { idArt: articleId },
-      data: { nbCom: approvedCount },
-    });
-  }
-
-  private isSpamContent(content: string): boolean {
-    const spamPatterns = [
-      /\b(buy|cheap|discount|free|money|cash|earn|income|profit|sale|offer|deal)\b.*\b(now|today|click|here|link)\b/i,
-      /\b(viagra|cialis|pharmacy|pills|medication)\b/i,
-      /\b(casino|poker|gambling|bet|lottery)\b/i,
-      /(http|https):\/\/[^\s]+/g, // Multiple links
-      /(.)\1{10,}/, // Repeated characters
-    ];
-
-    // Check for spam patterns
-    for (const pattern of spamPatterns) {
-      if (pattern.test(content)) {
-        return true;
-      }
-    }
-
-    // Check for excessive links
-    const linkCount = (content.match(/(http|https):\/\/[^\s]+/g) || []).length;
-    if (linkCount > 2) {
-      return true;
-    }
-
-    // Check for excessive capitalization
-    const capsCount = (content.match(/[A-Z]/g) || []).length;
-    const totalLetters = (content.match(/[A-Za-z]/g) || []).length;
-    if (totalLetters > 0 && capsCount / totalLetters > 0.7) {
-      return true;
-    }
-
-    return false;
-  }
-
-  private reverseIp(ip?: string): string | undefined {
-    if (!ip) return undefined;
-
-    try {
-      return ip.split('.').reverse().join('.');
-    } catch {
-      return ip;
-    }
   }
 }

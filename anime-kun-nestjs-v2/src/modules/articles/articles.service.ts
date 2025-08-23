@@ -14,81 +14,10 @@ import { PublishArticleDto } from './dto/publish-article.dto';
 export class ArticlesService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createArticleDto: CreateArticleDto, authorId: number) {
-    const { categoryIds, contentIds, contentTypes, ...articleData } =
-      createArticleDto;
-
-    // Generate nice URL if not provided
-    const niceUrl =
-      articleData.niceUrl || this.generateNiceUrl(articleData.titre);
-
-    // Ensure URL uniqueness
-    const existingArticle = await this.prisma.akWebzineArticle.findFirst({
-      where: { niceUrl },
-    });
-
-    if (existingArticle) {
-      throw new BadRequestException('An article with this URL already exists');
-    }
-
-    // Create article
-    const createData = {
-      ...articleData,
-      niceUrl,
-      auteur: authorId,
-      date: new Date(),
-      nbCom: 0,
-      nbClics: 0,
-      alreadyPing: 0,
-      statut: 0, // Draft by default
-    };
-
-    // Convert boolean fields to int for database
-    if (
-      'trackbacksOpen' in createData &&
-      typeof createData.trackbacksOpen === 'boolean'
-    ) {
-      (createData as any).trackbacksOpen = createData.trackbacksOpen ? 1 : 0;
-    }
-    if ('onindex' in createData && typeof createData.onindex === 'boolean') {
-      (createData as any).onindex = createData.onindex ? 1 : 0;
-    }
-    if ('nl2br' in createData && typeof createData.nl2br === 'boolean') {
-      (createData as any).nl2br = createData.nl2br ? 1 : 0;
-    }
-
-    const article = await this.prisma.akWebzineArticle.create({
-      data: createData as any,
-      include: {
-        author: {
-          select: {
-            idMember: true,
-            memberName: true,
-            realName: true,
-          },
-        },
-      },
-    });
-
-    // Add categories if provided
-    if (categoryIds && categoryIds.length > 0) {
-      await this.addCategoriesToArticle(article.idArt, categoryIds);
-    }
-
-    // Add content relationships if provided
-    if (
-      contentIds &&
-      contentTypes &&
-      contentIds.length === contentTypes.length
-    ) {
-      await this.addContentRelationships(
-        article.idArt,
-        contentIds,
-        contentTypes,
-      );
-    }
-
-    return this.getById(article.idArt);
+  private serializeBigInt(obj: any): any {
+    return JSON.parse(JSON.stringify(obj, (key, value) =>
+      typeof value === 'bigint' ? Number(value) : value
+    ));
   }
 
   async findAll(query: ArticleQueryDto) {
@@ -100,97 +29,128 @@ export class ArticlesService {
       authorId,
       status,
       sort,
+      sortBy,
       order = 'desc',
+      sortOrder,
       onindex,
       tag,
       includeContent,
     } = query;
+    
+    // Handle alias parameters
+    const finalSort = sortBy || sort || 'postDate';
+    const finalOrder = (sortOrder || order || 'desc').toLowerCase();
     const offset = (page - 1) * limit;
 
     // Build where conditions
-    const where: any = {};
+    const where: any = {
+      postType: 'post', // Only get posts, not pages
+    };
 
-    // Status filter (only show published articles for public)
+    // Status filter
     if (status === 'published') {
-      where.statut = 1;
+      where.postStatus = 'publish';
     } else if (status === 'draft') {
-      where.statut = 0;
+      where.postStatus = 'draft';
     } else if (status === 'archived') {
-      where.statut = -1;
+      where.postStatus = 'trash';
+    } else {
+      // Default to published posts for public
+      where.postStatus = 'publish';
     }
-    // If status === 'all', don't add status filter (admin only)
+
+    // Featured articles filter (onindex)
+    if (onindex) {
+      // For featured articles, we'll use the most recent published posts
+      // You can modify this logic based on your specific featured criteria
+      where.postStatus = 'publish';
+      where.postType = 'post';
+    }
 
     // Search filter
     if (search) {
       where.OR = [
-        { titre: { contains: search, mode: 'insensitive' } },
-        { texte: { contains: search, mode: 'insensitive' } },
-        { tags: { contains: search, mode: 'insensitive' } },
+        { postTitle: { contains: search, mode: 'insensitive' } },
+        { postContent: { contains: search, mode: 'insensitive' } },
+        { postExcerpt: { contains: search, mode: 'insensitive' } },
       ];
     }
 
     // Author filter
     if (authorId) {
-      where.auteur = authorId;
+      where.postAuthor = authorId;
     }
 
-    // Index filter
-    if (onindex !== undefined) {
-      where.onindex = onindex ? 1 : 0;
-    }
-
-    // Tag filter
-    if (tag) {
-      where.tags = { contains: tag, mode: 'insensitive' };
-    }
-
-    // Category filter
+    // Category filter (using WordPress taxonomy)
     if (categoryId) {
-      where.categories = {
+      where.termRelationships = {
         some: {
-          idCat: categoryId,
+          termTaxonomy: {
+            taxonomy: 'category',
+            termId: categoryId,
+          },
         },
       };
     }
 
     // Sort configuration
     const orderBy: any = {};
-    const sortOrder = (order || 'DESC').toLowerCase();
-    switch (sort) {
+    switch (finalSort) {
       case 'title':
-        orderBy.titre = sortOrder;
+      case 'titre':
+      case 'postTitle':
+        orderBy.postTitle = finalOrder;
         break;
-      case 'views':
-        orderBy.nbClics = sortOrder;
+      case 'modified':
+      case 'postModified':
+        orderBy.postModified = finalOrder;
         break;
       case 'comments':
-        orderBy.nbCom = sortOrder;
+      case 'commentCount':
+      case 'nbCom':
+        orderBy.commentCount = finalOrder;
         break;
+      case 'views':
+      case 'nbClics':
+        // For views/clicks, we'll sort by ID as a proxy since we don't have real view counts yet
+        orderBy.ID = finalOrder;
+        break;
+      case 'date':
+      case 'postDate':
       default:
-        orderBy.date = sortOrder;
+        orderBy.postDate = finalOrder;
     }
 
     // Execute query
-    const [articles, total] = await Promise.all([
-      this.prisma.akWebzineArticle.findMany({
+    const [posts, total] = await Promise.all([
+      this.prisma.wpPost.findMany({
         where,
         include: {
-          author: {
-            select: {
-              idMember: true,
-              memberName: true,
-              realName: true,
+          termRelationships: {
+            include: {
+              termTaxonomy: {
+                include: {
+                  term: true,
+                },
+              },
             },
           },
-          categories: {
-            include: {
-              category: true,
+          postMeta: {
+            where: {
+              OR: [
+                { metaKey: '_thumbnail_id' },
+                { metaKey: 'excerpt' },
+                { metaKey: 'views' },
+                { metaKey: 'ak_img' },
+                { metaKey: 'img' },
+              ],
             },
           },
           _count: {
             select: {
-              comments: true,
-              images: true,
+              comments: {
+                where: { commentApproved: '1' }
+              },
             },
           },
         },
@@ -198,23 +158,73 @@ export class ArticlesService {
         skip: offset,
         take: limit,
       }),
-      this.prisma.akWebzineArticle.count({ where }),
+      this.prisma.wpPost.count({ where }),
     ]);
 
-    // Transform results
-    const transformedArticles = articles.map((article) => ({
-      ...article,
-      content: includeContent ? article.texte : undefined,
-      texte: undefined, // Remove full content unless requested
-      categories: article.categories.map((cat) => cat.category),
-      commentCount: article._count.comments,
-      imageCount: article._count.images,
-      _count: undefined,
-    }));
+    // Transform results to match Article interface
+    const transformedArticles = posts.map((post) => {
+      // Extract meta values
+      const thumbnailMeta = post.postMeta.find(meta => meta.metaKey === '_thumbnail_id');
+      const excerptMeta = post.postMeta.find(meta => meta.metaKey === 'excerpt');
+      const viewsMeta = post.postMeta.find(meta => meta.metaKey === 'views');
+      const imgMeta = post.postMeta.find(meta => meta.metaKey === 'img');
+      const akImgMeta = post.postMeta.find(meta => meta.metaKey === 'ak_img');
+
+      // Extract categories (filter for category taxonomy only)
+      const categories = post.termRelationships
+        .filter(rel => rel.termTaxonomy.taxonomy === 'category')
+        .map(rel => ({
+          id: rel.termTaxonomy.term.termId,
+          idCat: rel.termTaxonomy.term.termId,
+          name: rel.termTaxonomy.term.name,
+          nom: rel.termTaxonomy.term.name,
+          slug: rel.termTaxonomy.term.slug,
+          niceUrl: rel.termTaxonomy.term.slug,
+        }));
+
+      // Get the best image URL (prioritize ak_img, then img, then thumbnail)
+      const imageUrl = akImgMeta?.metaValue || imgMeta?.metaValue || thumbnailMeta?.metaValue;
+
+      return {
+        idArt: Number(post.ID),
+        ID: Number(post.ID),
+        titre: post.postTitle,
+        postTitle: post.postTitle,
+        niceUrl: post.postName,
+        postName: post.postName,
+        date: post.postDate.toISOString(),
+        postDate: post.postDate.toISOString(),
+        img: imageUrl,
+        imgunebig: null, // WordPress doesn't have this concept by default
+        imgunebig2: null,
+        auteur: post.postAuthor,
+        postAuthor: post.postAuthor,
+        metaDescription: excerptMeta?.metaValue || post.postExcerpt,
+        postExcerpt: post.postExcerpt,
+        tags: null, // Will be populated separately if needed
+        nbCom: Number(post.commentCount),
+        commentCount: Number(post.commentCount),
+        nbClics: viewsMeta ? parseInt(viewsMeta.metaValue || '0') : 0,
+        statut: post.postStatus === 'publish' ? 1 : 0,
+        postStatus: post.postStatus,
+        author: {
+          idMember: post.postAuthor,
+          memberName: `User ${post.postAuthor}`,
+          realName: `User ${post.postAuthor}`,
+        },
+        categories,
+        content: includeContent ? post.postContent : undefined,
+        contenu: includeContent ? post.postContent : undefined,
+        postContent: includeContent ? post.postContent : undefined,
+        texte: includeContent ? post.postContent : (post.postExcerpt || '').substring(0, 200),
+        imageCount: 0, // TODO: Count images in content if needed
+        _count: undefined,
+      };
+    });
 
     const totalPages = Math.ceil(total / limit);
 
-    return {
+    return this.serializeBigInt({
       articles: transformedArticles,
       pagination: {
         currentPage: page,
@@ -223,12 +233,12 @@ export class ArticlesService {
         hasNext: page < totalPages,
         hasPrevious: page > 1,
       },
-    };
+    });
   }
 
   async getById(id: number, includeContent: boolean = true) {
-    const article = await this.prisma.akWebzineArticle.findUnique({
-      where: { idArt: id },
+    const post = await this.prisma.wpPost.findUnique({
+      where: { ID: BigInt(id) },
       include: {
         author: {
           select: {
@@ -237,46 +247,46 @@ export class ArticlesService {
             realName: true,
           },
         },
-        categories: {
+        termRelationships: {
           include: {
-            category: true,
-          },
-        },
-        comments: {
-          where: { moderation: 1 }, // Only approved comments
-          include: {
-            member: {
-              select: {
-                idMember: true,
-                memberName: true,
+            termTaxonomy: {
+              include: {
+                term: true,
               },
             },
           },
-          orderBy: { date: 'asc' },
+          where: {
+            termTaxonomy: {
+              taxonomy: 'category',
+            },
+          },
         },
-        images: true,
-        contentRelations: true,
+        comments: {
+          where: { commentApproved: '1' },
+          orderBy: { commentDate: 'asc' },
+        },
+        postMeta: true,
       },
     });
 
-    if (!article) {
+    if (!post) {
       throw new NotFoundException('Article not found');
     }
 
     // Increment view count
     await this.incrementViewCount(id);
 
-    return {
-      ...article,
-      categories: article.categories.map((cat) => cat.category),
-      content: includeContent ? article.texte : undefined,
-      texte: undefined,
-    };
+    return this.transformPost(post, includeContent);
   }
 
   async getByNiceUrl(niceUrl: string, includeContent: boolean = true) {
-    const article = await this.prisma.akWebzineArticle.findFirst({
-      where: { niceUrl },
+    console.log('ArticlesService.getByNiceUrl called with:', niceUrl);
+    const post = await this.prisma.wpPost.findFirst({
+      where: { 
+        postName: niceUrl,
+        postType: 'post',
+        postStatus: 'publish'
+      },
       include: {
         author: {
           select: {
@@ -285,51 +295,153 @@ export class ArticlesService {
             realName: true,
           },
         },
-        categories: {
+        termRelationships: {
           include: {
-            category: true,
-          },
-        },
-        comments: {
-          where: { moderation: 1 },
-          include: {
-            member: {
-              select: {
-                idMember: true,
-                memberName: true,
+            termTaxonomy: {
+              include: {
+                term: true,
               },
             },
           },
-          orderBy: { date: 'asc' },
+          where: {
+            termTaxonomy: {
+              taxonomy: 'category',
+            },
+          },
         },
-        images: true,
-        contentRelations: true,
+        comments: {
+          where: { commentApproved: '1' },
+          orderBy: { commentDate: 'asc' },
+        },
+        postMeta: true,
       },
     });
 
-    if (!article) {
+    if (!post) {
       throw new NotFoundException('Article not found');
     }
 
     // Increment view count
-    await this.incrementViewCount(article.idArt);
+    await this.incrementViewCount(Number(post.ID));
 
-    return {
-      ...article,
-      categories: article.categories.map((cat) => cat.category),
-      content: includeContent ? article.texte : undefined,
-      texte: undefined,
+    return this.transformPost(post, includeContent);
+  }
+
+  async getFeaturedArticles(limit: number = 5) {
+    // Get posts with a specific meta key indicating they're featured
+    const posts = await this.prisma.wpPost.findMany({
+      where: {
+        postType: 'post',
+        postStatus: 'publish',
+        postMeta: {
+          some: {
+            metaKey: 'featured_post',
+            metaValue: '1',
+          },
+        },
+      },
+      include: {
+        author: {
+          select: {
+            idMember: true,
+            memberName: true,
+            realName: true,
+          },
+        },
+        termRelationships: {
+          include: {
+            termTaxonomy: {
+              include: {
+                term: true,
+              },
+            },
+          },
+          where: {
+            termTaxonomy: {
+              taxonomy: 'category',
+            },
+          },
+        },
+        postMeta: true,
+        _count: {
+          select: {
+            comments: {
+              where: { commentApproved: '1' }
+            },
+          },
+        },
+      },
+      orderBy: { postDate: 'desc' },
+      take: limit,
+    });
+
+    return posts.map(post => this.transformPost(post, false));
+  }
+
+  async create(articleData: CreateArticleDto, authorId: number): Promise<any> {
+    // Generate nice URL if not provided
+    const postName =
+      articleData.niceUrl || this.generateNiceUrl(articleData.titre);
+
+    // Ensure URL uniqueness
+    const existingArticle = await this.prisma.wpPost.findFirst({
+      where: { postName },
+    });
+
+    if (existingArticle) {
+      throw new BadRequestException('An article with this URL already exists');
+    }
+
+    // Create WordPress post
+    const createData = {
+      postTitle: articleData.titre,
+      postName: postName,
+      postContent: articleData.texte || '',
+      postExcerpt: articleData.metaDescription || '',
+      postStatus: 'draft',
+      postType: 'post',
+      postDate: new Date(),
+      postDateGmt: new Date(),
+      postModified: new Date(),
+      postModifiedGmt: new Date(),
+      postAuthor: authorId,
+      commentStatus: 'open',
+      pingStatus: 'open',
+      postPassword: '',
+      postContentFiltered: '',
+      guid: `http://localhost:3003/?p=${Date.now()}`,
+      menuOrder: 0,
+      commentCount: 0,
     };
+
+    const article = await this.prisma.wpPost.create({
+      data: createData,
+      include: {
+        author: {
+          select: {
+            idMember: true,
+            memberName: true,
+            realName: true,
+          },
+        },
+        comments: {
+          where: { commentApproved: '1' },
+        },
+        postMeta: true,
+      },
+    });
+
+    return this.transformPost(article, true);
   }
 
   async update(
     id: number,
-    updateArticleDto: UpdateArticleDto,
-    userId: number,
-    isAdmin: boolean = false,
-  ) {
-    const existingArticle = await this.prisma.akWebzineArticle.findUnique({
-      where: { idArt: id },
+    updateData: UpdateArticleDto,
+    authorId: number,
+    isAdmin: boolean,
+  ): Promise<any> {
+    const existingArticle = await this.prisma.wpPost.findUnique({
+      where: { ID: BigInt(id) },
     });
 
     if (!existingArticle) {
@@ -337,97 +449,91 @@ export class ArticlesService {
     }
 
     // Check permissions
-    if (!isAdmin && existingArticle.auteur !== userId) {
-      throw new ForbiddenException('You can only edit your own articles');
+    if (!isAdmin && Number(existingArticle.postAuthor) !== authorId) {
+      throw new ForbiddenException(
+        'You can only edit your own articles',
+      );
     }
 
-    const { categoryIds, contentIds, contentTypes, ...articleData } =
-      updateArticleDto;
+    // Prepare update data
+    const updatePayload: any = {
+      postModified: new Date(),
+      postModifiedGmt: new Date(),
+    };
 
-    // Update nice URL if title changed
-    if (articleData.titre && articleData.titre !== existingArticle.titre) {
-      articleData.niceUrl = this.generateNiceUrl(articleData.titre);
-    }
+    if (updateData.titre) updatePayload.postTitle = updateData.titre;
+    if (updateData.texte) updatePayload.postContent = updateData.texte;
+    if (updateData.metaDescription) updatePayload.postExcerpt = updateData.metaDescription;
+    if (updateData.niceUrl) updatePayload.postName = updateData.niceUrl;
 
-    // Convert boolean fields to int for database
-    const updateData = { ...articleData };
-    if (
-      'trackbacksOpen' in updateData &&
-      typeof updateData.trackbacksOpen === 'boolean'
-    ) {
-      (updateData as any).trackbacksOpen = updateData.trackbacksOpen ? 1 : 0;
-    }
-    if ('onindex' in updateData && typeof updateData.onindex === 'boolean') {
-      (updateData as any).onindex = updateData.onindex ? 1 : 0;
-    }
-    if ('nl2br' in updateData && typeof updateData.nl2br === 'boolean') {
-      (updateData as any).nl2br = updateData.nl2br ? 1 : 0;
-    }
-
-    // Update article
-    const updatedArticle = await this.prisma.akWebzineArticle.update({
-      where: { idArt: id },
-      data: updateData as any,
+    const updatedArticle = await this.prisma.wpPost.update({
+      where: { ID: BigInt(id) },
+      data: updatePayload,
+      include: {
+        author: {
+          select: {
+            idMember: true,
+            memberName: true,
+            realName: true,
+          },
+        },
+        termRelationships: {
+          include: {
+            termTaxonomy: {
+              include: {
+                term: true,
+              },
+            },
+          },
+        },
+        comments: {
+          where: { commentApproved: '1' },
+        },
+        postMeta: true,
+      },
     });
 
-    // Update categories if provided
-    if (categoryIds !== undefined) {
-      await this.updateArticleCategories(id, categoryIds);
-    }
-
-    // Update content relationships if provided
-    if (contentIds !== undefined && contentTypes !== undefined) {
-      await this.updateContentRelationships(id, contentIds, contentTypes);
-    }
-
-    return this.getById(id);
+    return this.transformPost(updatedArticle, true);
   }
 
   async publish(
     id: number,
-    publishDto: PublishArticleDto,
-    userId: number,
-    isAdmin: boolean = false,
-  ) {
-    const article = await this.prisma.akWebzineArticle.findUnique({
-      where: { idArt: id },
+    publishData: PublishArticleDto,
+    authorId: number,
+    isAdmin: boolean,
+  ): Promise<any> {
+    const article = await this.prisma.wpPost.findUnique({
+      where: { ID: BigInt(id) },
     });
 
     if (!article) {
       throw new NotFoundException('Article not found');
     }
 
-    // Check permissions
-    if (!isAdmin && article.auteur !== userId) {
-      throw new ForbiddenException('You can only publish your own articles');
+    // Check permissions - only admins or article authors can publish
+    if (!isAdmin && Number(article.postAuthor) !== authorId) {
+      throw new ForbiddenException(
+        'You can only publish your own articles',
+      );
     }
 
-    const updateData: any = {
-      statut: publishDto.publish ? 1 : 0,
-    };
-
-    if (publishDto.onindex !== undefined) {
-      updateData.onindex = publishDto.onindex ? 1 : 0;
-    }
-
-    if (publishDto.publishDate) {
-      updateData.date = new Date(publishDto.publishDate);
-    } else if (publishDto.publish && article.statut === 0) {
-      // Set publish date to now if publishing for the first time
-      updateData.date = new Date();
-    }
-
-    await this.prisma.akWebzineArticle.update({
-      where: { idArt: id },
-      data: updateData,
+    await this.prisma.wpPost.update({
+      where: { ID: BigInt(id) },
+      data: {
+        postStatus: publishData.publish ? 'publish' : 'draft',
+        postModified: new Date(),
+        postModifiedGmt: new Date(),
+      },
     });
 
-    return this.getById(id);
+    return {
+      message: `Article ${publishData.publish ? 'published' : 'unpublished'} successfully`,
+    };
   }
 
-  async remove(id: number, userId: number, isAdmin: boolean = false) {
-    const article = await this.prisma.akWebzineArticle.findUnique({
-      where: { idArt: id },
+  async remove(id: number, authorId: number, isAdmin: boolean): Promise<any> {
+    const article = await this.prisma.wpPost.findUnique({
+      where: { ID: BigInt(id) },
     });
 
     if (!article) {
@@ -439,8 +545,8 @@ export class ArticlesService {
       throw new ForbiddenException('Only administrators can delete articles');
     }
 
-    await this.prisma.akWebzineArticle.delete({
-      where: { idArt: id },
+    await this.prisma.wpPost.delete({
+      where: { ID: BigInt(id) },
     });
 
     return { message: 'Article deleted successfully' };
@@ -449,13 +555,13 @@ export class ArticlesService {
   async getStats() {
     const stats = await this.prisma.$queryRaw`
       SELECT 
-        (SELECT COUNT(*) FROM ak_webzine_articles WHERE statut = 1) as published_articles,
-        (SELECT COUNT(*) FROM ak_webzine_articles WHERE statut = 0) as draft_articles,
-        (SELECT COUNT(*) FROM ak_webzine_articles WHERE statut = -1) as archived_articles,
-        (SELECT COUNT(*) FROM ak_webzine_com WHERE moderation = 1) as approved_comments,
-        (SELECT COUNT(*) FROM ak_webzine_com WHERE moderation = 0) as pending_comments,
-        (SELECT COUNT(*) FROM ak_webzine_categories) as categories_count,
-        (SELECT COUNT(*) FROM ak_webzine_une WHERE actif = 1) as featured_articles
+        (SELECT COUNT(*) FROM wp_posts WHERE post_status = 'publish' AND post_type = 'post') as published_articles,
+        (SELECT COUNT(*) FROM wp_posts WHERE post_status = 'draft' AND post_type = 'post') as draft_articles,
+        (SELECT COUNT(*) FROM wp_posts WHERE post_status = 'trash' AND post_type = 'post') as archived_articles,
+        (SELECT COUNT(*) FROM wp_comments WHERE comment_approved = '1') as approved_comments,
+        (SELECT COUNT(*) FROM wp_comments WHERE comment_approved = '0') as pending_comments,
+        (SELECT COUNT(*) FROM wp_terms t JOIN wp_term_taxonomy tt ON t.term_id = tt.term_id WHERE tt.taxonomy = 'category') as categories_count,
+        (SELECT COUNT(*) FROM wp_postmeta WHERE meta_key = 'featured_post' AND meta_value = '1') as featured_articles
     `;
 
     const result = (stats as any[])[0];
@@ -471,267 +577,186 @@ export class ArticlesService {
     };
   }
 
-  async getFeaturedArticles(limit: number = 5) {
-    const featured = await this.prisma.akWebzineUne.findMany({
-      where: { actif: 1 },
-      include: {
-        article: {
-          include: {
-            author: {
-              select: {
-                idMember: true,
-                memberName: true,
-                realName: true,
-              },
-            },
-            categories: {
-              include: {
-                category: true,
-              },
-            },
-            _count: {
-              select: {
-                comments: { where: { moderation: 1 } },
-                images: true,
-              },
-            },
-          },
-        },
+  async featureArticle(id: number, order?: number): Promise<any> {
+    // Delete existing featured meta and create new one
+    await this.prisma.wpPostMeta.deleteMany({
+      where: {
+        postId: BigInt(id),
+        metaKey: 'featured_post',
       },
-      orderBy: { ordre: 'asc' },
-      take: limit,
     });
 
-    return featured.map((item) => ({
-      ...item.article,
-      featured: {
-        order: item.ordre,
-        dateAdded: item.dateAjout,
-      },
-      categories: item.article.categories.map((cat) => cat.category),
-      commentCount: item.article._count.comments,
-      imageCount: item.article._count.images,
-      content: undefined, // Don't include full content in featured list
-      texte: undefined,
-      _count: undefined,
-    }));
-  }
-
-  async featureArticle(articleId: number, order?: number) {
-    // Check if article exists and is published
-    const article = await this.prisma.akWebzineArticle.findUnique({
-      where: { idArt: articleId },
-    });
-
-    if (!article) {
-      throw new NotFoundException('Article not found');
-    }
-
-    if (article.statut !== 1) {
-      throw new BadRequestException('Only published articles can be featured');
-    }
-
-    // Check if already featured
-    const existingFeature = await this.prisma.akWebzineUne.findFirst({
-      where: { idArticle: articleId, actif: 1 },
-    });
-
-    if (existingFeature) {
-      throw new BadRequestException('Article is already featured');
-    }
-
-    // Get next order if not provided
-    let featureOrder = order;
-    if (!featureOrder) {
-      const lastFeature = await this.prisma.akWebzineUne.findFirst({
-        where: { actif: 1 },
-        orderBy: { ordre: 'desc' },
-      });
-      featureOrder = (lastFeature?.ordre || 0) + 1;
-    }
-
-    // Get next ID
-    const lastFeatureItem = await this.prisma.akWebzineUne.findFirst({
-      orderBy: { idUne: 'desc' },
-    });
-    const nextId = (lastFeatureItem?.idUne || 0) + 1;
-
-    const featured = await this.prisma.akWebzineUne.create({
+    await this.prisma.wpPostMeta.create({
       data: {
-        idUne: nextId,
-        idArticle: articleId,
-        ordre: featureOrder,
-        dateAjout: new Date(),
-        actif: 1,
+        postId: BigInt(id),
+        metaKey: 'featured_post',
+        metaValue: '1',
       },
-      include: {
-        article: {
-          select: {
-            idArt: true,
-            titre: true,
-            niceUrl: true,
-          },
+    });
+
+    if (order !== undefined) {
+      await this.prisma.wpPostMeta.deleteMany({
+        where: {
+          postId: BigInt(id),
+          metaKey: 'featured_order',
+        },
+      });
+
+      await this.prisma.wpPostMeta.create({
+        data: {
+          postId: BigInt(id),
+          metaKey: 'featured_order',
+          metaValue: order.toString(),
+        },
+      });
+    }
+
+    return { message: 'Article featured successfully' };
+  }
+
+  async unfeatureArticle(id: number): Promise<any> {
+    await this.prisma.wpPostMeta.deleteMany({
+      where: {
+        postId: BigInt(id),
+        metaKey: {
+          in: ['featured_post', 'featured_order'],
         },
       },
     });
 
-    return {
-      message: 'Article featured successfully',
-      featured,
-    };
-  }
-
-  async unfeatureArticle(articleId: number) {
-    const featured = await this.prisma.akWebzineUne.findFirst({
-      where: { idArticle: articleId, actif: 1 },
-    });
-
-    if (!featured) {
-      throw new NotFoundException('Article is not currently featured');
-    }
-
-    await this.prisma.akWebzineUne.update({
-      where: { idUne: featured.idUne },
-      data: { actif: 0 },
-    });
-
-    return {
-      message: 'Article unfeatured successfully',
-    };
+    return { message: 'Article unfeatured successfully' };
   }
 
   async reorderFeaturedArticles(
-    articleOrders: Array<{ articleId: number; order: number }>,
-  ) {
-    const results: Array<{
-      articleId: number;
-      status: string;
-      message?: string;
-    }> = [];
+    articles: Array<{ articleId: number; order: number }>,
+  ): Promise<any> {
+    for (const article of articles) {
+      await this.prisma.wpPostMeta.deleteMany({
+        where: {
+          postId: BigInt(article.articleId),
+          metaKey: 'featured_order',
+        },
+      });
 
-    for (const { articleId, order } of articleOrders) {
-      try {
-        const featured = await this.prisma.akWebzineUne.findFirst({
-          where: { idArticle: articleId, actif: 1 },
-        });
-
-        if (!featured) {
-          results.push({
-            articleId,
-            status: 'error',
-            message: 'Article is not featured',
-          });
-          continue;
-        }
-
-        await this.prisma.akWebzineUne.update({
-          where: { idUne: featured.idUne },
-          data: { ordre: order },
-        });
-
-        results.push({
-          articleId,
-          status: 'success',
-        });
-      } catch (error) {
-        results.push({
-          articleId,
-          status: 'error',
-          message: error.message,
-        });
-      }
+      await this.prisma.wpPostMeta.create({
+        data: {
+          postId: BigInt(article.articleId),
+          metaKey: 'featured_order',
+          metaValue: article.order.toString(),
+        },
+      });
     }
 
+    return { message: 'Featured articles reordered successfully' };
+  }
+
+  private transformPost(post: any, includeContent: boolean = true) {
+    // Extract meta values
+    const thumbnailMeta = post.postMeta?.find(meta => meta.metaKey === '_thumbnail_id');
+    const excerptMeta = post.postMeta?.find(meta => meta.metaKey === 'excerpt');
+    const viewsMeta = post.postMeta?.find(meta => meta.metaKey === 'views');
+    const imgMeta = post.postMeta?.find(meta => meta.metaKey === 'img');
+    const akImgMeta = post.postMeta?.find(meta => meta.metaKey === 'ak_img');
+    const imgunebigMeta = post.postMeta?.find(meta => meta.metaKey === 'imgunebig');
+    const tagsMeta = post.postMeta?.find(meta => meta.metaKey === 'tags');
+
+    // Extract categories
+    const categories = post.termRelationships?.map(rel => ({
+      id: rel.termTaxonomy.term.termId,
+      idCat: rel.termTaxonomy.term.termId,
+      name: rel.termTaxonomy.term.name,
+      nom: rel.termTaxonomy.term.name,
+      slug: rel.termTaxonomy.term.slug,
+      niceUrl: rel.termTaxonomy.term.slug,
+    })) || [];
+
+    // Transform comments
+    const comments = post.comments?.map(comment => ({
+      id: Number(comment.commentID),
+      id_article: Number(post.ID),
+      id_membre: Number(comment.userId),
+      nom: comment.commentAuthor || 'Anonymous',
+      commentaire: comment.commentContent || '',
+      date: comment.commentDate.toISOString(),
+      moderation: comment.commentApproved === '1' ? 1 : 0,
+      author: null, // TODO: Join with member if userId > 0
+    })) || [];
+
     return {
-      message: 'Featured articles reordered',
-      results,
+      idArt: Number(post.ID),
+      ID: post.ID,
+      titre: post.postTitle,
+      postTitle: post.postTitle,
+      niceUrl: post.postName,
+      postName: post.postName,
+      date: post.postDate.toISOString(),
+      postDate: post.postDate.toISOString(),
+      img: this.transformImageUrl(akImgMeta?.metaValue || imgMeta?.metaValue || thumbnailMeta?.metaValue),
+      imgunebig: imgunebigMeta?.metaValue || null,
+      imgunebig2: null,
+      auteur: post.postAuthor,
+      postAuthor: post.postAuthor,
+      metaDescription: excerptMeta?.metaValue || post.postExcerpt,
+      postExcerpt: post.postExcerpt,
+      tags: tagsMeta?.metaValue || null,
+      nbCom: Number(post.commentCount || post._count?.comments || 0),
+      commentCount: Number(post.commentCount || post._count?.comments || 0),
+      nbClics: viewsMeta ? parseInt(viewsMeta.metaValue || '0') : 0,
+      statut: post.postStatus === 'publish' ? 1 : 0,
+      postStatus: post.postStatus,
+      author: {
+        idMember: post.author.idMember,
+        memberName: post.author.memberName,
+        realName: post.author.realName,
+      },
+      categories,
+      comments,
+      content: includeContent ? post.postContent : undefined,
+      contenu: includeContent ? post.postContent : undefined,
+      postContent: includeContent ? post.postContent : undefined,
+      texte: includeContent ? post.postContent : (post.postExcerpt || '').substring(0, 200),
+      imageCount: 0, // TODO: Count images in content if needed
     };
+  }
+
+  private async incrementViewCount(articleId: number) {
+    // Update or create views meta
+    const existingMeta = await this.prisma.wpPostMeta.findFirst({
+      where: {
+        postId: BigInt(articleId),
+        metaKey: 'views',
+      },
+    });
+
+    if (existingMeta) {
+      const currentViews = parseInt(existingMeta.metaValue || '0');
+      await this.prisma.wpPostMeta.update({
+        where: { metaId: existingMeta.metaId },
+        data: { metaValue: (currentViews + 1).toString() },
+      });
+    } else {
+      await this.prisma.wpPostMeta.create({
+        data: {
+          postId: BigInt(articleId),
+          metaKey: 'views',
+          metaValue: '1',
+        },
+      });
+    }
+  }
+
+  private transformImageUrl(imageUrl: string | null): string | null {
+    if (!imageUrl) return null;
+    
+    // For now, return external URLs directly
+    // TODO: Implement proxy/caching system later
+    return imageUrl;
   }
 
   private generateNiceUrl(title: string): string {
     return title
       .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove accents
-      .replace(/[^\w\s-]/g, '') // Remove special characters
-      .replace(/\s+/g, '-') // Replace spaces with hyphens
-      .replace(/-+/g, '-') // Replace multiple hyphens with single
-      .trim()
-      .substring(0, 100); // Limit length
-  }
-
-  private async incrementViewCount(articleId: number) {
-    await this.prisma.akWebzineArticle.update({
-      where: { idArt: articleId },
-      data: {
-        nbClics: {
-          increment: 1,
-        },
-      },
-    });
-  }
-
-  private async addCategoriesToArticle(
-    articleId: number,
-    categoryIds: number[],
-  ) {
-    const data = categoryIds.map((categoryId) => ({
-      idArt: articleId,
-      idCat: categoryId,
-    }));
-
-    await this.prisma.akWebzineArt2Cat.createMany({
-      data,
-      skipDuplicates: true,
-    });
-  }
-
-  private async updateArticleCategories(
-    articleId: number,
-    categoryIds: number[],
-  ) {
-    // Remove existing categories
-    await this.prisma.akWebzineArt2Cat.deleteMany({
-      where: { idArt: articleId },
-    });
-
-    // Add new categories
-    if (categoryIds.length > 0) {
-      await this.addCategoriesToArticle(articleId, categoryIds);
-    }
-  }
-
-  private async addContentRelationships(
-    articleId: number,
-    contentIds: number[],
-    contentTypes: string[],
-  ) {
-    // Create each relationship individually since idRelation is auto-generated
-    for (let i = 0; i < contentIds.length; i++) {
-      await this.prisma.akWebzineToFiche.create({
-        data: {
-          idArticle: articleId,
-          idWpArticle: 0, // Legacy field
-          idFiche: contentIds[i],
-          type: contentTypes[i],
-        },
-      });
-    }
-  }
-
-  private async updateContentRelationships(
-    articleId: number,
-    contentIds: number[],
-    contentTypes: string[],
-  ) {
-    // Remove existing relationships
-    await this.prisma.akWebzineToFiche.deleteMany({
-      where: { idArticle: articleId },
-    });
-
-    // Add new relationships
-    if (contentIds.length > 0 && contentTypes.length > 0) {
-      await this.addContentRelationships(articleId, contentIds, contentTypes);
-    }
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
   }
 }

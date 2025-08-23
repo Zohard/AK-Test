@@ -100,6 +100,7 @@ export class AnimesService extends BaseContentService<
       studio,
       annee,
       statut,
+      genre,
       sortBy,
       sortOrder,
       includeReviews,
@@ -138,6 +139,28 @@ export class AnimesService extends BaseContentService<
 
     if (statut !== undefined) {
       where.statut = statut;
+    }
+
+    // Handle genre filtering via tags
+    if (genre) {
+      // Get anime IDs that have the specified genre tag
+      const animeIdsWithGenre = await this.prisma.$queryRaw`
+        SELECT DISTINCT tf.id_fiche as anime_id
+        FROM ak_tags t
+        INNER JOIN ak_tag2fiche tf ON t.id_tag = tf.id_tag
+        WHERE LOWER(t.tag_name) = LOWER(${genre})
+          AND tf.type = 'anime'
+          AND t.categorie = 'Genre'
+      `;
+      
+      const animeIds = (animeIdsWithGenre as any[]).map(row => row.anime_id);
+      
+      if (animeIds.length > 0) {
+        where.idAnime = { in: animeIds };
+      } else {
+        // If no animes found with this genre, return empty result
+        where.idAnime = { in: [] };
+      }
     }
 
     // Build order by clause
@@ -442,11 +465,12 @@ export class AnimesService extends BaseContentService<
   }
 
   private formatAnime(anime: any) {
-    const { idAnime, dateAjout, ...otherFields } = anime;
+    const { idAnime, dateAjout, image, ...otherFields } = anime;
 
     return {
       id: idAnime,
       addedDate: dateAjout?.toISOString(),
+      image: image ? `/api/media/serve/anime/${image}` : null,
       ...otherFields,
     };
   }

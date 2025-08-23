@@ -12,7 +12,7 @@ interface User {
 }
 
 interface LoginCredentials {
-  email: string
+  emailOrUsername: string
   password: string
 }
 
@@ -24,8 +24,8 @@ interface RegisterData {
 }
 
 interface AuthResponse {
-  access_token: string
-  refresh_token: string
+  accessToken: string
+  refreshToken: string
   user: User
 }
 
@@ -45,20 +45,20 @@ export const useAuthStore = defineStore('auth', () => {
   const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
     loading.value = true
     try {
-      const response = await $fetch<AuthResponse>(`${API_BASE}/auth/login`, {
+      const response = await $fetch<AuthResponse>(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         body: credentials
       })
       
-      accessToken.value = response.access_token
-      refreshToken.value = response.refresh_token
+      accessToken.value = response.accessToken
+      refreshToken.value = response.refreshToken
       user.value = response.user
       isAuthenticated.value = true
 
       // Store tokens securely
       if (process.client) {
-        localStorage.setItem('access_token', response.access_token)
-        localStorage.setItem('refresh_token', response.refresh_token)
+        localStorage.setItem('access_token', response.accessToken)
+        localStorage.setItem('refresh_token', response.refreshToken)
         localStorage.setItem('auth_user', JSON.stringify(response.user))
       }
 
@@ -75,20 +75,20 @@ export const useAuthStore = defineStore('auth', () => {
   const register = async (data: RegisterData): Promise<AuthResponse> => {
     loading.value = true
     try {
-      const response = await $fetch<AuthResponse>(`${API_BASE}/auth/register`, {
+      const response = await $fetch<AuthResponse>(`${API_BASE}/api/auth/register`, {
         method: 'POST',
         body: data
       })
       
-      accessToken.value = response.access_token
-      refreshToken.value = response.refresh_token
+      accessToken.value = response.accessToken
+      refreshToken.value = response.refreshToken
       user.value = response.user
       isAuthenticated.value = true
 
       // Store tokens securely
       if (process.client) {
-        localStorage.setItem('access_token', response.access_token)
-        localStorage.setItem('refresh_token', response.refresh_token)
+        localStorage.setItem('access_token', response.accessToken)
+        localStorage.setItem('refresh_token', response.refreshToken)
         localStorage.setItem('auth_user', JSON.stringify(response.user))
       }
 
@@ -108,16 +108,16 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     try {
-      const response = await $fetch<AuthResponse>(`${API_BASE}/auth/refresh`, {
+      const response = await $fetch<AuthResponse>(`${API_BASE}/api/auth/refresh`, {
         method: 'POST',
         body: { refreshToken: refreshToken.value }
       })
 
-      accessToken.value = response.access_token
+      accessToken.value = response.accessToken
       user.value = response.user
 
       if (process.client) {
-        localStorage.setItem('access_token', response.access_token)
+        localStorage.setItem('access_token', response.accessToken)
         localStorage.setItem('auth_user', JSON.stringify(response.user))
       }
 
@@ -133,7 +133,7 @@ export const useAuthStore = defineStore('auth', () => {
   const logout = async (): Promise<void> => {
     try {
       if (accessToken.value) {
-        await $fetch(`${API_BASE}/auth/logout`, {
+        await $fetch(`${API_BASE}/api/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${accessToken.value}`
@@ -167,7 +167,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     try {
-      const response = await $fetch(`${API_BASE}/auth/verify`, {
+      const response = await $fetch(`${API_BASE}/api/auth/verify`, {
         headers: {
           'Authorization': `Bearer ${accessToken.value}`
         }
@@ -199,7 +199,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     try {
-      const response = await $fetch<{ user: User }>(`${API_BASE}/auth/profile`, {
+      const response = await $fetch<{ user: User }>(`${API_BASE}/api/auth/profile`, {
         headers: {
           'Authorization': `Bearer ${accessToken.value}`
         }
@@ -257,7 +257,7 @@ export const useAuthStore = defineStore('auth', () => {
   const forgotPassword = async (email: string): Promise<void> => {
     loading.value = true
     try {
-      await $fetch(`${API_BASE}/auth/forgot-password`, {
+      await $fetch(`${API_BASE}/api/auth/forgot-password`, {
         method: 'POST',
         body: { email }
       })
@@ -273,7 +273,7 @@ export const useAuthStore = defineStore('auth', () => {
   const resetPassword = async (token: string, password: string): Promise<void> => {
     loading.value = true
     try {
-      await $fetch(`${API_BASE}/auth/reset-password`, {
+      await $fetch(`${API_BASE}/api/auth/reset-password`, {
         method: 'POST',
         body: { token, password }
       })

@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsNumber, Min, Max } from 'class-validator';
+import { IsOptional, IsString, IsNumber, Min, Max, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ReviewQueryDto {
@@ -105,4 +105,13 @@ export class ReviewQueryDto {
   @IsOptional()
   @IsString()
   sortOrder?: 'asc' | 'desc' = 'desc';
+
+  @ApiPropertyOptional({
+    description: 'Type de critique',
+    example: 'anime',
+    enum: ['anime', 'manga', 'both'],
+  })
+  @IsOptional()
+  @IsIn(['anime', 'manga', 'both'])
+  type?: 'anime' | 'manga' | 'both';
 }

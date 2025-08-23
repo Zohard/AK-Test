@@ -103,8 +103,9 @@ export class AdminCommentsController {
   moderate(
     @Param('id', ParseIntPipe) id: number,
     @Body() moderateDto: ModerateCommentDto,
+    @Request() req,
   ) {
-    return this.commentsService.moderate(id, moderateDto);
+    return this.commentsService.moderate(id, moderateDto, req.user.sub, true);
   }
 
   @Delete(':id')

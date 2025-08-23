@@ -66,10 +66,42 @@
   --primary-color-hover: #42a5f5;
 }
 
+html {
+  height: auto !important;
+  overflow-x: hidden;
+  overflow-y: auto !important;
+}
+
 body {
   background-color: var(--bg-color);
   color: var(--text-color);
   transition: background-color 0.3s ease, color 0.3s ease;
+  height: auto !important;
+  overflow-x: hidden;
+  overflow-y: auto !important;
+  position: static !important;
+}
+
+/* Fix for min-h-screen and scrolling issues */
+#app, #__nuxt, .min-h-screen {
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow: visible !important;
+}
+
+/* Ensure main containers allow scrolling */
+div[data-v-48dd9585], .review-content, .container {
+  overflow: visible !important;
+  height: auto !important;
+}
+
+/* Scroll container for layout */
+.scroll-container {
+  height: auto !important;
+  min-height: 100vh;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  position: relative;
 }
 
 /* Base styles */

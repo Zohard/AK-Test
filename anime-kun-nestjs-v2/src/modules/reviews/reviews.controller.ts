@@ -51,8 +51,9 @@ export class ReviewsController {
   @ApiResponse({ status: 200, description: 'Liste des meilleures critiques' })
   async getTopReviews(
     @Query('limit', new ParseIntPipe({ optional: true })) limit = 10,
+    @Query('type') type?: 'anime' | 'manga' | 'both',
   ) {
-    return this.reviewsService.getTopReviews(limit);
+    return this.reviewsService.getTopReviews(limit, type);
   }
 
   @Get('user/:userId')
@@ -102,6 +103,15 @@ export class ReviewsController {
   @ApiResponse({ status: 404, description: 'Critique introuvable' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.reviewsService.findOne(id);
+  }
+
+  @Get('slug/:slug')
+  @ApiOperation({ summary: 'Récupérer une critique par slug (niceUrl)' })
+  @ApiParam({ name: 'slug', description: 'Slug de la critique', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Détails de la critique' })
+  @ApiResponse({ status: 404, description: 'Critique introuvable' })
+  async findBySlug(@Param('slug') slug: string) {
+    return this.reviewsService.findBySlug(slug);
   }
 
   @Patch(':id')

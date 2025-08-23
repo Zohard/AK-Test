@@ -4,7 +4,7 @@
     <div class="relative aspect-w-3 aspect-h-4">
       <img
         v-if="manga.image"
-        :src="getImageUrl(manga.image)"
+        :src="getImageUrl(manga.image, 'manga')"
         :alt="manga.titre"
         class="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
         @error="onImageError"
@@ -17,33 +17,12 @@
         <Icon name="heroicons:book-open" class="w-12 h-12 text-gray-400" />
       </div>
       
-      <!-- Rating overlay -->
-      <div 
-        v-if="manga.moyenneNotes" 
-        class="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded-md text-sm font-medium flex items-center space-x-1"
-      >
-        <Icon name="heroicons:star-solid" class="w-3 h-3 text-yellow-400" />
-        <span>{{ formatRating(manga.moyenneNotes) }}</span>
-      </div>
-
-      <!-- Status badge -->
-      <div 
-        v-if="manga.statut === 1" 
-        class="absolute top-2 left-2 bg-green-600 text-white px-2 py-1 rounded-md text-xs font-medium"
-      >
-        Actif
-      </div>
-      <div 
-        v-else-if="manga.statut === 0" 
-        class="absolute top-2 left-2 bg-gray-600 text-white px-2 py-1 rounded-md text-xs font-medium"
-      >
-        Inactif
-      </div>
+      
 
       <!-- Hover overlay -->
       <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
         <button
-          @click="$emit('view', manga)"
+          @click="handleViewClick"
           class="bg-white text-gray-900 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors transform translate-y-2 group-hover:translate-y-0"
         >
           Voir les détails
@@ -83,7 +62,7 @@
       <!-- Actions -->
       <div class="flex items-center justify-between">
         <button
-          @click="$emit('view', manga)"
+          @click="handleViewClick"
           class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium transition-colors"
         >
           En savoir plus
@@ -142,13 +121,57 @@ const emit = defineEmits<Emits>()
 
 const config = useRuntimeConfig()
 const authStore = useAuthStore()
+const { getImageUrl } = useImageUrl()
+const router = useRouter()
 
 // State
 const isFavorite = ref(false)
 
 // Methods
-const getImageUrl = (imagePath: string) => {
-  return `${config.public.apiBase}/media/manga/${imagePath}`
+const buildMangaUrl = (manga: any) => {
+  // Create SEO-friendly URL: /manga/nice-url-id
+  const niceUrl = manga.niceUrl || createSlug(manga.titre)
+  return `/manga/${niceUrl}-${manga.id}`
+}
+
+const createSlug = (title: string) => {
+  return title
+    .toLowerCase()
+    .replace(/[àáâãäå]/g, 'a')
+    .replace(/[èéêë]/g, 'e')
+    .replace(/[ìíîï]/g, 'i')
+    .replace(/[òóôõö]/g, 'o')
+    .replace(/[ùúûü]/g, 'u')
+    .replace(/[ýÿ]/g, 'y')
+    .replace(/[ñ]/g, 'n')
+    .replace(/[ç]/g, 'c')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+const handleViewClick = async () => {
+  console.log('View button clicked for manga:', props.manga)
+  const targetUrl = buildMangaUrl(props.manga)
+  console.log('Navigating to:', targetUrl)
+  
+  try {
+    await navigateTo(targetUrl)
+    console.log('Navigation completed')
+  } catch (error) {
+    console.error('Navigation error:', error)
+    // Fallback to router.push
+    try {
+      await router.push(targetUrl)
+      console.log('Router.push completed')
+    } catch (routerError) {
+      console.error('Router.push error:', routerError)
+      // Last resort: window.location
+      window.location.href = targetUrl
+    }
+  }
+  
+  // Also emit the event for backward compatibility
+  emit('view', props.manga)
 }
 
 const formatRating = (rating: number) => {

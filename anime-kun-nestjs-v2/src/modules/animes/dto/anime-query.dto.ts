@@ -73,6 +73,15 @@ export class AnimeQueryDto {
   statut?: number;
 
   @ApiPropertyOptional({
+    description: 'Filtrer par genre',
+    example: 'Action',
+  })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => value === '' ? undefined : value)
+  genre?: string;
+
+  @ApiPropertyOptional({
     description: 'Trier par',
     enum: ['dateAjout', 'titre', 'annee'],
     example: 'dateAjout',

@@ -2,7 +2,7 @@
   <div class="article-card">
     <img 
       v-if="imageAndTitle.image"
-      :src="getImageUrl(imageAndTitle.image || '', imageAndTitle.type) || undefined" 
+      :src="getArticleImageUrl(imageAndTitle.image || '') || undefined" 
       :alt="imageAndTitle.title"
       class="article-image"
       loading="lazy"
@@ -69,7 +69,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const { getImageUrl } = useImageUrl()
+const { getArticleImageUrl } = useImageUrl()
 
 const formatDate = (dateString?: string | Date) => {
   if (!dateString) return ''
