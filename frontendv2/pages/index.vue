@@ -5,7 +5,7 @@
     <section class="section">
       <div class="section-header">
         <h2 class="section-title">Dernières critiques</h2>
-        <NuxtLink to="/critiques" class="section-link">
+        <NuxtLink to="/reviews" class="section-link">
           Voir toutes les critiques →
         </NuxtLink>
       </div>
@@ -14,11 +14,12 @@
         Chargement des critiques...
       </div>
       
-      <div v-else class="articles-grid">
-        <ArticleCard 
+      <div v-else class="articles-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <ReviewCard 
           v-for="critique in critiques" 
-          :key="critique.idCritique" 
-          :article="critique" 
+          :key="critique.idCritique || critique.id" 
+          :review="critique" 
+          @view="viewReview"
         />
       </div>
     </section>
@@ -70,6 +71,7 @@
 <script setup lang="ts">
 import type { Anime, ApiResponse } from '~/types'
 import type { ReviewData } from '~/composables/useReviewsAPI'
+import ReviewCard from '~/components/reviews/ReviewCard.vue'
 
 // Page metadata
 useHead({
@@ -132,14 +134,12 @@ const loadCritiques = async () => {
   try {
     const response = await fetchReviews({ 
       limit: 4,
-      statut: 0, // Only visible reviews
       sortBy: 'dateCritique',
       sortOrder: 'desc'
     })
     
-    if (response && response.reviews) {
-      critiques.value = response.reviews
-    }
+    const raw = (response as any).data || (response as any).reviews || []
+    critiques.value = raw.map(normalizeReview)
   } catch (error) {
     console.error('Error loading critiques:', error)
     critiques.value = []
@@ -190,5 +190,32 @@ const createSlug = (title: string) => {
 const viewAnime = (anime: any) => {
   console.log('viewAnime called in index page with:', anime)
   navigateTo(buildAnimeUrl(anime))
+}
+
+const viewReview = (review: ReviewData) => {
+  // ReviewCard already contains NuxtLink; this is for analytics if needed
+}
+
+const normalizeReview = (r: any): ReviewData => {
+  return {
+    idCritique: r.idCritique || r.id,
+    niceUrl: r.niceUrl,
+    titre: r.titre,
+    critique: r.critique || r.contenu,
+    notation: r.notation || r.note,
+    dateCritique: r.reviewDate || r.dateCritique || r.dateCreation,
+    statut: typeof r.statut === 'number' ? r.statut : 1,
+    idMembre: r.idMembre || r.userId || 0,
+    idAnime: r.idAnime || r.animeId || 0,
+    idManga: r.idManga || r.mangaId || 0,
+    nbClics: r.nbClics || r.nbVues || 0,
+    anime: r.anime,
+    manga: r.manga,
+    membre: r.membre ? {
+      id: r.membre.id || r.membre.idMember,
+      pseudo: r.membre.pseudo || r.membre.memberName,
+      avatar: r.membre.avatar
+    } : undefined
+  }
 }
 </script>

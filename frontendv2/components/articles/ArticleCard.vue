@@ -1,86 +1,96 @@
 <template>
-  <article class="article-card group relative bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden">
+  <article class="article-card group relative bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 dark:border-gray-700">
     <!-- Article Image -->
-    <div class="relative aspect-video">
-      <img
+    <div class="relative aspect-video overflow-hidden">
+      <div 
         v-if="article.img || article.imgunebig"
-        :src="articleImage"
-        :alt="article.titre"
-        class="w-full h-full object-cover"
-        @error="onImageError"
-        loading="lazy"
-      />
+        :style="{ backgroundImage: `url(${articleImage})` }"
+        class="w-full h-full bg-cover bg-center bg-no-repeat group-hover:scale-105 transition-transform duration-300"
+      ></div>
       <div 
         v-else 
-        class="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center"
+        class="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center"
       >
-        <Icon name="heroicons:newspaper" class="w-12 h-12 text-gray-400" />
+        <Icon name="heroicons:newspaper" class="w-16 h-16 text-gray-400" />
       </div>
       
       <!-- Article overlay on hover -->
-      <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+      <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
         <button
           @click="handleViewClick"
-          class="px-4 py-2 bg-white text-gray-900 rounded-md font-medium shadow-lg transform scale-95 group-hover:scale-100 transition-transform duration-200"
+          class="px-6 py-3 bg-white text-gray-900 rounded-lg font-medium shadow-xl transform scale-95 group-hover:scale-100 transition-all duration-200 hover:bg-gray-50"
         >
+          <Icon name="heroicons:eye" class="w-4 h-4 inline mr-2" />
           Lire l'article
         </button>
+      </div>
+      
+      <!-- Date badge -->
+      <div class="absolute top-3 right-3 px-2 py-1 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-md text-xs font-medium text-gray-700 dark:text-gray-300">
+        {{ formatDate(article.date) }}
       </div>
     </div>
 
     <!-- Content -->
-    <div class="p-4">
+    <div class="p-6 flex flex-col h-full">
       <!-- Category badge -->
-      <div class="mb-2">
+      <div class="mb-3">
         <span 
-          v-if="article.categories && article.categories.length > 0"
-          class="inline-block px-2 py-1 text-xs font-medium text-blue-600 bg-blue-100 dark:bg-blue-900 dark:text-blue-200 rounded-full"
+          v-if="article.categories && article.categories.length > 0 && article.categories[0]"
+          class="inline-flex items-center px-3 py-1 text-xs font-medium text-blue-700 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300 rounded-full border border-blue-200 dark:border-blue-800"
         >
+          <Icon name="heroicons:tag" class="w-3 h-3 mr-1" />
           {{ article.categories[0].name }}
         </span>
       </div>
 
       <!-- Title -->
-      <h3 class="article-card-title text-lg font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">
+      <h3 class="article-card-title text-xl font-bold text-gray-900 dark:text-white mb-3 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 leading-tight">
         <NuxtLink :to="articleUrl" class="hover:underline">
           {{ article.titre }}
         </NuxtLink>
       </h3>
 
       <!-- Excerpt -->
-      <p 
-        v-if="article.metaDescription" 
-        class="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-3"
-      >
-        {{ article.metaDescription }}
-      </p>
+      <div class="text-sm text-gray-600 dark:text-gray-300 mb-4 flex-grow">
+        <p v-if="article.metaDescription" class="line-clamp-2 mb-3 font-medium text-gray-700 dark:text-gray-200">
+          {{ article.metaDescription }}
+        </p>
+        <div 
+          v-if="articleExcerpt" 
+          class="line-clamp-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed"
+        >
+          {{ articleExcerpt }}
+        </div>
+      </div>
 
       <!-- Footer -->
-      <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-        <!-- Author -->
-        <div class="flex items-center space-x-2">
-          <div class="w-6 h-6 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
-            <Icon name="heroicons:user" class="w-3 h-3" />
+      <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+        <div class="flex items-center justify-between text-sm">
+          <!-- Author -->
+          <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-xs">
+              {{ (article.author?.memberName || 'A')[0].toUpperCase() }}
+            </div>
+            <div>
+              <p class="font-medium text-gray-900 dark:text-white">{{ article.author?.memberName || 'Auteur' }}</p>
+            </div>
           </div>
-          <span>{{ article.author?.memberName || 'Auteur' }}</span>
-        </div>
 
-        <!-- Meta info -->
-        <div class="flex items-center space-x-3">
-          <!-- Views -->
-          <div class="flex items-center space-x-1">
-            <Icon name="heroicons:eye" class="w-3 h-3" />
-            <span>{{ formatNumber(article.nbClics) }}</span>
+          <!-- Meta info -->
+          <div class="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
+            <!-- Views -->
+            <div class="flex items-center space-x-1" title="Vues">
+              <Icon name="heroicons:eye" class="w-4 h-4" />
+              <span>{{ formatNumber(article.nbClics) }}</span>
+            </div>
+            
+            <!-- Comments -->
+            <div class="flex items-center space-x-1" title="Commentaires">
+              <Icon name="heroicons:chat-bubble-left" class="w-4 h-4" />
+              <span>{{ article.commentCount || 0 }}</span>
+            </div>
           </div>
-          
-          <!-- Comments -->
-          <div class="flex items-center space-x-1">
-            <Icon name="heroicons:chat-bubble-left" class="w-3 h-3" />
-            <span>{{ article.commentCount || 0 }}</span>
-          </div>
-          
-          <!-- Date -->
-          <span>{{ formatDate(article.date) }}</span>
         </div>
       </div>
     </div>
@@ -101,13 +111,36 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
+const { getArticleImageUrl } = useImageUrl()
+
 // Computed properties
 const articleImage = computed(() => {
-  return props.article.imgunebig || props.article.img
+  const rawImage = props.article.imgunebig || props.article.img
+  return rawImage ? getArticleImageUrl(rawImage) : null
 })
 
 const articleUrl = computed(() => {
   return `/articles/${props.article.niceUrl}`
+})
+
+const articleExcerpt = computed(() => {
+  if (!props.article.texte) return ''
+  
+  // Remove HTML tags and format the text
+  let text = props.article.texte
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+    .replace(/&[^;]+;/g, '') // Remove other HTML entities
+    .trim()
+  
+  // Limit to 150 characters
+  if (text.length > 150) {
+    const truncated = text.substring(0, 150)
+    const lastSpace = truncated.lastIndexOf(' ')
+    text = (lastSpace > 100 ? truncated.substring(0, lastSpace) : truncated) + '...'
+  }
+  
+  return text
 })
 
 // Methods
@@ -180,6 +213,13 @@ const createSlug = (title: string) => {
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

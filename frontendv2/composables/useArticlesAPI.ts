@@ -17,7 +17,7 @@ export function useArticlesAPI() {
     error.value = null
     
     try {
-      const response = await $fetch<ArticlesResponse>(`${config.public.apiBase}/api/articles`, {
+      const response = await $fetch<ArticlesResponse>('/api/proxy/articles', {
         params
       })
       return response
@@ -51,7 +51,7 @@ export function useArticlesAPI() {
     error.value = null
     
     try {
-      const response = await $fetch<Article>(`${config.public.apiBase}/api/articles/slug/${niceUrl}`)
+      const response = await $fetch<Article>(`/api/proxy/articles/slug/${niceUrl}`)
       return response
     } catch (err: any) {
       error.value = 'Erreur lors du chargement de l\'article'
@@ -67,7 +67,7 @@ export function useArticlesAPI() {
     error.value = null
     
     try {
-      const response = await $fetch<Article[]>(`${config.public.apiBase}/api/articles/featured`, {
+      const response = await $fetch<Article[]>('/api/proxy/articles/featured', {
         params: { limit }
       })
       return response

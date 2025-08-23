@@ -18,7 +18,7 @@
             Articles à la une
           </h2>
           <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-            <ArticleCard
+            <ArticlesArticleCard
               v-for="article in featuredArticles.slice(0, 3)"
               :key="article.idArt"
               :article="article"
@@ -33,7 +33,7 @@
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-6 md:px-8 lg:px-12 py-12">
       <!-- Filters and Search -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
+      <div class="mb-8">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <!-- Search -->
           <div>
@@ -153,21 +153,14 @@
       </div>
 
       <!-- Articles Grid -->
-      <ArticleCardGrid
-        v-else
-        :articles="articles"
-        :loading="loading"
-        :pagination="pagination"
-        :empty-title="hasActiveFilters ? 'Aucun article trouvé' : 'Aucun article disponible'"
-        :empty-message="hasActiveFilters ? 'Essayez de modifier vos filtres de recherche.' : 'Il n\'y a pas d\'articles disponibles pour le moment.'"
-        :show-empty-action="hasActiveFilters"
-        empty-action-text="Effacer les filtres"
-        grid-cols="auto"
-        gap="lg"
-        @article-view="viewArticle"
-        @page-change="goToPage"
-        @empty-action="clearFilters"
-      />
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <ArticlesArticleCard
+          v-for="article in articles"
+          :key="article.idArt"
+          :article="article"
+          @view="viewArticle"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -197,12 +190,12 @@ const pagination = ref<ArticlesResponse['pagination']>()
 // Filters
 const filters = reactive<ArticleQueryParams>({
   page: 1,
-  limit: 12,
+  limit: 6, // Temporary workaround for data integrity issue
   search: '',
   categoryId: undefined,
   authorId: undefined,
   sortBy: 'date',
-  sortOrder: 'desc'
+  sortOrder: true // true = desc, false = asc
 })
 
 // API composables
@@ -220,10 +213,19 @@ const loadArticles = async () => {
     loading.value = true
     error.value = ''
     
-    const response = await articlesAPI.fetchArticles({
+    // Clean up empty parameters before sending
+    const cleanFilters = Object.entries({
       ...filters,
-      sortOrder: filters.sortOrder === 'desc' ? 'desc' : 'asc'
-    })
+      sortOrder: filters.sortOrder ? 'desc' : 'asc'
+    }).reduce((acc, [key, value]) => {
+      // Only include parameters that have non-empty values
+      if (value !== '' && value !== null && value !== undefined) {
+        acc[key] = value
+      }
+      return acc
+    }, {} as Record<string, any>)
+    
+    const response = await articlesAPI.fetchArticles(cleanFilters)
     
     articles.value = response.articles
     pagination.value = response.pagination
@@ -283,7 +285,7 @@ const applyFilters = () => {
   if (filters.categoryId) query.category = filters.categoryId.toString()
   if (filters.authorId) query.author = filters.authorId.toString()
   if (filters.sortBy !== 'date') query.sort = filters.sortBy
-  if (filters.sortOrder !== 'desc') query.order = filters.sortOrder
+  if (!filters.sortOrder) query.order = 'asc'
   
   navigateTo({ query }, { replace: true })
 }
@@ -297,7 +299,7 @@ const clearFilters = () => {
   filters.categoryId = undefined
   filters.authorId = undefined
   filters.sortBy = 'date'
-  filters.sortOrder = 'desc'
+  filters.sortOrder = true
   applyFilters()
 }
 
@@ -332,7 +334,7 @@ onMounted(() => {
   if (route.query.category) filters.categoryId = parseInt(route.query.category as string)
   if (route.query.author) filters.authorId = parseInt(route.query.author as string)
   if (route.query.sort) filters.sortBy = route.query.sort as string
-  if (route.query.order) filters.sortOrder = route.query.order as 'asc' | 'desc'
+  if (route.query.order) filters.sortOrder = route.query.order === 'desc'
   if (route.query.page) filters.page = parseInt(route.query.page as string) || 1
   
   initializePage()

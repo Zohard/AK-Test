@@ -71,6 +71,8 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
+const { getArticleImageUrl } = useImageUrl()
+
 // Refs
 const contentRef = ref<HTMLElement>()
 const readingProgress = ref(0)
@@ -111,18 +113,20 @@ const processImages = (content: string): string => {
   // Handle image galleries and individual images
   content = content.replace(/\[img\]([^\[]*)\[\/img\]/gi, (match, src) => {
     const cleanSrc = src.trim()
-    const fullSrc = cleanSrc.startsWith('http') ? cleanSrc : `${props.baseImageUrl}${cleanSrc}`
+    const fullSrc = getArticleImageUrl(cleanSrc) || cleanSrc
     return `<img src="${fullSrc}" alt="Article image" class="article-image mx-auto rounded-lg shadow-md cursor-pointer" onclick="openImageModal('${fullSrc}', 'Article image')" loading="lazy" />`
   })
   
   // Handle imgunebig references
   if (props.article.imgunebig) {
-    content = content.replace(/\{imgunebig\}/gi, `<img src="${props.article.imgunebig}" alt="Article image" class="article-image mx-auto rounded-lg shadow-md cursor-pointer" onclick="openImageModal('${props.article.imgunebig}', 'Article image')" loading="lazy" />`)
+    const processedImageBig = getArticleImageUrl(props.article.imgunebig) || props.article.imgunebig
+    content = content.replace(/\{imgunebig\}/gi, `<img src="${processedImageBig}" alt="Article image" class="article-image mx-auto rounded-lg shadow-md cursor-pointer" onclick="openImageModal('${processedImageBig}', 'Article image')" loading="lazy" />`)
   }
   
   // Handle imgunebig2 references
   if (props.article.imgunebig2) {
-    content = content.replace(/\{imgunebig2\}/gi, `<img src="${props.article.imgunebig2}" alt="Article image" class="article-image mx-auto rounded-lg shadow-md cursor-pointer" onclick="openImageModal('${props.article.imgunebig2}', 'Article image')" loading="lazy" />`)
+    const processedImageBig2 = getArticleImageUrl(props.article.imgunebig2) || props.article.imgunebig2
+    content = content.replace(/\{imgunebig2\}/gi, `<img src="${processedImageBig2}" alt="Article image" class="article-image mx-auto rounded-lg shadow-md cursor-pointer" onclick="openImageModal('${processedImageBig2}', 'Article image')" loading="lazy" />`)
   }
   
   return content

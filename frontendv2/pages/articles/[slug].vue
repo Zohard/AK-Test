@@ -32,65 +32,42 @@
     </div>
 
     <!-- Article Content -->
-    <div v-else-if="article">
-      <!-- Article Header -->
-      <ArticleHeader 
-        :article="article" 
-        :estimated-reading-time="estimatedReadingTime"
-        @share="showShareModal = true"
-        @print="printArticle" 
-        @bookmark="onBookmark"
-      />
-
-      <!-- Main Content -->
-      <main class="max-w-4xl mx-auto px-6 md:px-8 lg:px-12 py-8">
-        <!-- Article Content -->
-        <ArticleContent
-          :article="article"
-          :show-social-sharing="true"
-          :show-print-button="false"
-          :show-reading-progress="true"
-          @content-processed="onContentProcessed"
-          @image-click="openImageModal"
-        />
-
+    <div v-else-if="article" class="container mx-auto px-4 py-8">
+      <div class="max-w-4xl mx-auto">
+        <!-- Simple article display -->
+        <h1 class="text-4xl font-bold mb-4">{{ article.titre }}</h1>
+        <div class="text-gray-600 mb-4">
+          <p>Publié le {{ formatDate(article.date) }} par {{ article.author?.memberName || 'Inconnu' }} dans {{ article.categories?.map(c => c.nom || c.name).join(', ') || 'Aucune catégorie' }} - {{ comments.length }} commentaires</p>
+        </div>
+        
+        <!-- Article image -->
+        <div v-if="article.imgunebig || article.img" class="mb-6">
+          <img 
+            :src="transformWebzineImageUrl(article.imgunebig || article.img)" 
+            :alt="article.titre"
+            class="w-full max-w-2xl mx-auto rounded-lg shadow-lg"
+            @error="onImageError"
+          />
+        </div>
+        
+        <!-- Article content -->
+        <div v-if="article.content" class="prose max-w-none" v-html="transformedContent"></div>
+        <div v-else-if="article.contenu" class="prose max-w-none" v-html="transformedContenu"></div>
+        <div v-else class="text-gray-500">No content available</div>
+        
         <!-- Comments Section -->
-        <section v-if="showComments" class="mt-16 pt-8 border-t border-gray-200 dark:border-gray-700">
+        <section class="mt-16 pt-8 border-t border-gray-200 dark:border-gray-700">
           <div class="mb-8">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">
               Commentaires ({{ comments.length }})
             </h2>
             
-            <!-- Add comment form (authenticated users) -->
-            <div v-if="authStore.isAuthenticated" class="mb-8">
-              <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                <textarea
-                  v-model="newComment"
-                  rows="3"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                  placeholder="Ajoutez votre commentaire..."
-                ></textarea>
-                <div class="mt-3 flex justify-between items-center">
-                  <p class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ 500 - newComment.length }} caractères restants
-                  </p>
-                  <button
-                    @click="addComment"
-                    :disabled="!newComment.trim() || commentLoading || newComment.length > 500"
-                    class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {{ commentLoading ? 'Publication...' : 'Publier' }}
-                  </button>
-                </div>
-              </div>
-            </div>
-
             <!-- Login prompt for non-authenticated users -->
-            <div v-else class="mb-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+            <div class="mb-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
               <p class="text-blue-800 dark:text-blue-200 mb-3">
                 Connectez-vous pour laisser un commentaire
               </p>
-              <NuxtLink to="/login" class="btn-primary">
+              <NuxtLink to="/login" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
                 Se connecter
               </NuxtLink>
             </div>
@@ -135,63 +112,6 @@
             </p>
           </div>
         </section>
-      </main>
-
-      <!-- Article Navigation -->
-      <ArticleNavigation
-        :current-article="article"
-        :previous-article="previousArticle"
-        :next-article="nextArticle"
-        :related-articles="relatedArticles"
-        @related-article-view="viewRelatedArticle"
-        @view-more-related="viewMoreRelated"
-      />
-
-      <!-- Share Modal -->
-      <div 
-        v-if="showShareModal"
-        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-        @click.self="showShareModal = false"
-      >
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-              Partager l'article
-            </h3>
-            <button 
-              @click="showShareModal = false"
-              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              <Icon name="heroicons:x-mark" class="w-5 h-5" />
-            </button>
-          </div>
-          <ArticleSocialShare
-            :title="article.titre"
-            :url="articleUrl"
-            :description="article.metaDescription"
-          />
-        </div>
-      </div>
-
-      <!-- Image Modal -->
-      <div 
-        v-if="showImageModal && selectedImage"
-        class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-4 z-50"
-        @click.self="closeImageModal"
-      >
-        <div class="max-w-4xl max-h-full">
-          <img
-            :src="selectedImage.src"
-            :alt="selectedImage.alt"
-            class="max-w-full max-h-full object-contain rounded-lg"
-          />
-          <button 
-            @click="closeImageModal"
-            class="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-75 transition-all duration-200"
-          >
-            <Icon name="heroicons:x-mark" class="w-6 h-6" />
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -199,6 +119,10 @@
 
 <script setup lang="ts">
 import type { Article, ArticleComment } from '~/types'
+import ArticleHeader from '~/components/articles/ArticleHeader.vue'
+import ArticleContent from '~/components/articles/ArticleContent.vue'
+import ArticleNavigation from '~/components/articles/ArticleNavigation.vue'
+import { transformWebzineImageUrl, transformWebzineImagesInContent } from '~/utils/webzineImages'
 
 // Get route parameters
 const route = useRoute()
@@ -239,6 +163,16 @@ const estimatedReadingTime = computed(() => {
   const wordsPerMinute = 200
   const words = article.value.contenu.split(' ').length
   return Math.ceil(words / wordsPerMinute)
+})
+
+const transformedContent = computed(() => {
+  if (!article.value?.content) return ''
+  return transformWebzineImagesInContent(article.value.content)
+})
+
+const transformedContenu = computed(() => {
+  if (!article.value?.contenu) return ''
+  return transformWebzineImagesInContent(article.value.contenu)
 })
 
 // Methods
@@ -364,6 +298,13 @@ const formatDate = (dateString: string) => {
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+const onImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  console.warn('Failed to load image:', img.src)
+  // Hide broken image or show placeholder
+  img.style.display = 'none'
 }
 
 // SEO and page metadata

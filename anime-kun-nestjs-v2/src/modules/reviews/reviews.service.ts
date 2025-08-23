@@ -109,6 +109,7 @@ export class ReviewsService {
       minNotation,
       sortBy = 'dateCritique',
       sortOrder = 'desc',
+      type,
     } = query;
 
     const skip = ((page || 1) - 1) * (limit || 20);
@@ -140,6 +141,23 @@ export class ReviewsService {
 
     if (minNotation) {
       where.notation = { gte: minNotation };
+    }
+
+    // Type filter: our schema uses 0 when unset
+    if (type === 'anime') {
+      if (!idAnime) {
+        where.idAnime = { gt: 0 };
+      }
+      if (!idManga) {
+        where.idManga = 0;
+      }
+    } else if (type === 'manga') {
+      if (!idManga) {
+        where.idManga = { gt: 0 };
+      }
+      if (!idAnime) {
+        where.idAnime = 0;
+      }
     }
 
     const orderBy = { [sortBy || 'dateCritique']: sortOrder || 'desc' };
@@ -191,6 +209,45 @@ export class ReviewsService {
   async findOne(id: number) {
     const review = await this.prisma.akCritique.findUnique({
       where: { idCritique: id },
+      include: {
+        membre: {
+          select: {
+            idMember: true,
+            memberName: true,
+            avatar: true,
+            realName: true,
+          },
+        },
+        anime: {
+          select: {
+            idAnime: true,
+            titre: true,
+            titreOrig: true,
+            image: true,
+            annee: true,
+          },
+        },
+        manga: {
+          select: {
+            idManga: true,
+            titre: true,
+            image: true,
+            annee: true,
+          },
+        },
+      },
+    });
+
+    if (!review) {
+      throw new NotFoundException('Critique introuvable');
+    }
+
+    return this.formatReview(review);
+  }
+
+  async findBySlug(slug: string) {
+    const review = await this.prisma.akCritique.findFirst({
+      where: { niceUrl: slug },
       include: {
         membre: {
           select: {
@@ -309,13 +366,23 @@ export class ReviewsService {
     return { message: 'Critique supprimée avec succès' };
   }
 
-  async getTopReviews(limit = 10) {
+  async getTopReviews(limit = 10, type?: 'anime' | 'manga' | 'both') {
+    const where: any = {
+      statut: 0, // Only active/visible reviews
+      notation: { gte: 8 }, // High ratings
+      popularite: { gte: 3 }, // High popularity ratings
+    };
+
+    if (type === 'anime') {
+      where.idAnime = { gt: 0 };
+      where.idManga = 0;
+    } else if (type === 'manga') {
+      where.idManga = { gt: 0 };
+      where.idAnime = 0;
+    }
+
     const reviews = await this.prisma.akCritique.findMany({
-      where: {
-        statut: 0, // Only active/visible reviews
-        notation: { gte: 8 }, // High ratings
-        popularite: { gte: 3 }, // High popularity ratings
-      },
+      where,
       orderBy: [{ popularite: 'desc' }, { nbClics: 'desc' }],
       take: limit,
       include: {
@@ -395,17 +462,31 @@ export class ReviewsService {
       idMembre,
       idAnime,
       idManga,
+      critique,
       ...otherFields
     } = review;
+
+    // Normalize dateCritique which may be stored as Date or as epoch seconds
+    let reviewDate: string | null = null;
+    if (dateCritique) {
+      if (dateCritique instanceof Date) {
+        reviewDate = dateCritique.toISOString();
+      } else if (typeof dateCritique === 'number') {
+        reviewDate = new Date(dateCritique * 1000).toISOString();
+      } else {
+        // Attempt to parse if it's a string
+        const d = new Date(dateCritique);
+        reviewDate = isNaN(d.getTime()) ? null : d.toISOString();
+      }
+    }
 
     return {
       id: idCritique,
       userId: idMembre,
       animeId: idAnime,
       mangaId: idManga,
-      reviewDate: dateCritique
-        ? new Date(dateCritique * 1000).toISOString()
-        : null,
+      reviewDate,
+      critique,
       ...otherFields,
     };
   }

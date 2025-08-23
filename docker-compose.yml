@@ -55,8 +55,8 @@ services:
   # NestJS API v3 (new)
   nestjs-api:
     build:
-      context: .
-      dockerfile: Dockerfile.nestjs
+      context: ./anime-kun-nestjs-v2
+      dockerfile: Dockerfile
     depends_on:
       - anime-kun-postgres
     ports:

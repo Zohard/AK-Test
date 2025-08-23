@@ -1,5 +1,5 @@
 <template>
-  <div class="article-card-grid">
+  <div :class="gridClasses">
     <!-- Loading skeletons -->
     <template v-if="loading">
       <div 
@@ -144,9 +144,7 @@ const gridClasses = computed(() => {
 </script>
 
 <style scoped>
-.article-card-grid {
-  @apply v-bind(gridClasses);
-}
+/* Grid classes are applied directly to the element via :class binding */
 
 .article-skeleton {
   @apply bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden;

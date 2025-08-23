@@ -238,6 +238,7 @@ export interface UpdateReviewDto extends Partial<CreateReviewDto> {}
 
 // Article types (based on actual API response format)
 export interface Article {
+  // Common fields (used by both ak_webzine_articles and wp_posts)
   idArt: number
   titre: string
   niceUrl: string
@@ -256,6 +257,20 @@ export interface Article {
   commentCount: number
   imageCount: number
   contenu?: string // Full content for detail view
+  content?: string // Alternative content field
+  texte?: string // Alternative content field
+
+  // WordPress-specific fields (wp_posts)
+  ID?: number | string
+  postTitle?: string
+  postName?: string
+  postDate?: string
+  postContent?: string
+  postExcerpt?: string
+  postAuthor?: number
+  postStatus?: string
+  postModified?: string
+  commentCount?: number
 }
 
 export interface ArticleAuthor {

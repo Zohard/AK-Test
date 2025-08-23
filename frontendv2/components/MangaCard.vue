@@ -17,15 +17,7 @@
         <Icon name="heroicons:book-open" class="w-12 h-12 text-gray-400" />
       </div>
       
-      <!-- Rating overlay -->
-      <div 
-        v-if="manga.moyenneNotes" 
-        class="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded-md text-sm font-medium flex items-center space-x-1"
-      >
-        <Icon name="heroicons:star-solid" class="w-3 h-3 text-yellow-400" />
-        <span>{{ formatRating(manga.moyenneNotes) }}</span>
-      </div>
-
+      
 
       <!-- Hover overlay -->
       <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">

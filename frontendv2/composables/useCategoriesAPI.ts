@@ -10,7 +10,7 @@ export function useCategoriesAPI() {
     error.value = null
     
     try {
-      const response = await $fetch<ArticleCategory[]>(`${config.public.apiBase}/api/categories`)
+      const response = await $fetch<ArticleCategory[]>('/api/proxy/categories')
       return response
     } catch (err: any) {
       error.value = 'Erreur lors du chargement des catégories'
