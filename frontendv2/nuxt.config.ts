@@ -2,9 +2,10 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: [
-    '@nuxtjs/tailwindcss', 
+    '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
-    '@vueuse/nuxt'
+    '@vueuse/nuxt',
+    '@nuxtjs/color-mode'
   ],
   css: ['~/assets/css/globals.css'],
   runtimeConfig: {
