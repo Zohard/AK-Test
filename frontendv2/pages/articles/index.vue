@@ -5,17 +5,17 @@
       <div class="max-w-7xl mx-auto px-6 md:px-8 lg:px-12">
         <div class="text-center mb-12">
           <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-            Articles
+            Webzine
           </h1>
           <p class="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-            Découvrez nos articles, actualités et analyses sur l'univers des animes et mangas
+            Découvrez notre webzine, actualités et analyses sur l'univers des animes et mangas
           </p>
         </div>
 
         <!-- Featured Articles -->
         <div v-if="featuredArticles.length > 0" class="mb-16">
           <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center">
-            Articles à la une
+            Webzine à la une
           </h2>
           <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
             <ArticlesArticleCard
@@ -31,7 +31,7 @@
     </section>
 
     <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-6 md:px-8 lg:px-12 py-12">
+    <div class="main-content">
       <!-- Filters and Search -->
       <div class="mb-8">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -170,10 +170,10 @@ import type { Article, ArticleQueryParams, ArticlesResponse, ArticleCategory, Ar
 
 // Page metadata
 useHead({
-  title: 'Articles - Anime-Kun V2',
+  title: 'Webzine - Anime-Kun',
   meta: [
-    { name: 'description', content: 'Découvrez nos articles, actualités et analyses sur l\'univers des animes et mangas' },
-    { name: 'keywords', content: 'articles, anime, manga, actualités, analyses, critiques' }
+    { name: 'description', content: 'Découvrez notre webzine, actualités et analyses sur l\'univers des animes et mangas' },
+    { name: 'keywords', content: 'webzine, articles, anime, manga, actualités, analyses, critiques' }
   ]
 })
 

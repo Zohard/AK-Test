@@ -1,7 +1,10 @@
 <template>
-  <div>
+  <div class="main-content">
     <div class="page-header">
-      <h1 class="section-title">Mangas</h1>
+      <h1 class="section-title flex items-center gap-3">
+        <Icon name="heroicons:book-open" class="w-8 h-8 text-blue-600 dark:text-blue-400" />
+        Mangas
+      </h1>
       <p class="text-lg text-gray-600 dark:text-gray-300">
         Découvrez notre collection de mangas avec critiques et notes de la communauté
       </p>
@@ -215,7 +218,7 @@ import type { Manga } from '~/types'
 
 // Page metadata
 useHead({
-  title: 'Mangas - Anime-Kun V2',
+  title: 'Mangas - Anime-Kun',
   meta: [
     { name: 'description', content: 'Découvrez notre collection de mangas avec critiques et notes de la communauté' }
   ]

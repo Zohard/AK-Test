@@ -4,14 +4,15 @@ export function useAnimeAPI() {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const authStore = useAuthStore()
+  const config = useRuntimeConfig()
 
   const fetchAnimes = async (params?: AnimeQueryParams) => {
     loading.value = true
     error.value = null
     
     try {
-      // Use server-side proxy to avoid CORS issues
-      const response = await $fetch('/api/proxy/animes', {
+      // Call backend directly using configured API base
+      const response = await $fetch(`${config.public.apiBase}/api/animes`, {
         params
       })
       
@@ -33,7 +34,6 @@ export function useAnimeAPI() {
     error.value = null
     
     try {
-      const config = useRuntimeConfig()
       const response = await $fetch(`${config.public.apiBase}/api/animes/${id}`, {
         params: options
       })
@@ -52,7 +52,6 @@ export function useAnimeAPI() {
     error.value = null
     
     try {
-      const config = useRuntimeConfig()
       const response = await $fetch(`${config.public.apiBase}/api/animes`, {
         method: 'POST',
         body: data,
@@ -73,7 +72,7 @@ export function useAnimeAPI() {
     error.value = null
     
     try {
-      const response = await $fetch(`/api/animes/${id}`, {
+      const response = await $fetch(`${config.public.apiBase}/api/animes/${id}`, {
         method: 'PATCH',
         body: data,
         headers: authStore.getAuthHeaders() as Record<string, string>
@@ -93,7 +92,7 @@ export function useAnimeAPI() {
     error.value = null
     
     try {
-      await $fetch(`/api/animes/${id}`, {
+      await $fetch(`${config.public.apiBase}/api/animes/${id}`, {
         method: 'DELETE',
         headers: authStore.getAuthHeaders() as Record<string, string>
       })
@@ -108,7 +107,7 @@ export function useAnimeAPI() {
 
   const getTopAnimes = async (limit = 10) => {
     try {
-      const response = await $fetch('/api/animes/top', {
+      const response = await $fetch(`${config.public.apiBase}/api/animes/top`, {
         params: { limit }
       })
       return response
@@ -120,7 +119,7 @@ export function useAnimeAPI() {
 
   const getAnimesByGenre = async (genre: string, limit = 20) => {
     try {
-      const response = await $fetch(`/api/animes/genre/${genre}`, {
+      const response = await $fetch(`${config.public.apiBase}/api/animes/genre/${genre}`, {
         params: { limit }
       })
       return response
@@ -135,7 +134,7 @@ export function useAnimeAPI() {
     limit?: number
   }) => {
     try {
-      const response = await $fetch('/api/animes/autocomplete', {
+      const response = await $fetch(`${config.public.apiBase}/api/animes/autocomplete`, {
         params: {
           q: query,
           ...options
@@ -150,7 +149,7 @@ export function useAnimeAPI() {
 
   const getGenres = async () => {
     try {
-      const response = await $fetch('/api/animes/genres')
+      const response = await $fetch(`${config.public.apiBase}/api/animes/genres`)
       return response
     } catch (err: any) {
       console.error('Error fetching genres:', err)
@@ -160,7 +159,7 @@ export function useAnimeAPI() {
 
   const getAnimeTags = async (id: number) => {
     try {
-      const response = await $fetch(`/api/animes/${id}/tags`)
+      const response = await $fetch(`${config.public.apiBase}/api/animes/${id}/tags`)
       return response
     } catch (err: any) {
       console.error('Error fetching anime tags:', err)
@@ -170,7 +169,7 @@ export function useAnimeAPI() {
 
   const getAnimeRelations = async (id: number) => {
     try {
-      const response = await $fetch(`/api/animes/${id}/relations`)
+      const response = await $fetch(`${config.public.apiBase}/api/animes/${id}/relations`)
       return response
     } catch (err: any) {
       console.error('Error fetching anime relations:', err)

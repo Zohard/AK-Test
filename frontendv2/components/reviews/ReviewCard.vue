@@ -5,7 +5,7 @@
       <div class="flex items-start space-x-3">
         <!-- Media Image -->
         <div class="flex-shrink-0 relative">
-          <LazyImage
+          <SmartImage
             v-if="mediaImage"
             :src="mediaImage"
             :alt="mediaTitle"
@@ -84,13 +84,23 @@
       <div class="flex items-center justify-between">
         <!-- Author info -->
         <div class="flex items-center space-x-2">
-          <div 
-            :class="[
-              'w-7 h-7 rounded-full flex items-center justify-center text-white font-medium text-xs',
-              `bg-gradient-to-br ${getAuthorGradient(review.membre?.pseudo)}`
-            ]"
-          >
-            {{ getAuthorInitial(review.membre?.pseudo) }}
+          <div class="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
+            <img 
+              v-if="review.membre?.avatar" 
+              :src="review.membre.avatar" 
+              :alt="review.membre?.pseudo || 'Utilisateur'"
+              class="w-full h-full object-cover"
+              @error="onAvatarError"
+            />
+            <div 
+              v-else
+              :class="[
+                'w-full h-full flex items-center justify-center text-white font-medium text-xs',
+                `bg-gradient-to-br ${getAuthorGradient(review.membre?.pseudo)}`
+              ]"
+            >
+              {{ getAuthorInitial(review.membre?.pseudo) }}
+            </div>
           </div>
           <div class="flex flex-col min-w-0">
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
@@ -269,6 +279,11 @@ const getAuthorGradient = (pseudo?: string) => {
 }
 
 const onImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  img.style.display = 'none'
+}
+
+const onAvatarError = (event: Event) => {
   const img = event.target as HTMLImageElement
   img.style.display = 'none'
 }

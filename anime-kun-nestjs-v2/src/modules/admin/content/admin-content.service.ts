@@ -459,6 +459,16 @@ export class AdminContentService {
       type === 'anime' ? 'ak_business_to_animes' : 'ak_business_to_mangas';
     const idColumn = type === 'anime' ? 'id_anime' : 'id_manga';
 
+    // Prevent duplicates
+    const existing = await this.prisma.$queryRawUnsafe(
+      `SELECT 1 FROM ${staffTable} WHERE ${idColumn} = $1 AND id_business = $2 LIMIT 1`,
+      id,
+      businessId,
+    );
+    if ((existing as any[]).length > 0) {
+      return { message: 'Staff member already attached' };
+    }
+
     await this.prisma.$queryRawUnsafe(
       `
       INSERT INTO ${staffTable} (${idColumn}, id_business, type)
@@ -505,12 +515,36 @@ export class AdminContentService {
   }
 
   async addContentTag(id: number, type: string, tagId: number) {
+    // Prevent duplicates
+    const exists = await this.prisma.$queryRawUnsafe(
+      `SELECT 1 FROM ak_tag2fiche WHERE id_fiche = $1 AND type = $2 AND id_tag = $3 LIMIT 1`,
+      id,
+      type,
+      tagId,
+    );
+    if ((exists as any[]).length > 0) {
+      return { message: 'Tag already attached' };
+    }
+
     await this.prisma.$queryRaw`
       INSERT INTO ak_tag2fiche (id_fiche, type, id_tag)
       VALUES (${id}, ${type}, ${tagId})
     `;
 
     return { message: 'Tag added successfully' };
+  }
+
+  async searchTags(query: string, limit = 10, categorie?: string) {
+    const q = `%${query}%`;
+    let sql = `SELECT id_tag as id, tag_name as name, categorie FROM ak_tags WHERE tag_name ILIKE $1`;
+    const params: any[] = [q, limit];
+    if (categorie) {
+      sql += ` AND categorie ILIKE $3`;
+      params.push(categorie);
+    }
+    sql += ` ORDER BY tag_name LIMIT $2`;
+    const rows = await this.prisma.$queryRawUnsafe(sql, ...params);
+    return { items: rows };
   }
 
   async removeContentTag(id: number, type: string, tagId: number) {

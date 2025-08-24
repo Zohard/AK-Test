@@ -370,9 +370,11 @@
                   
                   <!-- Relations Tab -->
                   <div v-show="activeTab === 'relations'" class="info relations">
-                    <div class="text-gray-500 dark:text-gray-400 italic">
-                      Fonctionnalité des relations à venir.
-                    </div>
+                    <RelatedContent
+                      :relations="relationsData"
+                      :loading="loadingRelations"
+                      title="Contenus liés"
+                    />
                   </div>
                   
                   <!-- Notes Tab -->
@@ -503,6 +505,8 @@ const staff = ref<any[]>([])
 const loading = ref(true)
 const loadingReviews = ref(false)
 const loadingStaff = ref(false)
+const loadingRelations = ref(false)
+const relationsData = ref([])
 const error = ref('')
 
 const activeTab = ref('synopsis')
@@ -531,6 +535,7 @@ const newReview = ref({
 // Composables
 const animeAPI = useAnimeAPI()
 const reviewsAPI = useReviewsAPI()
+const { fetchAnimeRelations } = useRelations()
 const config = useRuntimeConfig()
 
 // Computed
@@ -632,6 +637,7 @@ const loadAnime = async () => {
       loadSimilarAnimes()
       loadStaff()
       loadScreenshots()
+      loadRelations()
     }
     
   } catch (err: any) {
@@ -784,6 +790,22 @@ const onScreenshotLoad = (event: Event) => {
   const container = img.closest('.relative.group.cursor-pointer')
   if (container) {
     (container as HTMLElement).style.display = 'block'
+  }
+}
+
+const loadRelations = async () => {
+  if (!anime.value) return
+  
+  try {
+    loadingRelations.value = true
+    const response = await fetchAnimeRelations(anime.value.id)
+    if (response) {
+      relationsData.value = response.relations || []
+    }
+  } catch (err) {
+    console.error('Error loading relations:', err)
+  } finally {
+    loadingRelations.value = false
   }
 }
 

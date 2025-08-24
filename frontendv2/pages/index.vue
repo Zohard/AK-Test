@@ -4,9 +4,13 @@
     
     <section class="section">
       <div class="section-header">
-        <h2 class="section-title">Dernières critiques</h2>
-        <NuxtLink to="/reviews" class="section-link">
-          Voir toutes les critiques →
+        <h2 class="section-title flex items-center gap-3">
+          <Icon name="heroicons:star" class="w-6 h-6 text-yellow-500" />
+          Dernières critiques
+        </h2>
+        <NuxtLink to="/reviews" class="section-link flex items-center gap-2">
+          Voir toutes les critiques
+          <Icon name="heroicons:arrow-right" class="w-4 h-4" />
         </NuxtLink>
       </div>
       
@@ -27,9 +31,13 @@
     <!-- Les animés du moment -->
     <section class="section">
       <div class="section-header">
-        <h2 class="section-title">Les animés du moment</h2>
-        <NuxtLink to="/animes" class="section-link">
-          Voir tous les animés →
+        <h2 class="section-title flex items-center gap-3">
+          <Icon name="heroicons:film" class="w-6 h-6 text-blue-500" />
+          Les animés du moment
+        </h2>
+        <NuxtLink to="/animes" class="section-link flex items-center gap-2">
+          Voir tous les animés
+          <Icon name="heroicons:arrow-right" class="w-4 h-4" />
         </NuxtLink>
       </div>
       <div v-if="animesLoading" class="loading">
@@ -48,7 +56,10 @@
     <!-- Quick Stats -->
     <section class="section">
       <div class="section-header">
-        <h2 class="section-title">Statistiques</h2>
+        <h2 class="section-title flex items-center gap-3">
+          <Icon name="heroicons:chart-bar" class="w-6 h-6 text-green-500" />
+          Statistiques
+        </h2>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="card text-center">
@@ -75,7 +86,7 @@ import ReviewCard from '~/components/reviews/ReviewCard.vue'
 
 // Page metadata
 useHead({
-  title: 'Accueil - Anime-Kun V2',
+  title: 'Accueil - Anime-Kun',
   meta: [
     { name: 'description', content: 'Découvrez notre collection d\'animes et mangas avec critiques et notes de la communauté' }
   ]

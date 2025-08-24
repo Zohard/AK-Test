@@ -1,99 +1,113 @@
 <template>
-  <div class="anime-card">
+  <div class="group relative bg-surface rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 motion-reduce:transition-none motion-reduce:transform-none">
     <!-- Image -->
     <div class="relative">
-      <img
-        v-if="anime.image"
-        :src="getImageUrl(anime.image, 'anime') || undefined"
-        :alt="anime.titre"
-        class="anime-card-image"
-        @error="onImageError"
-        loading="lazy"
-      />
-      <div 
-        v-else 
-        class="anime-card-placeholder"
-      >
-        <Icon name="heroicons:film" class="w-12 h-12" />
+      <div class="aspect-[20/21] overflow-hidden">
+        <SmartImage
+          v-if="anime.image"
+          :src="getImageUrl(anime.image, 'anime')"
+          :alt="anime.titre"
+          aspect-ratio="20/21"
+          container-class="w-full h-full"
+          image-class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:transform-none"
+          :placeholder-icon="'heroicons:film'"
+        />
+        <div 
+          v-else 
+          class="w-full h-full bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900 dark:to-primary-800 flex items-center justify-center"
+        >
+          <Icon name="heroicons:film" size="xl" class="text-primary-500 dark:text-primary-400" />
+        </div>
       </div>
       
       <!-- Rating overlay -->
       <div 
         v-if="anime.moyenneNotes" 
-        class="anime-card-rating"
+        class="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1"
       >
-        <Icon name="heroicons:star-solid" class="w-3 h-3 text-yellow-400" />
+        <Icon name="heroicons:star" variant="solid" size="xs" class="text-yellow-400" />
         <span>{{ formatRating(anime.moyenneNotes) }}</span>
       </div>
 
       <!-- Genre badge -->
       <div 
         v-if="anime.genre" 
-        class="anime-card-genre"
+        class="absolute top-3 left-3 bg-primary-600/90 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide"
       >
         {{ anime.genre }}
       </div>
     </div>
 
     <!-- Hover overlay -->
-    <div class="anime-card-overlay">
-      <button
+    <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 motion-reduce:transition-none flex items-center justify-center">
+      <Button
+        variant="secondary"
+        size="lg"
+        rounded
         @click="handleViewClick"
-        class="anime-card-view-btn"
+        class="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 bg-white/90 backdrop-blur-sm text-gray-900 hover:bg-white px-6"
       >
+        <Icon name="heroicons:eye" size="sm" class="mr-2" />
         Voir les détails
-      </button>
+      </Button>
     </div>
 
     <!-- Content -->
-    <div class="anime-card-content">
-      <h3 class="anime-card-title">
+    <div class="p-4 space-y-3">
+      <h3 class="font-semibold text-lg text-text line-clamp-2 leading-tight">
         {{ anime.titre }}
       </h3>
       
-      <div class="anime-card-meta">
-        <span v-if="anime.annee">{{ anime.annee }}</span>
-        <span v-if="anime.nbEp" class="flex items-center space-x-1">
-          <Icon name="heroicons:play" class="w-3 h-3" />
-          <span>{{ anime.nbEp }} ép.</span>
+      <div class="flex items-center gap-3 text-sm text-text-secondary">
+        <span v-if="anime.annee" class="flex items-center gap-1">
+          <Icon name="heroicons:calendar" size="xs" />
+          {{ anime.annee }}
+        </span>
+        <span v-if="anime.nbEp" class="flex items-center gap-1">
+          <Icon name="episode" size="xs" />
+          {{ anime.nbEp }} ép.
         </span>
       </div>
 
       <p 
         v-if="anime.synopsis" 
-        class="anime-card-synopsis"
+        class="text-sm text-text-secondary line-clamp-3 leading-relaxed"
       >
         {{ anime.synopsis }}
       </p>
 
       <!-- Actions -->
-      <div class="anime-card-actions">
-        <button
+      <div class="flex items-center justify-between pt-2 border-t border-border">
+        <Button
+          variant="ghost"
+          size="sm"
           @click="$emit('view', anime)"
-          class="anime-card-more-btn"
+          icon-right="heroicons:arrow-right"
+          class="text-primary-600 hover:text-primary-700"
         >
           En savoir plus
-        </button>
+        </Button>
         
-        <div class="anime-card-action-buttons">
+        <div class="flex items-center gap-1">
           <!-- Favorite button -->
           <button
             @click="toggleFavorite"
-            class="anime-card-action-btn"
-            :class="{ 'favorite': isFavorite }"
+            class="p-2 rounded-full hover:bg-surface-hover transition-colors duration-200"
+            :class="{ 'text-red-500': isFavorite, 'text-text-muted hover:text-text': !isFavorite }"
           >
             <Icon 
-              :name="isFavorite ? 'heroicons:heart-solid' : 'heroicons:heart'" 
-              class="w-5 h-5" 
+              :name="isFavorite ? 'heroicons:heart' : 'heroicons:heart'" 
+              :variant="isFavorite ? 'solid' : 'outline'"
+              size="sm"
             />
           </button>
           
           <!-- Share button -->
           <button
             @click="shareAnime"
-            class="anime-card-action-btn"
+            class="p-2 rounded-full hover:bg-surface-hover text-text-muted hover:text-text transition-colors duration-200"
           >
-            <Icon name="heroicons:share" class="w-5 h-5" />
+            <Icon name="heroicons:share" size="sm" />
           </button>
         </div>
       </div>

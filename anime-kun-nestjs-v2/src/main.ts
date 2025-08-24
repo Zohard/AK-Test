@@ -2,6 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
+import * as express from 'express';
+import { join } from 'path';
 import { setupSwagger } from './config/swagger.config';
 
 async function bootstrap() {
@@ -43,10 +45,13 @@ async function bootstrap() {
   // API prefix
   app.setGlobalPrefix('api');
 
+  // Serve static uploads so /uploads/* works
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
+
   // Setup Swagger documentation
   setupSwagger(app);
 
-  const port = configService.get('PORT') || 3003;
+  const port = configService.get('PORT') || 3004;
   await app.listen(port, '0.0.0.0');
 
   console.log(

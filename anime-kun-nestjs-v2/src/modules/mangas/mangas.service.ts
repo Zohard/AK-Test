@@ -8,6 +8,7 @@ import { BaseContentService } from '../../shared/services/base-content.service';
 import { CreateMangaDto } from './dto/create-manga.dto';
 import { UpdateMangaDto } from './dto/update-manga.dto';
 import { MangaQueryDto } from './dto/manga-query.dto';
+import { RelatedContentItem, RelationsResponse } from '../shared/types/relations.types';
 
 @Injectable()
 export class MangasService extends BaseContentService<
@@ -287,6 +288,90 @@ export class MangasService extends BaseContentService<
 
   async getMangaTags(id: number) {
     return this.getTags(id, 'manga');
+  }
+
+  async getMangaRelations(id: number): Promise<RelationsResponse> {
+    // First check if manga exists
+    const manga = await this.prisma.akManga.findUnique({
+      where: { idManga: id, statut: 1 },
+      select: { idManga: true },
+    });
+
+    if (!manga) {
+      throw new NotFoundException('Manga introuvable');
+    }
+
+    // Get relations where this manga is the source using raw SQL
+    const relations = await this.prisma.$queryRaw`
+      SELECT id_relation, id_fiche_depart, id_anime, id_manga 
+      FROM ak_fiche_to_fiche 
+      WHERE id_fiche_depart = ${`manga${id}`}
+    ` as any[];
+
+    const relatedContent: RelatedContentItem[] = [];
+
+    // Process each relation to get the actual content
+    for (const relation of relations) {
+      if (relation.id_anime && relation.id_anime > 0) {
+        // Related anime
+        const relatedAnime = await this.prisma.akAnime.findUnique({
+          where: { idAnime: relation.id_anime, statut: 1 },
+          select: {
+            idAnime: true,
+            titre: true,
+            image: true,
+            annee: true,
+            moyenneNotes: true,
+            niceUrl: true,
+          },
+        });
+        
+        if (relatedAnime) {
+          relatedContent.push({
+            id: relatedAnime.idAnime,
+            type: 'anime',
+            title: relatedAnime.titre,
+            image: relatedAnime.image,
+            year: relatedAnime.annee,
+            rating: relatedAnime.moyenneNotes,
+            niceUrl: relatedAnime.niceUrl,
+            relationType: 'related',
+          });
+        }
+      } else if (relation.id_manga && relation.id_manga > 0) {
+        // Related manga
+        const relatedManga = await this.prisma.akManga.findUnique({
+          where: { idManga: relation.id_manga, statut: 1 },
+          select: {
+            idManga: true,
+            titre: true,
+            image: true,
+            annee: true,
+            moyenneNotes: true,
+            niceUrl: true,
+          },
+        });
+        
+        if (relatedManga) {
+          relatedContent.push({
+            id: relatedManga.idManga,
+            type: 'manga',
+            title: relatedManga.titre,
+            image: relatedManga.image,
+            year: relatedManga.annee,
+            rating: relatedManga.moyenneNotes,
+            niceUrl: relatedManga.niceUrl,
+            relationType: 'related',
+          });
+        }
+      }
+    }
+
+    return {
+      manga_id: id,
+      relations: relatedContent,
+      total: relatedContent.length,
+    };
   }
 
   async getMangaStaff(id: number) {

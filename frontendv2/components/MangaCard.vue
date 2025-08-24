@@ -23,7 +23,7 @@
       <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
         <button
           @click="handleViewClick"
-          class="bg-white text-gray-900 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors transform translate-y-2 group-hover:translate-y-0"
+          class="bg-white text-gray-900 px-6 py-2.5 rounded-full font-medium hover:bg-gray-100 transition-colors transform translate-y-2 group-hover:translate-y-0"
         >
           Voir les détails
         </button>

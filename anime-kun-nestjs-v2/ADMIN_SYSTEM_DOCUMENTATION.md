@@ -198,6 +198,53 @@ The system uses Redis-backed queues for scalable moderation:
 await queueService.addReviewModerationJob(reviewId, userId, contentId, contentType);
 ```
 
+## Admin CRUD Roadmap: Animes, Mangas, Business
+
+- Overview: Implement admin CRUD for core entities with server-side filtering, sorting, pagination, image handling, and admin-only access. Aligns with tables `ak_animes`, `ak_mangas`, and `ak_business`.
+
+- Backend Endpoints (admin-only):
+  - Animes:
+    - `GET /api/admin/animes`: list with `page`, `limit`, `status`, `search` filters
+    - `GET /api/admin/animes/:id`: fetch one
+    - `POST /api/admin/animes`: create (required: `titre`)
+    - `PUT /api/admin/animes/:id`: update
+    - `DELETE /api/admin/animes/:id`: delete
+    - Extras: staff (`GET/POST/DELETE /:id/staff`), tags (`GET/POST/DELETE /:id/tags`), relations (`GET/POST/DELETE /:id/relations`), screenshots (`GET/POST/DELETE /:id/screenshots`), autocomplete (`GET /api/admin/animes/autocomplete`)
+  - Mangas:
+    - `GET /api/admin/mangas`, `GET /api/admin/mangas/:id`, `POST /api/admin/mangas`, `PUT /api/admin/mangas/:id`, `DELETE /api/admin/mangas/:id`
+    - Extras: tags, relations, covers mirror anime endpoints; autocomplete `GET /api/admin/mangas/autocomplete`
+  - Business:
+    - `GET /api/admin/business`, `GET /api/admin/business/:id`, `POST /api/admin/business`, `PUT /api/admin/business/:id`, `DELETE /api/admin/business/:id`
+    - Upload image: `POST /api/admin/business/:id/upload-image`
+
+- Field Mapping (DB accurate):
+  - Anime (`ak_animes`): `idAnime(PK)`, `niceUrl`, `titre`(required), `titreOrig`, `annee(number)`, `nbEp(number)`, `image`, `studio`, `synopsis`, `statut(0|1|2)`, `realisateur`, read-only: `nbReviews`, `moyenneNotes`, `dateAjout`.
+  - Manga (`ak_mangas`): `idManga(PK)`, `niceUrl`, `titre`(required), `auteur`, `annee(string len 4)`, `origine`, `titreOrig`, `titreFr`, `titresAlternatifs`, `licence`, `nbVolumes(string)`, `nbVol(number)`, `statutVol`, `synopsis`, `image`, `editeur`, `isbn`, `precisions`, `tags`, `statut(0|1|2)`, `ficheComplete`, read-only metrics: `nbClics*`, `nbReviews`, `moyenneNotes`, `dateAjout`.
+  - Business (`ak_business`): `idBusiness(PK)`, `niceUrl`, `type`, `denomination`(required), `autresDenominations`, `image`, `date(string)`, `origine`, `siteOfficiel(url)`, `notes`, `statut`, read-only metrics: `nbClics*`, `relations`, `dateAjout`.
+
+- Validation Hints:
+  - Anime: `annee>=1900`, `nbEp>=0`, `statut in {0,1,2}`.
+  - Manga: `annee` is STRING (e.g., "2024"), `nbVol>=0`, `statut in {0,1,2}`.
+  - Business: `siteOfficiel` URL if provided; keep `date` as free-form string unless standardized.
+
+- Images:
+  - Use existing media upload: `POST /api/media/upload` with `type: 'anime'|'manga'|'cover'`, save returned `filename` to entity `image`.
+  - Business image via `POST /api/admin/business/:id/upload-image` also supported.
+
+- Frontend Admin (Nuxt) Pages:
+  - Animes: `pages/admin/animes/index.vue` (list), `create.vue`, `[id].vue` (edit)
+  - Mangas: `pages/admin/mangas/index.vue`, `create.vue`, `[id].vue`
+  - Business: `pages/admin/business/index.vue`, `create.vue`, `[id].vue`
+  - Features: server-side pagination, search, filters, sorting; forms with validation; image uploader; slug (niceUrl) generator; status chips; toasts.
+  - Auth: route middleware to enforce admin; attach `Authorization: Bearer ...` to API calls.
+
+- Implementation Checklist:
+  - Add NestJS admin controllers/services (or bridge legacy endpoints) for the endpoints above with `JwtAuthGuard` + `AdminGuard`.
+  - Create DTOs matching DB fields exactly (notably Manga `annee` as string).
+  - Build frontend admin tables and forms per entity.
+  - Wire media upload and preview.
+  - Add Swagger tags for Admin CRUD and ensure examples reflect required/optional fields.
+
 ## Database Schema
 
 ### New Tables

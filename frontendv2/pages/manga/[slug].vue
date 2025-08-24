@@ -285,9 +285,11 @@
                   
                   <!-- Relations Tab -->
                   <div v-show="activeTab === 'relations'" class="info relations">
-                    <div class="text-gray-500 dark:text-gray-400 italic">
-                      Fonctionnalité des relations à venir.
-                    </div>
+                    <RelatedContent
+                      :relations="relationsData"
+                      :loading="loadingRelations"
+                      title="Contenus liés"
+                    />
                   </div>
                   
                   <!-- Notes Tab -->
@@ -416,6 +418,8 @@ const reviews = ref<Review[]>([])
 const similarMangas = ref<Manga[]>([])
 const loading = ref(true)
 const loadingReviews = ref(false)
+const loadingRelations = ref(false)
+const relationsData = ref([])
 const error = ref('')
 
 const activeTab = ref('synopsis')
@@ -443,6 +447,7 @@ const newReview = ref({
 // Composables
 const mangaAPI = useMangaAPI()
 const reviewsAPI = useReviewsAPI()
+const { fetchMangaRelations } = useRelations()
 const config = useRuntimeConfig()
 
 // Computed
@@ -505,6 +510,7 @@ const loadManga = async () => {
       loadReviews()
       loadSimilarMangas()
       loadScreenshots()
+      loadRelations()
     }
     
   } catch (err: any) {
@@ -583,6 +589,22 @@ const loadScreenshots = async () => {
     } else {
       screenshots.value = []
     }
+  }
+}
+
+const loadRelations = async () => {
+  if (!manga.value) return
+  
+  try {
+    loadingRelations.value = true
+    const response = await fetchMangaRelations(manga.value.id)
+    if (response) {
+      relationsData.value = response.relations || []
+    }
+  } catch (err) {
+    console.error('Error loading relations:', err)
+  } finally {
+    loadingRelations.value = false
   }
 }
 

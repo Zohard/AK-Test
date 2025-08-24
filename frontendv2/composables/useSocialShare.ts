@@ -16,7 +16,7 @@ export const useSocialShare = () => {
   const route = useRoute()
   const config = useRuntimeConfig()
   
-  const baseUrl = config.public.siteUrl || 'https://anime-kun.com'
+  const baseUrl = config.public.siteUrl || (process.client ? window.location.origin : '')
 
   // Social platforms configuration
   const platforms: SharePlatform[] = [

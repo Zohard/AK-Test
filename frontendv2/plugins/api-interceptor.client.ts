@@ -10,7 +10,12 @@ export default defineNuxtPlugin(() => {
       // Only apply baseURL and auth headers to API calls (not Nuxt assets)
       const url = typeof request === 'string' ? request : request.toString()
       
-      if ((url.startsWith('/api/') && !url.startsWith('/api/proxy/')) || url.startsWith('http://localhost:3003/') || url.startsWith('/media/')) {
+      const apiBase = (config.public.apiBase || '').replace(/\/$/, '')
+      if (
+        (url.startsWith('/api/') && !url.startsWith('/api/proxy/')) ||
+        (apiBase && url.startsWith(apiBase)) ||
+        url.startsWith('/media/')
+      ) {
         // Apply baseURL only for API calls and media
         if (!url.startsWith('http')) {
           options.baseURL = config.public.apiBase

@@ -332,8 +332,8 @@ const authStore = useAuthStore()
 
 // Computed
 const pageTitle = computed(() => {
-  if (!review.value) return 'Critique - Anime-Kun V2'
-  return `${review.value.titre} - Critique par ${review.value.membre?.pseudo} - Anime-Kun V2`
+  if (!review.value) return 'Critique - Anime-Kun'
+  return `${review.value.titre} - Critique par ${review.value.membre?.pseudo} - Anime-Kun`
 })
 
 const pageDescription = computed(() => {
@@ -362,6 +362,13 @@ const displayTitle = computed(() => {
 })
 
 // Meta tags
+const runtimeConfig = useRuntimeConfig()
+const siteOrigin = computed(() => {
+  if (runtimeConfig.public.siteUrl) return runtimeConfig.public.siteUrl
+  if (process.client) return window.location.origin
+  return ''
+})
+
 useHead({
   title: pageTitle,
   meta: [
@@ -369,7 +376,7 @@ useHead({
     { property: 'og:title', content: pageTitle },
     { property: 'og:description', content: pageDescription },
     { property: 'og:type', content: 'article' },
-    { property: 'og:url', content: `${process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/review/${slug}` },
+    { property: 'og:url', content: siteOrigin.value ? `${siteOrigin.value}/review/${slug}` : `/review/${slug}` },
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: pageTitle },
     { name: 'twitter:description', content: pageDescription }

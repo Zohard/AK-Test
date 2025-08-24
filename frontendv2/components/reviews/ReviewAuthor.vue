@@ -167,13 +167,13 @@ const authorUrl = computed(() => {
 const avatarUrl = computed(() => {
   if (!props.author) return null
   
-  // If author has avatar field
+  // If author has avatar field, use it directly
   if ('avatar' in props.author && props.author.avatar) {
-    return getAvatarUrl(props.author.avatar, props.author.id)
+    return props.author.avatar
   }
   
-  // Generate default avatar
-  return getAvatarUrl(undefined, props.author.id)
+  // No avatar available
+  return null
 })
 
 const authorInitial = computed(() => {

@@ -4,7 +4,8 @@
     <div class="hero-section bg-gradient-to-r from-blue-600 to-purple-600 text-white py-16">
       <div class="container mx-auto px-4">
         <div class="text-center">
-          <h1 class="text-4xl md:text-5xl font-bold mb-4">
+          <h1 class="text-4xl md:text-5xl font-bold mb-4 flex items-center justify-center gap-4">
+            <Icon name="heroicons:star" class="w-12 h-12 text-yellow-300" />
             Critiques d'Animes et Mangas
           </h1>
           <p class="text-xl md:text-2xl mb-6 opacity-90">
@@ -163,7 +164,7 @@ import TopReviews from '~/components/reviews/TopReviews.vue'
 
 // Page metadata
 useHead({
-  title: 'Critiques - Anime-Kun V2',
+  title: 'Critiques - Anime-Kun',
   meta: [
     { name: 'description', content: 'Découvrez les critiques d\'animes et mangas de la communauté Anime-Kun' }
   ]
