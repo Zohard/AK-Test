@@ -63,6 +63,34 @@ export class CreateAdminMangaDto {
   @IsString()
   editeur?: string;
 
+  @ApiPropertyOptional({ description: 'ISBN du manga' })
+  @IsOptional()
+  @IsString()
+  isbn?: string;
+
+  @ApiPropertyOptional({ description: 'Précisions supplémentaires' })
+  @IsOptional()
+  @IsString()
+  precisions?: string;
+
+  @ApiPropertyOptional({ description: 'Statut de licence (0=non, 1=oui)', minimum: 0, maximum: 1 })
+  @IsOptional()
+  @IsInt()
+  @IsIn([0, 1])
+  licence?: number;
+
+  @ApiPropertyOptional({ description: 'ID du lien forum associé', minimum: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  lienForum?: number;
+
+  @ApiPropertyOptional({ description: 'Fiche complète (0=non, 1=oui)', minimum: 0, maximum: 1 })
+  @IsOptional()
+  @IsInt()
+  @IsIn([0, 1])
+  ficheComplete?: number;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

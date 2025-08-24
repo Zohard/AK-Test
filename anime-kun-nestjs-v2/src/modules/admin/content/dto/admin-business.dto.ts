@@ -47,6 +47,11 @@ export class CreateAdminBusinessDto {
   @IsString()
   notes?: string;
 
+  @ApiPropertyOptional({ description: 'Nombre de relations (-1 = non calculé)' })
+  @IsOptional()
+  @IsInt()
+  relations?: number;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsInt()
