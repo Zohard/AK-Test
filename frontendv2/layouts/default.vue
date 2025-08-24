@@ -5,6 +5,9 @@
       <slot />
     </main>
     <TheFooter />
+    
+    <!-- Global Notification Container -->
+    <NotificationContainer />
   </div>
 </template>
 

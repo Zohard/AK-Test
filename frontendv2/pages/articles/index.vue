@@ -227,9 +227,9 @@ const loadArticles = async () => {
     
     const response = await articlesAPI.fetchArticles(cleanFilters)
     
-    articles.value = response.articles
-    pagination.value = response.pagination
-    totalArticles.value = response.pagination.totalItems
+    articles.value = response.articles || []
+    pagination.value = response.pagination || { totalItems: 0, totalPages: 0, currentPage: 1, pageSize: 12 }
+    totalArticles.value = response.pagination?.totalItems || 0
     
   } catch (err: any) {
     error.value = articlesAPI.error.value || 'Erreur lors du chargement des articles'
@@ -263,11 +263,14 @@ const loadAuthors = async () => {
     const allArticles = await articlesAPI.fetchArticles({ limit: 100 })
     const uniqueAuthors = new Map()
     
-    allArticles.articles.forEach(article => {
-      if (article.author && !uniqueAuthors.has(article.author.idMember)) {
-        uniqueAuthors.set(article.author.idMember, article.author)
-      }
-    })
+    // Check if allArticles and articles array exist
+    if (allArticles && allArticles.articles && Array.isArray(allArticles.articles)) {
+      allArticles.articles.forEach(article => {
+        if (article.author && !uniqueAuthors.has(article.author.idMember)) {
+          uniqueAuthors.set(article.author.idMember, article.author)
+        }
+      })
+    }
     
     authors.value = Array.from(uniqueAuthors.values())
   } catch (err) {

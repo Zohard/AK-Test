@@ -515,6 +515,13 @@
         </div>
       </Transition>
     </div>
+
+    <!-- Logout Modal -->
+    <LogoutModal 
+      :is-open="showLogoutModal" 
+      @confirm="confirmLogout" 
+      @cancel="showLogoutModal = false" 
+    />
   </header>
 </template>
 
@@ -531,6 +538,7 @@ const showMobileMenu = ref(false)
 const showAnimeDropdown = ref(false)
 const avatarError = ref(false)
 const isScrolled = ref(false)
+const showLogoutModal = ref(false)
 
 // Mock notifications data - will be replaced with real data
 const notifications = ref<{id: number; message: string}[]>([])
@@ -610,13 +618,23 @@ onMounted(async () => {
   })
 })
 
-const handleLogout = async () => {
+const handleLogout = () => {
+  showUserMenu.value = false
+  showMobileMenu.value = false
+  showLogoutModal.value = true
+}
+
+const confirmLogout = async () => {
+  const { success } = useNotification()
+  
   try {
     await authStore.logout()
-    showUserMenu.value = false
+    showLogoutModal.value = false
+    success('Vous avez été déconnecté avec succès')
     navigateTo('/')
   } catch (error) {
     console.error('Logout error:', error)
+    showLogoutModal.value = false
   }
 }
 

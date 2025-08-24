@@ -75,5 +75,3 @@ export class AdminAnimesController {
     return this.service.remove(id);
   }
 }
-
-}
