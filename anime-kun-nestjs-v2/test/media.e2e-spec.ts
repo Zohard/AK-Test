@@ -56,6 +56,17 @@ describe('Media E2E', () => {
         });
     });
 
+    it('should reject non-numeric relatedId', () => {
+      const mockImageBuffer = Buffer.from('fake-image-data');
+
+      return request(app.getHttpServer())
+        .post('/api/media/upload')
+        .attach('file', mockImageBuffer, 'test.jpg')
+        .field('type', 'anime')
+        .field('relatedId', 'abc')
+        .expect(400);
+    });
+
     it('should reject invalid file type', () => {
       const mockTextFile = Buffer.from('text content');
 
