@@ -80,6 +80,13 @@ frontendv2/public/images/
 *.sql.gz
 discourse_*.sql
 
+# Project planning and roadmap files
+ADMIN_FEATURES_ROADMAP.md
+PRIORITY_MATRIX.md
+STAFF_MANAGEMENT_ARCHITECTURE.md
+*ROADMAP*.md
+*roadmap*.md
+
 # Backup files
 backups/
 *.backup

@@ -30,7 +30,7 @@ export const useSEO = () => {
   
   const defaultSiteName = 'AK9 - Anime & Manga Community'
   const defaultLocale = 'fr_FR'
-  const baseUrl = config.public.siteUrl || 'https://anime-kun.com'
+  const baseUrl = config.public.siteUrl || (process.client ? window.location.origin : '')
 
   const setPageSEO = (seoConfig: SEOConfig) => {
     const {

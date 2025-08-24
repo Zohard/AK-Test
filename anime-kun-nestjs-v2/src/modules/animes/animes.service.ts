@@ -8,6 +8,7 @@ import { BaseContentService } from '../../shared/services/base-content.service';
 import { CreateAnimeDto } from './dto/create-anime.dto';
 import { UpdateAnimeDto } from './dto/update-anime.dto';
 import { AnimeQueryDto } from './dto/anime-query.dto';
+import { RelatedContentItem, RelationsResponse } from '../shared/types/relations.types';
 
 @Injectable()
 export class AnimesService extends BaseContentService<
@@ -385,29 +386,99 @@ export class AnimesService extends BaseContentService<
 
   // Use inherited autocomplete() method
 
-  async getAnimeRelations(id: number) {
-    // First check if anime exists
-    const anime = await this.prisma.akAnime.findUnique({
-      where: { idAnime: id, statut: 1 },
-      select: { idAnime: true },
-    });
+  async getAnimeRelations(id: number): Promise<RelationsResponse> {
+    try {
+      console.log(`Starting getAnimeRelations for anime ID: ${id}`);
+      
+      // First check if anime exists
+      const anime = await this.prisma.akAnime.findUnique({
+        where: { idAnime: id, statut: 1 },
+        select: { idAnime: true },
+      });
 
-    if (!anime) {
-      throw new NotFoundException('Anime introuvable');
+      if (!anime) {
+        throw new NotFoundException('Anime introuvable');
+      }
+      console.log(`Anime ${id} exists and is validated`);
+
+      // Get relations where this anime is the source using raw SQL
+      console.log(`Querying relations for: anime${id}`);
+      const relations = await this.prisma.$queryRaw`
+        SELECT id_relation, id_fiche_depart, id_anime, id_manga 
+        FROM ak_fiche_to_fiche 
+        WHERE id_fiche_depart = ${`anime${id}`}
+      ` as any[];
+      
+      console.log(`Found ${relations.length} relations:`, relations);
+
+      const relatedContent: RelatedContentItem[] = [];
+
+      // Process each relation to get the actual content
+      for (const relation of relations) {
+        if (relation.id_anime && relation.id_anime > 0) {
+          // Related anime
+          const relatedAnime = await this.prisma.akAnime.findUnique({
+            where: { idAnime: relation.id_anime, statut: 1 },
+            select: {
+              idAnime: true,
+              titre: true,
+              image: true,
+              annee: true,
+              moyenneNotes: true,
+              niceUrl: true,
+            },
+          });
+          
+          if (relatedAnime) {
+            relatedContent.push({
+              id: relatedAnime.idAnime,
+              type: 'anime',
+              title: relatedAnime.titre,
+              image: relatedAnime.image,
+              year: relatedAnime.annee,
+              rating: relatedAnime.moyenneNotes,
+              niceUrl: relatedAnime.niceUrl,
+              relationType: 'related', // Default since we're not selecting type_relation
+            });
+          }
+        } else if (relation.id_manga && relation.id_manga > 0) {
+          // Related manga
+          const relatedManga = await this.prisma.akManga.findUnique({
+            where: { idManga: relation.id_manga, statut: 1 },
+            select: {
+              idManga: true,
+              titre: true,
+              image: true,
+              annee: true,
+              moyenneNotes: true,
+              niceUrl: true,
+            },
+          });
+          
+          if (relatedManga) {
+            relatedContent.push({
+              id: relatedManga.idManga,
+              type: 'manga',
+              title: relatedManga.titre,
+              image: relatedManga.image,
+              year: relatedManga.annee,
+              rating: relatedManga.moyenneNotes,
+              niceUrl: relatedManga.niceUrl,
+              relationType: 'related', // Default since we're not selecting type_relation
+            });
+          }
+        }
+      }
+
+      return {
+        anime_id: id,
+        relations: relatedContent,
+        total: relatedContent.length,
+      };
+    } catch (error) {
+      console.error('Error in getAnimeRelations:', error);
+      throw error;
     }
-
-    // Get relations using raw SQL for now
-    const relations = await this.prisma.$queryRaw`
-      SELECT COUNT(*) as count, id_fiche_depart
-      FROM ak_fiche_to_fiche 
-      WHERE id_fiche_depart = ${'anime' + id}
-      GROUP BY id_fiche_depart
-    `;
-
-    return {
-      anime_id: id,
-      relations,
-    };
   }
 
   async getAnimeStaff(id: number) {

@@ -1,4 +1,5 @@
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig()
   const query = getQuery(event)
   
   try {
@@ -15,7 +16,7 @@ export default defineEventHandler(async (event) => {
     
     console.log('Cleaned query:', cleanQuery)
     
-    const response = await $fetch('http://localhost:3003/api/articles', {
+    const response = await $fetch(`${config.public.apiBase}/api/articles`, {
       query: cleanQuery
     })
     

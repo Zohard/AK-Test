@@ -143,7 +143,12 @@ export class AnimesController {
   @ApiResponse({ status: 200, description: 'Liste des relations' })
   @ApiResponse({ status: 404, description: 'Anime introuvable' })
   async getAnimeRelations(@Param('id', ParseIntPipe) id: number) {
-    return this.animesService.getAnimeRelations(id);
+    try {
+      return await this.animesService.getAnimeRelations(id);
+    } catch (error) {
+      console.error('Controller error in getAnimeRelations:', error);
+      throw error;
+    }
   }
 
   @Get(':id/staff')

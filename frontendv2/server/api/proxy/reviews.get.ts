@@ -1,10 +1,11 @@
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig()
   const query = getQuery(event)
   
   try {
     console.log('Proxying reviews request with query:', query)
     
-    const response = await $fetch('http://localhost:3003/api/reviews', {
+    const response = await $fetch(`${config.public.apiBase}/api/reviews`, {
       query
     })
     

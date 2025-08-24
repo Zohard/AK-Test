@@ -1,10 +1,11 @@
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig()
   const slug = getRouterParam(event, 'slug')
   
   try {
     console.log('Proxying article by slug request for:', slug)
     
-    const response = await $fetch(`http://localhost:3003/api/articles/slug/${slug}`)
+    const response = await $fetch(`${config.public.apiBase}/api/articles/slug/${slug}`)
     
     console.log('Article by slug proxy successful, returning data')
     return response

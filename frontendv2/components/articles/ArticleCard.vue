@@ -1,12 +1,16 @@
 <template>
   <article class="article-card group relative bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 dark:border-gray-700">
     <!-- Article Image -->
-    <div class="relative aspect-video overflow-hidden">
-      <div 
-        v-if="article.img || article.imgunebig"
-        :style="{ backgroundImage: `url(${articleImage})` }"
-        class="w-full h-full bg-cover bg-center bg-no-repeat group-hover:scale-105 transition-transform duration-300"
-      ></div>
+    <div class="relative aspect-[16/6.3] overflow-hidden">
+      <SmartImage
+        v-if="articleImage"
+        :src="articleImage as string"
+        :alt="article.titre"
+        aspect-ratio="16/6.3"
+        container-class="w-full h-full"
+        image-class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 motion-reduce:transition-none motion-reduce:transform-none"
+        :placeholder-icon="'heroicons:newspaper'"
+      />
       <div 
         v-else 
         class="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center"
@@ -15,10 +19,10 @@
       </div>
       
       <!-- Article overlay on hover -->
-      <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+      <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 motion-reduce:transition-none flex items-center justify-center opacity-0 group-hover:opacity-100">
         <button
           @click="handleViewClick"
-          class="px-6 py-3 bg-white text-gray-900 rounded-lg font-medium shadow-xl transform scale-95 group-hover:scale-100 transition-all duration-200 hover:bg-gray-50"
+          class="px-7 py-3 bg-white text-gray-900 rounded-full font-medium shadow-xl transform scale-95 group-hover:scale-100 transition-all duration-200 hover:bg-gray-50"
         >
           <Icon name="heroicons:eye" class="w-4 h-4 inline mr-2" />
           Lire l'article

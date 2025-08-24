@@ -13,6 +13,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { MediaModule } from './modules/media/media.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ArticlesModule } from './modules/articles/articles.module';
+import { SeasonsModule } from './modules/seasons/seasons.module';
 import { PrismaService } from './shared/services/prisma.service';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
@@ -35,6 +36,7 @@ import jwtConfig from './config/jwt.config';
     MediaModule,
     NotificationsModule,
     ArticlesModule,
+    SeasonsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

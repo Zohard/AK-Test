@@ -45,10 +45,23 @@ export interface Anime {
   moyenneNotes?: number // Note: this is a float, not moyenneNotes
   dateAjout?: string // Formatted by API as ISO string
   addedDate?: string // API formatted field
+  format?: string // Série TV, Film, ONA, OAV
+  genres?: string[]
+  duration?: number
+  status?: string
   // Relations
   reviews?: Review[]
   episodes?: AnimeEpisode[]
-  businessRelations?: BusinessToAnime[]
+}
+
+// Season types
+export interface Season {
+  id_saison: number
+  saison: number // 1=hiver, 2=printemps, 3=été, 4=automne
+  annee: number
+  statut: number
+  nom_saison: string
+  json_data?: string | object // Contains anime IDs for the season
 }
 
 export interface AnimeEpisode {

@@ -319,4 +319,19 @@ export class AdminContentController {
   ) {
     return this.adminContentService.removeContentTag(id, type, tagId);
   }
+
+  @Get('tags/search')
+  @ApiOperation({ summary: 'Search tags for autocomplete' })
+  @ApiQuery({ name: 'q', required: true })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  @ApiQuery({ name: 'categorie', required: false, description: 'Filter by category (e.g., Genre)' })
+  async searchTags(
+    @Query('q') q: string,
+    @Query('limit') limit?: string,
+    @Query('categorie') categorie?: string,
+  ) {
+    if (!q || !q.trim()) return { items: [] };
+    const lim = limit ? parseInt(limit, 10) : 10;
+    return this.adminContentService.searchTags(q.trim(), lim, categorie);
+  }
 }

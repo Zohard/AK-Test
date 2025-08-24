@@ -200,7 +200,7 @@ const showAllPlatforms = ref(false)
 const shareStats = ref<Record<string, number> | null>(null)
 
 // Computed
-const baseUrl = computed(() => config.public.siteUrl || 'https://anime-kun.com')
+const baseUrl = computed(() => config.public.siteUrl || (process.client ? window.location.origin : ''))
 const fullUrl = computed(() => props.shareData.url || `${baseUrl.value}${route.fullPath}`)
 
 const showNativeShare = computed(() => {

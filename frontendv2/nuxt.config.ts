@@ -11,7 +11,9 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.API_BASE_URL || 'http://localhost:3003',
-      forumUrl: process.env.FORUM_URL || 'http://localhost:8083'
+      forumUrl: process.env.FORUM_URL || 'http://localhost:8083',
+      siteUrl: process.env.SITE_URL || '',
+      enablePlayground: process.env.ENABLE_PLAYGROUND === 'true'
     }
   },
   ssr: false,
@@ -32,9 +34,7 @@ export default defineNuxtConfig({
       port: 3000,
       host: '0.0.0.0'
     },
-    define: {
-      __NUXT_BASE__: '"http://localhost:3000"'
-    }
+    define: {}
   },
   colorMode: {
     preference: 'system',
@@ -68,6 +68,8 @@ export default defineNuxtConfig({
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
       ]
-    }
+    },
+    pageTransition: { name: 'page', mode: 'out-in' },
+    layoutTransition: { name: 'layout', mode: 'out-in' }
   }
 })
