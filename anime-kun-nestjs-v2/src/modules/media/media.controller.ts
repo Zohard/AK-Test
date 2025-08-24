@@ -67,7 +67,7 @@ export class MediaController {
     }
 
     const parsedRelatedId = relatedId ? parseInt(relatedId, 10) : undefined;
-    if (relatedId && parsedRelatedId && isNaN(parsedRelatedId)) {
+    if (relatedId && Number.isNaN(parsedRelatedId!)) {
       throw new BadRequestException('Invalid relatedId. Must be a number');
     }
 
