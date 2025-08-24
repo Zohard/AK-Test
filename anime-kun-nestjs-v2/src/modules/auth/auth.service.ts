@@ -111,7 +111,7 @@ export class AuthService {
       username: user.memberName,
       email: user.emailAddress,
       isAdmin:
-        user.idGroup === 1 || user.idMember === 1 || user.idMember === 17667,
+        user.idGroup === 1 || user.idMember === 1,
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -348,7 +348,7 @@ export class AuthService {
       posts: user.posts,
       avatar: user.avatar,
       isAdmin:
-        user.idGroup === 1 || user.idMember === 1 || user.idMember === 17667,
+        user.idGroup === 1 || user.idMember === 1,
     };
   }
 }

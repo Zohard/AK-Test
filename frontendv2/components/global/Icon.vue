@@ -57,152 +57,130 @@ const iconComponent = computed(() => {
     const variant = props.variant === 'mini' ? '20' : '24'
     const style = props.variant === 'solid' ? 'solid' : 'outline'
     
-    // Comprehensive icon mapping with all variants
+    // Minimal icon mapping - only icons actually used in the codebase
     const iconMap: Record<string, any> = {
-      // Media & Entertainment
-      'film': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/FilmIcon`)),
-      'play': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/PlayIcon`)),
-      'pause': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/PauseIcon`)),
-      'stop': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/StopIcon`)),
-      'tv': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/TvIcon`)),
-      'music': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/MusicalNoteIcon`)),
-      'camera': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/CameraIcon`)),
-      'photo': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/PhotoIcon`)),
-      'video': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/VideoCameraIcon`)),
+      // Navigation & Arrows
+      'arrow-left': () => import('@heroicons/vue/24/outline/ArrowLeftIcon.js'),
+      'arrow-right': () => import('@heroicons/vue/24/outline/ArrowRightIcon.js'),
+      'arrow-up': () => import('@heroicons/vue/24/outline/ArrowUpIcon.js'),
+      'chevron-left': () => import('@heroicons/vue/24/outline/ChevronLeftIcon.js'),
+      'chevron-right': () => import('@heroicons/vue/24/outline/ChevronRightIcon.js'),
+      'chevron-up': () => import('@heroicons/vue/24/outline/ChevronUpIcon.js'),
+      'chevron-down': () => import('@heroicons/vue/24/outline/ChevronDownIcon.js'),
+      'chevron-up-down': () => import('@heroicons/vue/24/outline/ChevronUpDownIcon.js'),
       
-      // Rating & Feedback
-      'star': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/StarIcon`)),
-      'heart': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/HeartIcon`)),
-      'thumbs-up': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/HandThumbUpIcon`)),
-      'thumbs-down': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/HandThumbDownIcon`)),
-      'fire': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/FireIcon`)),
-      'lightning-bolt': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/BoltIcon`)),
-      
-      // Navigation & Actions
-      'chevron-left': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ChevronLeftIcon`)),
-      'chevron-right': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ChevronRightIcon`)),
-      'chevron-up': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ChevronUpIcon`)),
-      'chevron-down': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ChevronDownIcon`)),
-      'arrow-left': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ArrowLeftIcon`)),
-      'arrow-right': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ArrowRightIcon`)),
-      'arrow-up': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ArrowUpIcon`)),
-      'arrow-down': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ArrowDownIcon`)),
-      'plus': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/PlusIcon`)),
-      'minus': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/MinusIcon`)),
-      'x-mark': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/XMarkIcon`)),
-      'check': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/CheckIcon`)),
-      
-      // Social & Sharing
-      'share': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ShareIcon`)),
-      'link': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/LinkIcon`)),
-      'at-symbol': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/AtSymbolIcon`)),
-      'chat-bubble-left': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ChatBubbleLeftIcon`)),
-      'chat-bubble-left-right': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ChatBubbleLeftRightIcon`)),
-      'rss': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/RssIcon`)),
-      
-      // Content & Reading
-      'book-open': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/BookOpenIcon`)),
-      'document-text': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/DocumentTextIcon`)),
-      'newspaper': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/NewspaperIcon`)),
-      'academic-cap': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/AcademicCapIcon`)),
-      'pencil': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/PencilIcon`)),
-      'pencil-square': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/PencilSquareIcon`)),
+      // Media & Content
+      'film': () => import('@heroicons/vue/24/outline/FilmIcon.js'),
+      'tv': () => import('@heroicons/vue/24/outline/TvIcon.js'),
+      'photo': () => import('@heroicons/vue/24/outline/PhotoIcon.js'),
+      'book-open': () => import('@heroicons/vue/24/outline/BookOpenIcon.js'),
+      'play': () => import('@heroicons/vue/24/outline/PlayIcon.js'),
+      'document-text': () => import('@heroicons/vue/24/outline/DocumentTextIcon.js'),
       
       // User & Account
-      'user': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/UserIcon`)),
-      'user-circle': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/UserCircleIcon`)),
-      'user-group': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/UserGroupIcon`)),
-      'user-plus': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/UserPlusIcon`)),
-      'identification': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/IdentificationIcon`)),
+      'user': () => import('@heroicons/vue/24/outline/UserIcon.js'),
+      'user-circle': () => import('@heroicons/vue/24/outline/UserCircleIcon.js'),
+      'user-plus': () => import('@heroicons/vue/24/outline/UserPlusIcon.js'),
+      'user-minus': () => import('@heroicons/vue/24/outline/UserMinusIcon.js'),
       
-      // Interface & System
-      'bars-3': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/Bars3Icon`)),
-      'ellipsis-horizontal': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/EllipsisHorizontalIcon`)),
-      'ellipsis-vertical': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/EllipsisVerticalIcon`)),
-      'magnifying-glass': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/MagnifyingGlassIcon`)),
-      'funnel': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/FunnelIcon`)),
-      'adjustments-horizontal': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/AdjustmentsHorizontalIcon`)),
-      'cog-6-tooth': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/Cog6ToothIcon`)),
-      'cog-8-tooth': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/Cog8ToothIcon`)),
+      // Interactions
+      'heart': () => import('@heroicons/vue/24/outline/HeartIcon.js'),
+      'heart-solid': () => import('@heroicons/vue/24/solid/HeartIcon.js'),
+      'star': () => import('@heroicons/vue/24/outline/StarIcon.js'),
+      'star-solid': () => import('@heroicons/vue/24/solid/StarIcon.js'),
+      'eye': () => import('@heroicons/vue/24/outline/EyeIcon.js'),
+      'eye-slash': () => import('@heroicons/vue/24/outline/EyeSlashIcon.js'),
+      'share': () => import('@heroicons/vue/24/outline/ShareIcon.js'),
+      'bookmark': () => import('@heroicons/vue/24/outline/BookmarkIcon.js'),
+      'bookmark-solid': () => import('@heroicons/vue/24/solid/BookmarkIcon.js'),
       
-      // Notifications & Status
-      'bell': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/BellIcon`)),
-      'bell-alert': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/BellAlertIcon`)),
-      'exclamation-triangle': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ExclamationTriangleIcon`)),
-      'exclamation-circle': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ExclamationCircleIcon`)),
-      'information-circle': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/InformationCircleIcon`)),
-      'check-circle': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/CheckCircleIcon`)),
-      'x-circle': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/XCircleIcon`)),
-      'question-mark-circle': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/QuestionMarkCircleIcon`)),
+      // Interface Elements
+      'x-mark': () => import('@heroicons/vue/24/outline/XMarkIcon.js'),
+      'plus': () => import('@heroicons/vue/24/outline/PlusIcon.js'),
+      'magnifying-glass': () => import('@heroicons/vue/24/outline/MagnifyingGlassIcon.js'),
+      'funnel': () => import('@heroicons/vue/24/outline/FunnelIcon.js'),
+      'bars-3': () => import('@heroicons/vue/24/outline/Bars3Icon.js'),
+      'ellipsis-horizontal': () => import('@heroicons/vue/24/outline/EllipsisHorizontalIcon.js'),
+      'ellipsis-vertical': () => import('@heroicons/vue/24/outline/EllipsisVerticalIcon.js'),
+      'cog-6-tooth': () => import('@heroicons/vue/24/outline/Cog6ToothIcon.js'),
+      
+      // Status & Alerts
+      'check': () => import('@heroicons/vue/24/outline/CheckIcon.js'),
+      'check-circle': () => import('@heroicons/vue/24/outline/CheckCircleIcon.js'),
+      'check-badge-solid': () => import('@heroicons/vue/24/solid/CheckBadgeIcon.js'),
+      'exclamation-triangle': () => import('@heroicons/vue/24/outline/ExclamationTriangleIcon.js'),
+      'exclamation-circle': () => import('@heroicons/vue/24/outline/ExclamationCircleIcon.js'),
+      'information-circle': () => import('@heroicons/vue/24/outline/InformationCircleIcon.js'),
+      'x-circle': () => import('@heroicons/vue/24/outline/XCircleIcon.js'),
       
       // Theme & Display
-      'sun': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/SunIcon`)),
-      'moon': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/MoonIcon`)),
-      'computer-desktop': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ComputerDesktopIcon`)),
-      'device-phone-mobile': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/DevicePhoneMobileIcon`)),
-      'device-tablet': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/DeviceTabletIcon`)),
-      'eye': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/EyeIcon`)),
-      'eye-slash': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/EyeSlashIcon`)),
+      'sun': () => import('@heroicons/vue/24/outline/SunIcon.js'),
+      'moon': () => import('@heroicons/vue/24/outline/MoonIcon.js'),
+      'computer-desktop': () => import('@heroicons/vue/24/outline/ComputerDesktopIcon.js'),
       
-      // Tags & Categories
-      'tag': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/TagIcon`)),
-      'hashtag': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/HashtagIcon`)),
-      'bookmark': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/BookmarkIcon`)),
-      'folder': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/FolderIcon`)),
-      'folder-open': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/FolderOpenIcon`)),
-      'archive-box': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ArchiveBoxIcon`)),
-      
-      // Actions & Controls
-      'arrow-right-on-rectangle': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ArrowRightOnRectangleIcon`)),
-      'arrow-left-on-rectangle': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ArrowLeftOnRectangleIcon`)),
-      'power': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/PowerIcon`)),
-      'refresh': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ArrowPathIcon`)),
-      'download': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ArrowDownTrayIcon`)),
-      'upload': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ArrowUpTrayIcon`)),
-      'trash': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/TrashIcon`)),
-      
-      // Lists & Organization
-      'list-bullet': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ListBulletIcon`)),
-      'queue-list': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/QueueListIcon`)),
-      'rectangle-stack': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/RectangleStackIcon`)),
-      'squares-2x2': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/Squares2X2Icon`)),
-      'squares-plus': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/SquaresPlusIcon`)),
-      'table-cells': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/TableCellsIcon`)),
-      
-      // Communication & Messages
-      'envelope': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/EnvelopeIcon`)),
-      'envelope-open': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/EnvelopeOpenIcon`)),
-      'inbox': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/InboxIcon`)),
-      'inbox-arrow-down': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/InboxArrowDownIcon`)),
-      'paper-airplane': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/PaperAirplaneIcon`)),
-      'megaphone': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/MegaphoneIcon`)),
-      'speaker-wave': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/SpeakerWaveIcon`)),
+      // Communication
+      'chat-bubble-left': () => import('@heroicons/vue/24/outline/ChatBubbleLeftIcon.js'),
+      'chat-bubble-left-ellipsis': () => import('@heroicons/vue/24/outline/ChatBubbleLeftEllipsisIcon.js'),
+      'chat-bubble-oval-left': () => import('@heroicons/vue/24/outline/ChatBubbleOvalLeftIcon.js'),
+      'at-symbol': () => import('@heroicons/vue/24/outline/AtSymbolIcon.js'),
       
       // Time & Calendar
-      'calendar': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/CalendarIcon`)),
-      'calendar-days': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/CalendarDaysIcon`)),
-      'clock': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/ClockIcon`)),
-      'hourglass': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/HourglassIcon`)),
-      'stopwatch': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/StopwatchIcon`)),
+      'calendar': () => import('@heroicons/vue/24/outline/CalendarIcon.js'),
+      'calendar-days': () => import('@heroicons/vue/24/outline/CalendarDaysIcon.js'),
+      'clock': () => import('@heroicons/vue/24/outline/ClockIcon.js'),
       
-      // Code & Development
-      'code-bracket': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/CodeBracketIcon`)),
-      'code-bracket-square': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/CodeBracketSquareIcon`)),
-      'command-line': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/CommandLineIcon`)),
-      'bug-ant': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/BugAntIcon`)),
-      'cpu-chip': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/CpuChipIcon`)),
+      // Actions
+      'arrow-path': () => import('@heroicons/vue/24/outline/ArrowPathIcon.js'),
+      'arrow-down-tray': () => import('@heroicons/vue/24/outline/ArrowDownTrayIcon.js'),
+      'arrow-top-right-on-square': () => import('@heroicons/vue/24/outline/ArrowTopRightOnSquareIcon.js'),
+      'link': () => import('@heroicons/vue/24/outline/LinkIcon.js'),
+      'printer': () => import('@heroicons/vue/24/outline/PrinterIcon.js'),
       
-      // Maps & Location
-      'map': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/MapIcon`)),
-      'map-pin': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/MapPinIcon`)),
-      'globe-alt': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/GlobeAltIcon`)),
-      'building-office': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/BuildingOfficeIcon`)),
-      'home': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/HomeIcon`)),
-      // Note: HomeModernIcon might not exist in all variants, using regular HomeIcon as fallback
-      'home-modern': defineAsyncComponent(() => import(`@heroicons/vue/${variant}/${style}/HomeIcon`))
+      // Tags & Organization
+      'tag': () => import('@heroicons/vue/24/outline/TagIcon.js'),
+      'hashtag': () => import('@heroicons/vue/24/outline/HashtagIcon.js'),
+      'folder': () => import('@heroicons/vue/24/outline/FolderIcon.js'),
+      
+      // Location & Building
+      'globe-alt': () => import('@heroicons/vue/24/outline/GlobeAltIcon.js'),
+      'building-office': () => import('@heroicons/vue/24/outline/BuildingOfficeIcon.js'),
+      'home': () => import('@heroicons/vue/24/outline/HomeIcon.js'),
+      'map-pin': () => import('@heroicons/vue/24/outline/MapPinIcon.js'),
+      
+      // Development
+      'code-bracket': () => import('@heroicons/vue/24/outline/CodeBracketIcon.js'),
+      'command-line': () => import('@heroicons/vue/24/outline/CommandLineIcon.js'),
+      
+      // Sorting & Filtering
+      'bars-arrow-down': () => import('@heroicons/vue/24/outline/BarsArrowDownIcon.js'),
+      
+      // Account Actions
+      'arrow-right-on-rectangle': () => import('@heroicons/vue/24/outline/ArrowRightOnRectangleIcon.js'),
+      'key': () => import('@heroicons/vue/24/outline/KeyIcon.js'),
+      'identification': () => import('@heroicons/vue/24/outline/IdentificationIcon.js'),
+      'envelope': () => import('@heroicons/vue/24/outline/EnvelopeIcon.js'),
+      'lock-closed': () => import('@heroicons/vue/24/outline/LockClosedIcon.js'),
+      'phone': () => import('@heroicons/vue/24/outline/PhoneIcon.js'),
+      
+      // Admin & Management
+      'pencil-square': () => import('@heroicons/vue/24/outline/PencilSquareIcon.js'),
+      'trash': () => import('@heroicons/vue/24/outline/TrashIcon.js'),
+      'adjustments-horizontal': () => import('@heroicons/vue/24/outline/AdjustmentsHorizontalIcon.js'),
+      'squares-2x2': () => import('@heroicons/vue/24/outline/Squares2X2Icon.js'),
+      'list-bullet': () => import('@heroicons/vue/24/outline/ListBulletIcon.js'),
+      'table-cells': () => import('@heroicons/vue/24/outline/TableCellsIcon.js')
     }
     
-    return iconMap[iconName] || null
+    try {
+      const iconImport = iconMap[iconName]
+      if (iconImport) {
+        return defineAsyncComponent(iconImport)
+      }
+    } catch (error) {
+      console.warn(`Icon not found: ${iconName}`)
+    }
+    
+    return null
   }
   
   return null

@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsNotEmpty, IsOptional, IsString, Min, Max, IsIn } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateAdminAnimeDto {
   @ApiProperty({ description: 'Titre de l\'anime' })
@@ -114,12 +115,14 @@ export class UpdateAdminAnimeDto {
 export class AdminAnimeListQueryDto {
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   page?: number = 1;
 
   @ApiPropertyOptional({ default: 20 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)
@@ -132,6 +135,7 @@ export class AdminAnimeListQueryDto {
 
   @ApiPropertyOptional({ description: 'Filtrer par année' })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   annee?: number;
 
@@ -142,6 +146,7 @@ export class AdminAnimeListQueryDto {
 
   @ApiPropertyOptional({ description: 'Filtrer par statut', enum: [0, 1, 2] })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @IsIn([0, 1, 2])
   statut?: number;

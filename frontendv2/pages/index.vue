@@ -1,6 +1,14 @@
 <template>
   <div class="main-content">
-    <SimpleHeroBanner />
+    <!-- Main layout with carousel and forum panel -->
+    <div class="hero-layout">
+      <div class="hero-carousel-section">
+        <ModernHeroBanner />
+      </div>
+      <div class="forum-panel-section">
+        <ForumPanel />
+      </div>
+    </div>
     
     <section class="section">
       <div class="section-header">
@@ -83,6 +91,8 @@
 import type { Anime, ApiResponse } from '~/types'
 import type { ReviewData } from '~/composables/useReviewsAPI'
 import ReviewCard from '~/components/reviews/ReviewCard.vue'
+import ModernHeroBanner from '~/components/ModernHeroBanner.vue'
+import ForumPanel from '~/components/ForumPanel.vue'
 
 // Page metadata
 useHead({
@@ -108,72 +118,134 @@ const reviewsLoading = ref(true)
 const featuredAnimes = ref<Anime[]>([])
 const animesLoading = ref(true)
 
+// Component lifecycle and cleanup
+const isMounted = ref(false)
+const abortController = ref<AbortController | null>(null)
+
 // Load initial data
 onMounted(async () => {
-  await Promise.all([
-    loadStats(),
-    loadCritiques(),
-    loadFeaturedAnimes()
-  ])
+  isMounted.value = true
+  abortController.value = new AbortController()
+  
+  try {
+    await Promise.all([
+      loadStats(),
+      loadCritiques(),
+      loadFeaturedAnimes()
+    ])
+  } catch (error) {
+    if (error.name !== 'AbortError') {
+      console.error('Error loading homepage data:', error)
+    }
+  }
+})
+
+onBeforeUnmount(() => {
+  isMounted.value = false
+  if (abortController.value) {
+    abortController.value.abort()
+    abortController.value = null
+  }
 })
 
 const loadStats = async () => {
+  if (!isMounted.value || !abortController.value) return
+  
   try {
-    // Get stats from APIs
+    const signal = abortController.value.signal
+    
+    // Get stats from APIs with abort signal
     const [animesResponse, mangasResponse, reviewsResponse] = await Promise.allSettled([
       fetchAnimes({ limit: 1 }),
-      $fetch(`${useRuntimeConfig().public.apiBase}/api/mangas`, { params: { limit: 1 } }),
-      $fetch(`${useRuntimeConfig().public.apiBase}/api/reviews/count`)
+      $fetch(`${useRuntimeConfig().public.apiBase}/api/mangas`, { 
+        params: { limit: 1 },
+        signal 
+      }),
+      $fetch(`${useRuntimeConfig().public.apiBase}/api/reviews/count`, { 
+        signal 
+      })
     ])
+    
+    // Check if component is still mounted before updating reactive state
+    if (!isMounted.value || signal.aborted) return
     
     stats.value = {
       animes: animesResponse.status === 'fulfilled' ? ((animesResponse.value as ApiResponse<Anime[]>)?.pagination?.total || 0) : 0,
       mangas: mangasResponse.status === 'fulfilled' ? ((mangasResponse.value as ApiResponse<any[]>)?.pagination?.total || 0) : 0,
       reviews: reviewsResponse.status === 'fulfilled' ? ((reviewsResponse.value as any)?.count || 0) : 0
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === 'AbortError' || !isMounted.value) return
+    
     console.error('Error loading stats:', error)
-    stats.value = {
-      animes: 0,
-      mangas: 0,
-      reviews: 0
+    if (isMounted.value) {
+      stats.value = {
+        animes: 0,
+        mangas: 0,
+        reviews: 0
+      }
     }
   }
 }
 
 const loadCritiques = async () => {
+  if (!isMounted.value || !abortController.value) return
+  
   try {
+    const signal = abortController.value.signal
+    
     const response = await fetchReviews({ 
       limit: 4,
       sortBy: 'dateCritique',
       sortOrder: 'desc'
     })
     
+    if (!isMounted.value || signal.aborted) return
+    
     const raw = (response as any).data || (response as any).reviews || []
     critiques.value = raw.map(normalizeReview)
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === 'AbortError' || !isMounted.value) return
+    
     console.error('Error loading critiques:', error)
-    critiques.value = []
+    if (isMounted.value) {
+      critiques.value = []
+    }
   } finally {
-    reviewsLoading.value = false
+    if (isMounted.value) {
+      reviewsLoading.value = false
+    }
   }
 }
 
 const loadFeaturedAnimes = async () => {
+  if (!isMounted.value || !abortController.value) return
+  
   try {
+    const signal = abortController.value.signal
+    
     const response = await fetchAnimes({ 
       limit: 3, 
       sortBy: 'titre', 
       sortOrder: 'asc' 
     }) as ApiResponse<Anime[]>
     
+    if (!isMounted.value || signal.aborted) return
+    
     if (response && response.animes) {
       featuredAnimes.value = response.animes
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === 'AbortError' || !isMounted.value) return
+    
     console.error('Error loading featured animes:', error)
+    if (isMounted.value) {
+      featuredAnimes.value = []
+    }
   } finally {
-    animesLoading.value = false
+    if (isMounted.value) {
+      animesLoading.value = false
+    }
   }
 }
 
@@ -230,3 +302,41 @@ const normalizeReview = (r: any): ReviewData => {
   }
 }
 </script>
+
+<style scoped>
+.hero-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.hero-carousel-section {
+  min-height: 500px;
+}
+
+.forum-panel-section {
+  min-height: 500px;
+}
+
+@media (max-width: 1024px) {
+  .hero-layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .hero-carousel-section {
+    min-height: 400px;
+  }
+  
+  .forum-panel-section {
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-carousel-section {
+    min-height: 300px;
+  }
+}
+</style>

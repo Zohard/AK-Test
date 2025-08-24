@@ -23,6 +23,7 @@ services:
     volumes:
       - ./src:/app/src:ro
       - ./prisma:/app/prisma:ro
+      - ak9project_nestjs_uploads:/app/uploads
     depends_on:
       - postgres
     networks:
@@ -67,6 +68,8 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  ak9project_nestjs_uploads:
+    external: true
 
 networks:
   anime-kun-network:

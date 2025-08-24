@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsNotEmpty, IsOptional, IsString, Min, Max, IsIn } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateAdminMangaDto {
   @ApiProperty({ description: 'Titre du manga' })
@@ -113,12 +114,14 @@ export class UpdateAdminMangaDto extends CreateAdminMangaDto {}
 export class AdminMangaListQueryDto {
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   page?: number = 1;
 
   @ApiPropertyOptional({ default: 20 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)
@@ -141,6 +144,7 @@ export class AdminMangaListQueryDto {
 
   @ApiPropertyOptional({ enum: [0, 1, 2] })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @IsIn([0, 1, 2])
   statut?: number;

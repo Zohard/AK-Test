@@ -35,9 +35,9 @@
         <div>
           <label class="block text-sm mb-1">Statut</label>
           <select v-model.number="form.statut" class="form-input w-full">
-            <option :value="0">Brouillon</option>
-            <option :value="1">Publié</option>
-            <option :value="2">Refusé</option>
+            <option :value="1">Affichée</option>
+            <option :value="2">En attente</option>
+            <option :value="0">Bloquée</option>
           </select>
         </div>
         <div>

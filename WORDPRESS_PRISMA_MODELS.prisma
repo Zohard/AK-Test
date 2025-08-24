@@ -1,0 +1,349 @@
+// Additional Prisma Models for WordPress-Equivalent CMS
+// Add these models to your main schema.prisma file
+
+// WordPress Options (Site Settings & Configuration)
+model WpOption {
+  optionId    BigInt  @id @default(autoincrement()) @map("option_id")
+  optionName  String  @unique @map("option_name") @db.VarChar(191)
+  optionValue String? @map("option_value") @db.Text
+  autoload    String  @default("yes") @map("autoload") @db.VarChar(20)
+
+  @@map("wp_options")
+  @@index([optionName], map: "wp_options_option_name")
+  @@index([autoload], map: "wp_options_autoload")
+}
+
+// WordPress User Meta (User Preferences & Custom Fields)
+model WpUserMeta {
+  umetaId   BigInt  @id @default(autoincrement()) @map("umeta_id")
+  userId    BigInt  @map("user_id") @default(0)
+  metaKey   String? @map("meta_key") @db.VarChar(255)
+  metaValue String? @map("meta_value") @db.Text
+
+  // Relations
+  user WpUser @relation(fields: [userId], references: [ID], onDelete: Cascade)
+
+  @@map("wp_usermeta")
+  @@index([userId], map: "wp_usermeta_user_id")
+  @@index([metaKey], map: "wp_usermeta_meta_key")
+  @@index([userId, metaKey], map: "wp_usermeta_user_id_meta_key")
+}
+
+// WordPress Comment Meta (Comment Metadata)
+model WpCommentMeta {
+  metaId    BigInt  @id @default(autoincrement()) @map("meta_id")
+  commentId BigInt  @map("comment_id") @default(0)
+  metaKey   String? @map("meta_key") @db.VarChar(255)
+  metaValue String? @map("meta_value") @db.Text
+
+  // Relations
+  comment WpComment @relation(fields: [commentId], references: [commentID], onDelete: Cascade)
+
+  @@map("wp_commentmeta")
+  @@index([commentId], map: "wp_commentmeta_comment_id")
+  @@index([metaKey], map: "wp_commentmeta_meta_key")
+}
+
+// WordPress Links (Link Manager - Optional)
+model WpLink {
+  linkId          BigInt   @id @default(autoincrement()) @map("link_id")
+  linkUrl         String   @default("") @map("link_url") @db.VarChar(255)
+  linkName        String   @default("") @map("link_name") @db.VarChar(255)
+  linkImage       String   @default("") @map("link_image") @db.VarChar(255)
+  linkTarget      String   @default("") @map("link_target") @db.VarChar(25)
+  linkDescription String   @default("") @map("link_description") @db.VarChar(255)
+  linkVisible     String   @default("Y") @map("link_visible") @db.VarChar(20)
+  linkOwner       BigInt   @default(1) @map("link_owner")
+  linkRating      Int      @default(0) @map("link_rating")
+  linkUpdated     DateTime @default(dbgenerated("'1970-01-01 00:00:01'::timestamp")) @map("link_updated") @db.Timestamp
+  linkRel         String   @default("") @map("link_rel") @db.VarChar(255)
+  linkNotes       String   @map("link_notes") @db.Text
+  linkRss         String   @default("") @map("link_rss") @db.VarChar(255)
+
+  @@map("wp_links")
+}
+
+// WordPress Capabilities (Advanced User Permissions)
+model WpCapability {
+  capId      Int      @id @default(autoincrement()) @map("cap_id")
+  roleName   String   @map("role_name") @db.VarChar(50)
+  capability String   @db.VarChar(100)
+  granted    Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp
+
+  @@unique([roleName, capability])
+  @@map("wp_capabilities")
+}
+
+// WordPress Themes (Theme Management)
+model WpTheme {
+  themeId             Int      @id @default(autoincrement()) @map("theme_id")
+  themeName           String   @unique @map("theme_name") @db.VarChar(100)
+  themeSlug           String   @unique @map("theme_slug") @db.VarChar(100)
+  themeVersion        String   @default("1.0.0") @map("theme_version") @db.VarChar(20)
+  themeAuthor         String?  @map("theme_author") @db.VarChar(100)
+  themeAuthorUri      String?  @map("theme_author_uri") @db.VarChar(255)
+  themeDescription    String?  @map("theme_description") @db.Text
+  themeUri            String?  @map("theme_uri") @db.VarChar(255)
+  template            String?  @db.VarChar(100) // Parent theme for child themes
+  stylesheet          String?  @db.VarChar(100)
+  screenshot          String?  @db.VarChar(255)
+  tags                String?  @db.Text // JSON array of theme tags
+  requiresWp          String?  @map("requires_wp") @db.VarChar(20)
+  testedWp            String?  @map("tested_wp") @db.VarChar(20)
+  requiresPhp         String?  @map("requires_php") @db.VarChar(20)
+  isActive            Boolean  @default(false) @map("is_active")
+  isChildTheme        Boolean  @default(false) @map("is_child_theme")
+  themePath           String?  @map("theme_path") @db.VarChar(255)
+  customizerSettings  Json?    @map("customizer_settings") @db.JsonB
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp
+
+  @@map("wp_themes")
+}
+
+// WordPress Plugins (Plugin Management)
+model WpPlugin {
+  pluginId         Int       @id @default(autoincrement()) @map("plugin_id")
+  pluginName       String    @map("plugin_name") @db.VarChar(100)
+  pluginSlug       String    @unique @map("plugin_slug") @db.VarChar(100)
+  pluginVersion    String    @default("1.0.0") @map("plugin_version") @db.VarChar(20)
+  pluginAuthor     String?   @map("plugin_author") @db.VarChar(100)
+  pluginAuthorUri  String?   @map("plugin_author_uri") @db.VarChar(255)
+  pluginDescription String?  @map("plugin_description") @db.Text
+  pluginUri        String?   @map("plugin_uri") @db.VarChar(255)
+  mainFile         String    @map("main_file") @db.VarChar(255)
+  network          Boolean   @default(false)
+  requiresWp       String?   @map("requires_wp") @db.VarChar(20)
+  testedWp         String?   @map("tested_wp") @db.VarChar(20)
+  requiresPhp      String?   @map("requires_php") @db.VarChar(20)
+  isActive         Boolean   @default(false) @map("is_active")
+  autoUpdate       Boolean   @default(false) @map("auto_update")
+  pluginPath       String?   @map("plugin_path") @db.VarChar(255)
+  settings         Json?     @db.JsonB
+  dependencies     Json?     @db.JsonB
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp
+  activatedAt      DateTime? @map("activated_at") @db.Timestamp
+  deactivatedAt    DateTime? @map("deactivated_at") @db.Timestamp
+
+  @@map("wp_plugins")
+}
+
+// WordPress Widgets (Widget Management)
+model WpWidget {
+  widgetId       Int      @id @default(autoincrement()) @map("widget_id")
+  widgetType     String   @map("widget_type") @db.VarChar(100)
+  widgetTitle    String?  @map("widget_title") @db.VarChar(255)
+  sidebarId      String?  @map("sidebar_id") @db.VarChar(100)
+  widgetOrder    Int      @default(0) @map("widget_order")
+  widgetSettings Json?    @map("widget_settings") @db.JsonB
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp
+
+  @@map("wp_widgets")
+}
+
+// WordPress Menus (Navigation Menu Management)
+model WpNavMenu {
+  termId       BigInt   @id @map("term_id")
+  name         String   @db.VarChar(200)
+  slug         String   @db.VarChar(200)
+  menuLocation String?  @map("menu_location") @db.VarChar(100)
+  menuItems    Json?    @map("menu_items") @db.JsonB
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  term      WpTerm           @relation(fields: [termId], references: [termId], onDelete: Cascade)
+  menuItems WpNavMenuItem[]
+
+  @@map("wp_nav_menus")
+}
+
+// WordPress Menu Items (Individual Menu Items)
+model WpNavMenuItem {
+  itemId      BigInt    @id @default(autoincrement()) @map("item_id")
+  menuId      BigInt    @map("menu_id")
+  objectId    BigInt    @default(0) @map("object_id")
+  objectType  String    @default("") @map("object_type") @db.VarChar(20)
+  itemType    String    @default("custom") @map("item_type") @db.VarChar(20)
+  title       String    @db.VarChar(255)
+  url         String?   @db.VarChar(2048)
+  target      String    @default("") @db.VarChar(20)
+  attrTitle   String    @default("") @map("attr_title") @db.VarChar(255)
+  description String?   @db.Text
+  classes     String?   @db.Text
+  xfn         String    @default("") @db.VarChar(255)
+  menuOrder   Int       @default(0) @map("menu_order")
+  parentId    BigInt    @default(0) @map("parent_id")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  menu   WpNavMenu        @relation(fields: [menuId], references: [termId], onDelete: Cascade)
+  parent WpNavMenuItem?   @relation("MenuItemParent", fields: [parentId], references: [itemId], onDelete: SetNull)
+  children WpNavMenuItem[] @relation("MenuItemParent")
+
+  @@map("wp_nav_menu_items")
+}
+
+// WordPress Custom Fields Groups (Advanced Custom Fields Support)
+model WpFieldGroup {
+  groupId   Int      @id @default(autoincrement()) @map("group_id")
+  groupKey  String   @unique @map("group_key") @db.VarChar(100)
+  title     String   @db.VarChar(255)
+  fields    Json     @db.JsonB
+  location  Json     @db.JsonB
+  options   Json?    @db.JsonB
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp
+
+  @@map("wp_field_groups")
+}
+
+// WordPress Revisions Enhanced (Post Revisions with Better Tracking)
+model WpPostRevision {
+  revisionId      BigInt   @id @default(autoincrement()) @map("revision_id")
+  postId          BigInt   @map("post_id")
+  authorId        Int      @map("author_id")
+  revisionDate    DateTime @default(now()) @map("revision_date") @db.Timestamp
+  revisionContent Json     @map("revision_content") @db.JsonB
+  revisionType    String   @default("manual") @map("revision_type") @db.VarChar(20)
+  isCurrent       Boolean  @default(false) @map("is_current")
+
+  // Relations
+  post   WpPost    @relation(fields: [postId], references: [ID], onDelete: Cascade)
+  author SmfMember @relation(fields: [authorId], references: [idMember], onDelete: Cascade)
+
+  @@map("wp_post_revisions")
+}
+
+// WordPress Media Attachments Enhanced (Better Media Management)
+model WpMediaAttachment {
+  attachmentId BigInt    @id @map("attachment_id")
+  filePath     String    @map("file_path") @db.VarChar(500)
+  fileName     String    @map("file_name") @db.VarChar(255)
+  mimeType     String    @map("mime_type") @db.VarChar(100)
+  fileSize     BigInt    @default(0) @map("file_size")
+  imageWidth   Int?      @map("image_width")
+  imageHeight  Int?      @map("image_height")
+  altText      String?   @map("alt_text") @db.VarChar(255)
+  caption      String?   @db.Text
+  description  String?   @db.Text
+  metadata     Json?     @db.JsonB
+  uploadDate   DateTime  @default(now()) @map("upload_date") @db.Timestamp
+  uploadedBy   Int?      @map("uploaded_by")
+
+  // Relations
+  attachment WpPost     @relation(fields: [attachmentId], references: [ID], onDelete: Cascade)
+  uploader   SmfMember? @relation(fields: [uploadedBy], references: [idMember], onDelete: SetNull)
+
+  @@map("wp_media_attachments")
+}
+
+// WordPress Multisite Support Tables
+model WpSite {
+  siteId      BigInt   @id @default(autoincrement()) @map("site_id")
+  domain      String   @default("") @db.VarChar(200)
+  path        String   @default("/") @db.VarChar(100)
+  networkId   BigInt   @default(1) @map("network_id")
+  registered  DateTime @default(now()) @db.Timestamp
+  lastUpdated DateTime @default(dbgenerated("'1970-01-01 00:00:01'::timestamp")) @map("last_updated") @db.Timestamp
+  public      Int      @default(1) @db.SmallInt
+  archived    Int      @default(0) @db.SmallInt
+  mature      Int      @default(0) @db.SmallInt
+  spam        Int      @default(0) @db.SmallInt
+  deleted     Int      @default(0) @db.SmallInt
+  langId      Int      @default(0) @map("lang_id")
+
+  // Relations
+  sitemeta WpSiteMeta[]
+
+  @@map("wp_sites")
+}
+
+model WpSiteMeta {
+  metaId    BigInt  @id @default(autoincrement()) @map("meta_id")
+  siteId    BigInt  @default(0) @map("site_id")
+  metaKey   String? @map("meta_key") @db.VarChar(255)
+  metaValue String? @map("meta_value") @db.Text
+
+  // Relations
+  site WpSite @relation(fields: [siteId], references: [siteId], onDelete: Cascade)
+
+  @@map("wp_sitemeta")
+}
+
+// WordPress SEO Enhancement Table
+model WpSeoData {
+  seoId               BigInt   @id @default(autoincrement()) @map("seo_id")
+  objectId            BigInt   @map("object_id")
+  objectType          String   @map("object_type") @db.VarChar(20)
+  metaTitle           String?  @map("meta_title") @db.VarChar(255)
+  metaDescription     String?  @map("meta_description") @db.Text
+  canonicalUrl        String?  @map("canonical_url") @db.VarChar(2048)
+  ogTitle             String?  @map("og_title") @db.VarChar(255)
+  ogDescription       String?  @map("og_description") @db.Text
+  ogImage             String?  @map("og_image") @db.VarChar(2048)
+  twitterTitle        String?  @map("twitter_title") @db.VarChar(255)
+  twitterDescription  String?  @map("twitter_description") @db.Text
+  twitterImage        String?  @map("twitter_image") @db.VarChar(2048)
+  schemaMarkup        Json?    @map("schema_markup") @db.JsonB
+  focusKeyword        String?  @map("focus_keyword") @db.VarChar(255)
+  seoScore            Int      @default(0) @map("seo_score")
+  readabilityScore    Int      @default(0) @map("readability_score")
+  isNoindex           Boolean  @default(false) @map("is_noindex")
+  isNofollow          Boolean  @default(false) @map("is_nofollow")
+  breadcrumbTitle     String?  @map("breadcrumb_title") @db.VarChar(255)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp
+
+  @@map("wp_seo_data")
+  @@index([objectId, objectType], map: "wp_seo_data_object")
+  @@index([focusKeyword], map: "wp_seo_data_focus_keyword")
+}
+
+// WordPress Cache Table (Object Caching)
+model WpCache {
+  cacheKey   String   @id @map("cache_key") @db.VarChar(255)
+  cacheValue String?  @map("cache_value") @db.Text
+  expiration DateTime @db.Timestamp
+  cacheGroup String   @default("default") @map("cache_group") @db.VarChar(100)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp
+
+  @@map("wp_cache")
+  @@index([expiration], map: "wp_cache_expiration")
+  @@index([cacheGroup], map: "wp_cache_group")
+}
+
+// Update existing models to add missing relations
+model WpUser {
+  // Add relation to user meta
+  userMeta WpUserMeta[]
+}
+
+model WpComment {
+  // Add relation to comment meta
+  commentMeta WpCommentMeta[]
+}
+
+model WpPost {
+  // Add relations to revisions and media
+  revisions WpPostRevision[]
+  mediaAttachment WpMediaAttachment?
+}
+
+model WpTerm {
+  // Add relation to nav menus
+  navMenu WpNavMenu?
+}
+
+model SmfMember {
+  // Add relations to revisions and media uploads
+  postRevisions WpPostRevision[]
+  mediaUploads WpMediaAttachment[]
+}

@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsNotEmpty, IsOptional, IsString, IsUrl } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateAdminBusinessDto {
   @ApiProperty({ description: 'Dénomination' })
@@ -64,10 +65,12 @@ export class AdminBusinessListQueryDto {
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()
   @IsInt()
+  @Type(() => Number)
   page?: number = 1;
   @ApiPropertyOptional({ default: 20 })
   @IsOptional()
   @IsInt()
+  @Type(() => Number)
   statut?: number;
   @ApiPropertyOptional()
   @IsOptional()

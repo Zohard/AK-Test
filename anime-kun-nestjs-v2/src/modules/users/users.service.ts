@@ -601,7 +601,7 @@ export class UsersService {
       email: emailAddress,
       registrationDate: dateRegistered,
       lastLogin,
-      isAdmin: user.idGroup === 1 || idMember === 1 || idMember === 17667,
+      isAdmin: user.idGroup === 1 || idMember === 1,
       ...otherFields,
     };
   }
