@@ -156,7 +156,7 @@
                   Mes listes
                 </NuxtLink>
                 <div v-if="authStore.isAdmin" class="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">
-                  <NuxtLink 
+                  <NuxtLink
                     to="/admin"
                     class="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                     @click="showUserMenu = false"
@@ -166,7 +166,16 @@
                   </NuxtLink>
                 </div>
                 <div class="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">
-                  <button 
+                  <button
+                    @click="toggleTheme"
+                    class="flex items-center w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                  >
+                    <Icon :name="isDark ? 'heroicons:sun' : 'heroicons:moon'" class="w-4 h-4 mr-2" />
+                    {{ isDark ? 'Passer en mode clair' : 'Passer en mode sombre' }}
+                  </button>
+                </div>
+                <div class="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">
+                  <button
                     @click="handleLogout"
                     class="flex items-center w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                   >
@@ -288,6 +297,14 @@ const hideImage = (event: Event) => {
 watch(() => useRoute().path, () => {
   showMobileMenu.value = false
 })
+
+// Theme handling
+const colorMode = useColorMode()
+const isDark = computed(() => colorMode.value === 'dark')
+const toggleTheme = () => {
+  colorMode.preference = isDark.value ? 'light' : 'dark'
+  showUserMenu.value = false
+}
 </script>
 
 <style scoped>
