@@ -10,45 +10,35 @@ interface Props {
 
 const props = defineProps<Props>()
 
+function toPascalCase(str: string) {
+  return str
+    .split('-')
+    .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('')
+}
+
+// Import all heroicons using relative paths so Vite's glob can resolve them
+const outlineIcons = import.meta.glob(
+  '../../node_modules/@heroicons/vue/24/outline/*Icon.js'
+)
+const solidIcons = import.meta.glob(
+  '../../node_modules/@heroicons/vue/24/solid/*Icon.js'
+)
+
 const iconComponent = computed(() => {
   if (props.name.startsWith('heroicons:')) {
-    const iconName = props.name.replace('heroicons:', '')
-    
-    // Map icon names to components
-    const iconMap: Record<string, any> = {
-      'film': defineAsyncComponent(() => import('@heroicons/vue/24/outline/FilmIcon')),
-      'star-solid': defineAsyncComponent(() => import('@heroicons/vue/24/solid/StarIcon')),
-      'star': defineAsyncComponent(() => import('@heroicons/vue/24/outline/StarIcon')),
-      'heart': defineAsyncComponent(() => import('@heroicons/vue/24/outline/HeartIcon')),
-      'heart-solid': defineAsyncComponent(() => import('@heroicons/vue/24/solid/HeartIcon')),
-      'share': defineAsyncComponent(() => import('@heroicons/vue/24/outline/ShareIcon')),
-      'exclamation-triangle': defineAsyncComponent(() => import('@heroicons/vue/24/outline/ExclamationTriangleIcon')),
-      'book-open': defineAsyncComponent(() => import('@heroicons/vue/24/outline/BookOpenIcon')),
-      'chevron-left': defineAsyncComponent(() => import('@heroicons/vue/24/outline/ChevronLeftIcon')),
-      'chevron-right': defineAsyncComponent(() => import('@heroicons/vue/24/outline/ChevronRightIcon')),
-      'magnifying-glass': defineAsyncComponent(() => import('@heroicons/vue/24/outline/MagnifyingGlassIcon')),
-      'moon': defineAsyncComponent(() => import('@heroicons/vue/24/outline/MoonIcon')),
-      'sun': defineAsyncComponent(() => import('@heroicons/vue/24/outline/SunIcon')),
-      'bars-3': defineAsyncComponent(() => import('@heroicons/vue/24/outline/Bars3Icon')),
-      'x-mark': defineAsyncComponent(() => import('@heroicons/vue/24/outline/XMarkIcon')),
-      'user': defineAsyncComponent(() => import('@heroicons/vue/24/outline/UserIcon')),
-      'play': defineAsyncComponent(() => import('@heroicons/vue/24/outline/PlayIcon')),
-      'at-symbol': defineAsyncComponent(() => import('@heroicons/vue/24/outline/AtSymbolIcon')),
-      'chat-bubble-left': defineAsyncComponent(() => import('@heroicons/vue/24/outline/ChatBubbleLeftIcon')),
-      'code-bracket': defineAsyncComponent(() => import('@heroicons/vue/24/outline/CodeBracketIcon')),
-      'information-circle': defineAsyncComponent(() => import('@heroicons/vue/24/outline/InformationCircleIcon')),
-      'bell': defineAsyncComponent(() => import('@heroicons/vue/24/outline/BellIcon')),
-      'cog-6-tooth': defineAsyncComponent(() => import('@heroicons/vue/24/outline/Cog6ToothIcon')),
-      'arrow-right-on-rectangle': defineAsyncComponent(() => import('@heroicons/vue/24/outline/ArrowRightOnRectangleIcon')),
-      'newspaper': defineAsyncComponent(() => import('@heroicons/vue/24/outline/NewspaperIcon')),
-      'eye': defineAsyncComponent(() => import('@heroicons/vue/24/outline/EyeIcon')),
-      'tag': defineAsyncComponent(() => import('@heroicons/vue/24/outline/TagIcon')),
-      'document-text': defineAsyncComponent(() => import('@heroicons/vue/24/outline/DocumentTextIcon')),
-    }
-    
-    return iconMap[iconName] || null
+    const rawName = props.name.replace('heroicons:', '')
+    const fileName = `${toPascalCase(rawName)}Icon.js`
+
+    const importer =
+      outlineIcons[
+        `../../node_modules/@heroicons/vue/24/outline/${fileName}`
+      ] ||
+      solidIcons[`../../node_modules/@heroicons/vue/24/solid/${fileName}`]
+
+    return importer ? defineAsyncComponent(importer) : null
   }
-  
+
   return null
 })
 </script>
