@@ -65,7 +65,8 @@
         <Icon name="heroicons:chevron-right" class="w-6 h-6" />
       </button>
 
-      <!-- Dots indicator -->
+      <!-- Dots indicator - Hidden -->
+      <!-- 
       <div class="carousel-indicators">
         <button
           v-for="(item, index) in items"
@@ -75,6 +76,7 @@
           :aria-label="`Aller à l'élément ${index + 1}`"
         />
       </div>
+      -->
 
       <!-- Progress bar -->
       <div class="progress-container">
@@ -135,7 +137,7 @@ const fetchContent = async () => {
           title: r.titre || media?.titre || 'Critique',
           subtitle: r.critique ? (r.critique.length > 120 ? r.critique.slice(0, 120) + '...' : r.critique) : 'Découvrez la dernière critique de la communauté',
           imageUrl: imagePath ? getImageUrl(imagePath, mediaType as any) : null,
-          link: r.niceUrl ? `/reviews/${r.niceUrl}` : `/reviews/${r.idCritique}`,
+          link: r.niceUrl ? `/review/${r.niceUrl}` : `/review/${r.idCritique}`,
           date: r.dateCritique || new Date().toISOString(),
           alt: media?.titre || r.titre || 'Critique'
         })

@@ -204,9 +204,11 @@ const handleViewAllReviews = () => {
   emit('view-all-reviews')
 }
 
+const { handleImageError } = useImageUrl()
+
 const onImageError = (event: Event) => {
-  const img = event.target as HTMLImageElement
-  img.style.display = 'none'
+  const mediaType = props.review.idManga ? 'manga' : 'anime'
+  handleImageError(event, undefined, mediaType)
 }
 </script>
 

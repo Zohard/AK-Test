@@ -94,7 +94,7 @@ const fetchContent = async () => {
           title: r.titre || media?.titre || 'Critique',
           subtitle: r.critique ? (r.critique.length > 140 ? r.critique.slice(0, 140) + '...' : r.critique) : 'Découvrez la dernière critique de la communauté',
           imageUrl: imagePath ? getImageUrl(imagePath, mediaType as any) : null,
-          link: r.niceUrl ? `/reviews/${r.niceUrl}` : `/reviews/${r.idCritique}`,
+          link: r.niceUrl ? `/review/${r.niceUrl}` : `/review/${r.idCritique}`,
           date: r.dateCritique || new Date().toISOString(),
           alt: media?.titre || r.titre || 'Critique'
         })

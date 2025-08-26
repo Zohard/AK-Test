@@ -258,7 +258,7 @@
                     </NuxtLink>
 
                     <NuxtLink
-                      to="/animes/critiques"
+                      to="/reviews/anime"
                       class="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors duration-200"
                     >
                       <Icon name="heroicons:star" class="w-4 h-4 text-yellow-500" />
@@ -336,20 +336,98 @@
             </Transition>
           </div>
 
-          <NuxtLink
-            to="/mangas"
-            class="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors duration-200 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+          <!-- Manga Dropdown -->
+          <div 
+            class="relative"
+            @mouseenter="showMangaMenu = true"
+            @mouseleave="showMangaMenu = false"
           >
-            <Icon name="heroicons:book-open" class="w-5 h-5" />
-            <span>Mangas</span>
-          </NuxtLink>
-          <NuxtLink
-            to="/reviews"
-            class="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors duration-200 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
-          >
-            <Icon name="heroicons:star" class="w-5 h-5" />
-            <span>Critiques</span>
-          </NuxtLink>
+            <button
+              class="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors duration-200 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <Icon name="heroicons:book-open" class="w-5 h-5" />
+              <span>Mangas</span>
+              <Icon name="heroicons:chevron-down" class="w-4 h-4 transition-transform" :class="{ 'rotate-180': showMangaMenu }" />
+            </button>
+
+            <Transition
+              enter-active-class="transition ease-out duration-200"
+              enter-from-class="opacity-0 translate-y-1"
+              enter-to-class="opacity-100 translate-y-0"
+              leave-active-class="transition ease-in duration-150"
+              leave-from-class="opacity-100 translate-y-0"
+              leave-to-class="opacity-0 translate-y-1"
+            >
+              <div
+                v-show="showMangaMenu"
+                class="absolute left-0 z-50 mt-1 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700"
+              >
+                <div class="p-4">
+                  <div class="grid grid-cols-1 gap-1">
+                    <NuxtLink
+                      to="/mangas"
+                      class="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors duration-200"
+                    >
+                      <Icon name="heroicons:rectangle-stack" class="w-4 h-4 text-green-500" />
+                      <span>Base de données</span>
+                    </NuxtLink>
+
+                    <NuxtLink
+                      to="/reviews/manga"
+                      class="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors duration-200"
+                    >
+                      <Icon name="heroicons:star" class="w-4 h-4 text-yellow-500" />
+                      <span>Dernières critiques</span>
+                    </NuxtLink>
+                  </div>
+
+                  <!-- Stats Footer -->
+                  <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
+                      {{ mangaStats.total }} mangas référencés, {{ mangaStats.reviews }} critiques
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Transition>
+          </div>
+          <!-- Reviews Dropdown -->
+          <div class="relative group">
+            <button
+              class="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors duration-200 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <Icon name="heroicons:star" class="w-5 h-5" />
+              <span>Critiques</span>
+              <Icon name="heroicons:chevron-down" class="w-4 h-4 transition-transform group-hover:rotate-180" />
+            </button>
+            
+            <!-- Dropdown Menu -->
+            <div class="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div class="py-1">
+                <NuxtLink
+                  to="/reviews/all"
+                  class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  <Icon name="heroicons:rectangle-stack" class="w-4 h-4 mr-3" />
+                  Toutes les critiques
+                </NuxtLink>
+                <NuxtLink
+                  to="/reviews/anime"
+                  class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  <Icon name="heroicons:film" class="w-4 h-4 mr-3" />
+                  Critiques d'animes
+                </NuxtLink>
+                <NuxtLink
+                  to="/reviews/manga"
+                  class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  <Icon name="heroicons:book-open" class="w-4 h-4 mr-3" />
+                  Critiques de mangas
+                </NuxtLink>
+              </div>
+            </div>
+          </div>
           <NuxtLink
             to="/articles"
             class="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors duration-200 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -397,14 +475,36 @@
               <Icon name="heroicons:book-open" class="w-5 h-5 mr-4" />
               <span class="text-base font-medium">Mangas</span>
             </NuxtLink>
-            <NuxtLink
-              to="/reviews"
-              class="flex items-center px-4 py-3 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200"
-              @click="showMobileMenu = false"
-            >
-              <Icon name="heroicons:star" class="w-5 h-5 mr-4" />
-              <span class="text-base font-medium">Critiques</span>
-            </NuxtLink>
+            <!-- Reviews Section -->
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
+              <div class="px-4 py-2">
+                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Critiques</span>
+              </div>
+              <NuxtLink
+                to="/reviews/all"
+                class="flex items-center px-4 py-3 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200"
+                @click="showMobileMenu = false"
+              >
+                <Icon name="heroicons:rectangle-stack" class="w-5 h-5 mr-4" />
+                <span class="text-base font-medium">Toutes les critiques</span>
+              </NuxtLink>
+              <NuxtLink
+                to="/reviews/anime"
+                class="flex items-center px-4 py-3 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200"
+                @click="showMobileMenu = false"
+              >
+                <Icon name="heroicons:film" class="w-5 h-5 mr-4" />
+                <span class="text-base font-medium">Critiques d'animes</span>
+              </NuxtLink>
+              <NuxtLink
+                to="/reviews/manga"
+                class="flex items-center px-4 py-3 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200"
+                @click="showMobileMenu = false"
+              >
+                <Icon name="heroicons:book-open" class="w-5 h-5 mr-4" />
+                <span class="text-base font-medium">Critiques de mangas</span>
+              </NuxtLink>
+            </div>
             <NuxtLink
               to="/articles"
               class="flex items-center px-4 py-3 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200"
@@ -545,6 +645,7 @@ const showNotifications = ref(false)
 const showUserMenu = ref(false)
 const showMobileMenu = ref(false)
 const showAnimeDropdown = ref(false)
+const showMangaMenu = ref(false)
 const avatarError = ref(false)
 const isScrolled = ref(false)
 const showLogoutModal = ref(false)
@@ -557,6 +658,12 @@ const unreadCount = ref(0)
 const animeStats = ref({
   total: 8130,
   reviews: 7364
+})
+
+// Manga dropdown data
+const mangaStats = ref({
+  total: 2150,
+  reviews: 1842
 })
 
 // Current season data
@@ -592,7 +699,10 @@ const loadCurrentSeason = async () => {
   }
 }
 
-// Close dropdowns when clicking outside
+// Close dropdowns when clicking outside - fixed lifecycle hooks
+let onScroll: (() => void) | null = null
+let onKeydown: ((e: KeyboardEvent) => void) | null = null
+
 onMounted(async () => {
   // Load current season data
   await loadCurrentSeason()
@@ -606,12 +716,12 @@ onMounted(async () => {
     }
   })
 
-  const onScroll = () => {
+  onScroll = () => {
     isScrolled.value = window.scrollY > 4
   }
   window.addEventListener('scroll', onScroll, { passive: true })
 
-  const onKeydown = (e: KeyboardEvent) => {
+  onKeydown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       showNotifications.value = false
       showUserMenu.value = false
@@ -620,11 +730,15 @@ onMounted(async () => {
     }
   }
   document.addEventListener('keydown', onKeydown)
+})
 
-  onUnmounted(() => {
+onUnmounted(() => {
+  if (onScroll) {
     window.removeEventListener('scroll', onScroll)
+  }
+  if (onKeydown) {
     document.removeEventListener('keydown', onKeydown)
-  })
+  }
 })
 
 const handleLogout = () => {

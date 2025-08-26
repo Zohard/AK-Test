@@ -3,7 +3,7 @@
     <div class="panel-header">
       <div class="header-content">
         <Icon name="heroicons:chat-bubble-left-ellipsis" class="w-6 h-6 text-blue-500" />
-        <h3 class="panel-title">Derniers messages du forum</h3>
+        <h3 class="panel-title">Derniers messages</h3>
       </div>
       <NuxtLink to="/forums" class="panel-link">
         <span>Voir tout</span>
@@ -13,7 +13,7 @@
 
     <div class="panel-content">
       <div v-if="loading" class="loading-state">
-        <div class="loading-skeleton" v-for="i in 5" :key="i"></div>
+        <div class="loading-skeleton" v-for="i in 3" :key="i"></div>
       </div>
 
       <div v-else class="messages-list">
@@ -132,7 +132,7 @@ const loadForumMessages = async () => {
     error.value = ''
     
     console.log('ForumPanel: Starting to fetch messages...')
-    const response = await fetchLatestMessages({ limit: 5 })
+    const response = await fetchLatestMessages({ limit: 3 })
     console.log('ForumPanel: Response received:', response)
     
     // Transform API data to display format

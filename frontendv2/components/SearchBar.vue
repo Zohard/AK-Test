@@ -83,14 +83,24 @@
           >
             <!-- Thumbnail -->
             <div class="w-12 h-16 mr-4 flex-shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900/50 dark:to-primary-800/50">
-              <img
-                v-if="suggestion.image && !imageErrors[suggestion.id]"
-                :src="getImageUrl(suggestion.image, suggestion.type)"
-                :alt="suggestion.titre"
-                class="w-full h-full object-cover"
-                @error="handleImageError(suggestion.id)"
-                @load="handleImageLoad(suggestion.id)"
-              />
+              <div 
+                v-if="suggestion.image"
+                class="w-full h-full"
+              >
+                <img
+                  :src="getImageUrl(suggestion.image, suggestion.type)"
+                  :alt="suggestion.titre"
+                  class="w-full h-full object-cover"
+                  @error="(event) => { (event.target as HTMLImageElement).style.display = 'none' }"
+                />
+                <div class="w-full h-full flex items-center justify-center" style="margin-top: -100%;">
+                  <Icon 
+                    :name="suggestion.type === 'anime' ? 'heroicons:tv' : 'heroicons:book-open'" 
+                    size="sm"
+                    class="text-primary-500 dark:text-primary-400" 
+                  />
+                </div>
+              </div>
               <div 
                 v-else
                 class="w-full h-full flex items-center justify-center"
@@ -220,8 +230,6 @@ const showSuggestions = ref(false)
 const loading = ref(false)
 const selectedSuggestionIndex = ref(-1)
 const showRecent = ref(false)
-const imageErrors = ref<Record<number, boolean>>({})
-
 // Local storage for recent searches
 const recentSearches = ref<string[]>([])
 
@@ -235,19 +243,6 @@ onMounted(() => {
   } catch (error) {
     console.warn('Failed to load recent searches:', error)
   }
-  
-  // Keyboard shortcut (Cmd/Ctrl + K)
-  const handleKeydown = (e: KeyboardEvent) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-      e.preventDefault()
-      searchInput.value?.focus()
-    }
-  }
-  
-  document.addEventListener('keydown', handleKeydown)
-  onUnmounted(() => {
-    document.removeEventListener('keydown', handleKeydown)
-  })
 })
 
 const config = useRuntimeConfig()
@@ -297,8 +292,6 @@ const debouncedSearch = useDebounceFn(async (searchQuery: string) => {
     
     // Combine and limit results
     suggestions.value = [...animeItems, ...mangaItems].slice(0, 5)
-    // Clear previous image errors for new suggestions
-    imageErrors.value = {}
   } catch (error: any) {
     console.error('Search error:', error)
     suggestions.value = []
@@ -438,21 +431,37 @@ const hideSuggestions = () => {
 // Use the same image URL logic as other components
 const { getImageUrl } = useImageUrl()
 
-const handleImageError = (suggestionId: number) => {
-  imageErrors.value[suggestionId] = true
-}
+// Keyboard shortcut and event listeners
+let keydownHandler: ((e: KeyboardEvent) => void) | null = null
+let clickHandler: ((event: MouseEvent) => void) | null = null
 
-const handleImageLoad = (suggestionId: number) => {
-  imageErrors.value[suggestionId] = false
-}
-
-// Clear suggestions when clicking outside
 onMounted(() => {
-  document.addEventListener('click', (event) => {
+  // Keyboard shortcut (Cmd/Ctrl + K)
+  keydownHandler = (e: KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault()
+      searchInput.value?.focus()
+    }
+  }
+  
+  // Clear suggestions when clicking outside
+  clickHandler = (event: MouseEvent) => {
     const target = event.target as HTMLElement
-    if (!target.closest('.relative')) {
+    if (!searchContainer.value?.contains(target)) {
       showSuggestions.value = false
     }
-  })
+  }
+  
+  document.addEventListener('keydown', keydownHandler)
+  document.addEventListener('click', clickHandler)
+})
+
+onUnmounted(() => {
+  if (keydownHandler) {
+    document.removeEventListener('keydown', keydownHandler)
+  }
+  if (clickHandler) {
+    document.removeEventListener('click', clickHandler)
+  }
 })
 </script>

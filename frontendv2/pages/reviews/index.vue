@@ -1,8 +1,4 @@
-<template>
-  <ReviewsPage />
-</template>
-
 <script setup lang="ts">
-import ReviewsPage from '../reviews.vue'
+// Redirect /reviews to /reviews/all
+await navigateTo('/reviews/all', { replace: true })
 </script>
-

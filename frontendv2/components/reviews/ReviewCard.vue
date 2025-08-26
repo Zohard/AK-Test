@@ -5,17 +5,18 @@
       <div class="flex items-start space-x-3">
         <!-- Media Image -->
         <div class="flex-shrink-0 relative">
-          <SmartImage
-            v-if="mediaImage"
-            :src="mediaImage"
-            :alt="mediaTitle"
-            :width="48"
-            :height="64"
-            aspect-ratio="3/4"
-            container-class="w-12 h-16 rounded-md shadow-sm"
-            image-class="rounded-md"
-            :placeholder-icon="mediaType === 'manga' ? 'heroicons:book-open' : 'heroicons:film'"
-          />
+          <div 
+            v-if="mediaImage && hasValidImage"
+            class="w-12 h-16 rounded-md shadow-sm overflow-hidden bg-gray-100 dark:bg-gray-800"
+          >
+            <img 
+              :src="mediaImage"
+              :alt="mediaTitle"
+              class="w-full h-full object-cover rounded-md"
+              @error="onImageError"
+              @load="onImageLoad"
+            />
+          </div>
           <div 
             v-else 
             class="w-12 h-16 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 rounded-md flex items-center justify-center"
@@ -158,6 +159,7 @@
 
 <script setup lang="ts">
 import type { ReviewData } from '~/composables/useReviewsAPI'
+import ReviewRating from '~/components/reviews/ReviewRating.vue'
 
 interface Props {
   review: ReviewData
@@ -172,10 +174,11 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const authStore = useAuthStore()
-const { getImageUrl } = useImageUrl()
+const { getImageUrl, handleImageError } = useImageUrl()
 
 // State
 const isFavorite = ref(false)
+const hasValidImage = ref(true)
 
 // Computed properties
 const mediaType = computed(() => {
@@ -193,13 +196,31 @@ const mediaTitle = computed(() => {
 })
 
 const mediaImage = computed(() => {
-  const image = props.review.manga?.image || props.review.anime?.image
-  return image ? getImageUrl(image, mediaType.value) : null
+  // Handle different possible data structures
+  let image = null
+  
+  if (mediaType.value === 'manga') {
+    image = props.review.manga?.image || props.review.manga?.imageUrl
+  } else {
+    image = props.review.anime?.image || props.review.anime?.imageUrl
+  }
+  
+  const imageUrl = image ? getImageUrl(image, mediaType.value) : null
+  console.log('MediaImage debug:', { 
+    image, 
+    imageUrl,
+    mediaType: mediaType.value, 
+    manga: props.review.manga, 
+    anime: props.review.anime,
+    fullReview: props.review
+  })
+  return imageUrl
 })
 
 const reviewUrl = computed(() => {
-  // Use numeric ID to avoid backend slug dependency
-  return `/review/${props.review.idCritique}`
+  // Use numeric ID from API response
+  const reviewId = props.review.id || props.review.idCritique
+  return `/review/${reviewId}`
 })
 
 const reviewExcerpt = computed(() => {
@@ -280,7 +301,18 @@ const getAuthorGradient = (pseudo?: string) => {
 
 const onImageError = (event: Event) => {
   const img = event.target as HTMLImageElement
-  img.style.display = 'none'
+  console.log('Image error:', {
+    src: img.src,
+    originalImage: props.review.manga?.image || props.review.anime?.image,
+    mediaType: mediaType.value,
+    review: props.review
+  })
+  hasValidImage.value = false
+}
+
+const onImageLoad = (event: Event) => {
+  console.log('Image loaded successfully')
+  hasValidImage.value = true
 }
 
 const onAvatarError = (event: Event) => {
@@ -297,7 +329,7 @@ const toggleFavorite = async () => {
 
   try {
     isFavorite.value = !isFavorite.value
-    emit('favorite', props.review.idCritique, isFavorite.value)
+    emit('favorite', props.review.id || props.review.idCritique, isFavorite.value)
     
     // TODO: Implement API call when backend is ready
     // await $fetch(`/api/reviews/${props.review.idCritique}/favorite`, {

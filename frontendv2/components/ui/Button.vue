@@ -19,7 +19,7 @@
     
     <!-- Icon (left) -->
     <Icon
-      v-else-if="iconLeft"
+      v-else-if="iconLeft && typeof iconLeft === 'string'"
       :name="iconLeft"
       :size="iconSize"
       :variant="iconVariant"

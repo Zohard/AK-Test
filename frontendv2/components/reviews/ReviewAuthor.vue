@@ -52,7 +52,7 @@
               <span>{{ authorStats.reviewsCount }} critiques</span>
             </div>
             
-            <div class="flex items-center space-x-1">
+            <div v-if="authorStats.reviewsCount > 0" class="flex items-center space-x-1">
               <Icon name="heroicons:star" class="w-4 h-4 text-yellow-400" />
               <span>{{ authorStats.averageRating }}/10 moyenne</span>
             </div>
@@ -149,7 +149,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 const authStore = useAuthStore()
-const { getAvatarUrl } = useImageUrl()
+const { getAvatarUrl, handleImageError } = useImageUrl()
 
 // State
 const isFollowing = ref(false)
@@ -167,9 +167,16 @@ const authorUrl = computed(() => {
 const avatarUrl = computed(() => {
   if (!props.author) return null
   
-  // If author has avatar field, use it directly
+  // If author has avatar field, process it through image URL handler
   if ('avatar' in props.author && props.author.avatar) {
-    return props.author.avatar
+    // Handle problematic external image hosts
+    let avatarPath = props.author.avatar
+    if (avatarPath.startsWith('https://') && 
+        (avatarPath.includes('casimages.com') || avatarPath.includes('imageshack') || avatarPath.includes('hostingpics.net'))) {
+      // Convert to HTTP to avoid SSL issues
+      avatarPath = avatarPath.replace('https://', 'http://')
+    }
+    return avatarPath
   }
   
   // No avatar available
@@ -295,7 +302,23 @@ const sendMessage = () => {
 
 const onAvatarError = (event: Event) => {
   const img = event.target as HTMLImageElement
-  img.style.display = 'none'
+  const originalSrc = img.src
+  
+  // If it's an old image host with SSL issues, try HTTP first
+  if (originalSrc.startsWith('https://') && 
+      (originalSrc.includes('casimages.com') || originalSrc.includes('imageshack') || originalSrc.includes('hostingpics.net'))) {
+    const httpVersion = originalSrc.replace('https://', 'http://')
+    if (!img.dataset.httpTried) {
+      img.dataset.httpTried = 'true'
+      img.src = httpVersion
+      return
+    }
+  }
+  
+  // Fallback to default avatar
+  const fallbackAvatar = getAvatarUrl(undefined, props.author?.id)
+  img.src = fallbackAvatar
+  img.style.opacity = '0.8'
 }
 
 // Load follow status if authenticated

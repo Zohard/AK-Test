@@ -3,6 +3,6 @@
 </template>
 
 <script setup lang="ts">
-import ReviewDetail from '../reviews/[slug].vue'
+import ReviewDetail from '~/components/ReviewDetail.vue'
 </script>
 

@@ -97,12 +97,15 @@ const iconComponent = computed(() => {
       // Interface Elements
       'x-mark': () => import('@heroicons/vue/24/outline/XMarkIcon.js'),
       'plus': () => import('@heroicons/vue/24/outline/PlusIcon.js'),
+      'plus-circle': () => import('@heroicons/vue/24/outline/PlusCircleIcon.js'),
       'magnifying-glass': () => import('@heroicons/vue/24/outline/MagnifyingGlassIcon.js'),
       'funnel': () => import('@heroicons/vue/24/outline/FunnelIcon.js'),
       'bars-3': () => import('@heroicons/vue/24/outline/Bars3Icon.js'),
       'ellipsis-horizontal': () => import('@heroicons/vue/24/outline/EllipsisHorizontalIcon.js'),
       'ellipsis-vertical': () => import('@heroicons/vue/24/outline/EllipsisVerticalIcon.js'),
       'cog-6-tooth': () => import('@heroicons/vue/24/outline/Cog6ToothIcon.js'),
+      'rectangle-stack': () => import('@heroicons/vue/24/outline/RectangleStackIcon.js'),
+      'light-bulb': () => import('@heroicons/vue/24/outline/LightBulbIcon.js'),
       
       // Status & Alerts
       'check': () => import('@heroicons/vue/24/outline/CheckIcon.js'),
@@ -135,6 +138,7 @@ const iconComponent = computed(() => {
       'arrow-top-right-on-square': () => import('@heroicons/vue/24/outline/ArrowTopRightOnSquareIcon.js'),
       'link': () => import('@heroicons/vue/24/outline/LinkIcon.js'),
       'printer': () => import('@heroicons/vue/24/outline/PrinterIcon.js'),
+      'flag': () => import('@heroicons/vue/24/outline/FlagIcon.js'),
       
       // Tags & Organization
       'tag': () => import('@heroicons/vue/24/outline/TagIcon.js'),
@@ -154,8 +158,15 @@ const iconComponent = computed(() => {
       // Sorting & Filtering
       'bars-arrow-down': () => import('@heroicons/vue/24/outline/BarsArrowDownIcon.js'),
       
+      // Analytics & Stats
+      'chart-bar': () => import('@heroicons/vue/24/outline/ChartBarIcon.js'),
+      'trophy': () => import('@heroicons/vue/24/outline/TrophyIcon.js'),
+      'newspaper': () => import('@heroicons/vue/24/outline/NewspaperIcon.js'),
+      
       // Account Actions
       'arrow-right-on-rectangle': () => import('@heroicons/vue/24/outline/ArrowRightOnRectangleIcon.js'),
+      'arrow-left-on-rectangle': () => import('@heroicons/vue/24/outline/ArrowLeftOnRectangleIcon.js'),
+      'bell': () => import('@heroicons/vue/24/outline/BellIcon.js'),
       'key': () => import('@heroicons/vue/24/outline/KeyIcon.js'),
       'identification': () => import('@heroicons/vue/24/outline/IdentificationIcon.js'),
       'envelope': () => import('@heroicons/vue/24/outline/EnvelopeIcon.js'),

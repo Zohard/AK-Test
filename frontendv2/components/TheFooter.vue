@@ -71,10 +71,26 @@
             </li>
             <li>
               <NuxtLink 
-                to="/reviews"
+                to="/reviews/all"
                 class="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
                 Critiques
+              </NuxtLink>
+            </li>
+            <li>
+              <NuxtLink 
+                to="/reviews/anime"
+                class="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              >
+                Critiques d'animes
+              </NuxtLink>
+            </li>
+            <li>
+              <NuxtLink 
+                to="/reviews/manga"
+                class="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              >
+                Critiques de mangas
               </NuxtLink>
             </li>
             <li>

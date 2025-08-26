@@ -1,6 +1,6 @@
 <template>
   <div class="main-content">
-    <!-- Main layout with carousel and forum panel -->
+    <!-- Temporary simplified layout to fix stack overflow -->
     <div class="hero-layout">
       <div class="hero-carousel-section">
         <ModernHeroBanner />
@@ -26,13 +26,17 @@
         Chargement des critiques...
       </div>
       
-      <div v-else class="articles-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div v-else-if="critiques.length > 0" class="articles-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <ReviewCard 
           v-for="critique in critiques" 
           :key="critique.idCritique || critique.id" 
           :review="critique" 
           @view="viewReview"
         />
+      </div>
+      
+      <div v-else class="bg-gray-100 dark:bg-gray-700 p-8 rounded-lg text-center">
+        <p>Aucune critique disponible</p>
       </div>
     </section>
 
@@ -48,16 +52,41 @@
           <Icon name="heroicons:arrow-right" class="w-4 h-4" />
         </NuxtLink>
       </div>
+      
       <div v-if="animesLoading" class="loading">
         Chargement des animés...
       </div>
-      <div v-else class="articles-grid">
-        <AnimeCard
+      
+      <div v-else-if="featuredAnimes.length > 0" class="articles-grid">
+        <div 
           v-for="anime in featuredAnimes"
           :key="anime.id"
-          :anime="anime"
-          @view="viewAnime"
-        />
+          class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow hover:shadow-lg transition-shadow cursor-pointer"
+          @click="() => viewAnime(anime)"
+        >
+          <div class="aspect-w-3 aspect-h-4 mb-4 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+            <img 
+              v-if="anime.image"
+              :src="getImageUrl(anime.image, 'anime')"
+              :alt="anime.titre"
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+            <div v-else class="flex items-center justify-center">
+              <Icon name="heroicons:film" class="w-12 h-12 text-gray-400" />
+            </div>
+          </div>
+          <h3 class="font-semibold text-lg mb-2 line-clamp-2">{{ anime.titre }}</h3>
+          <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <span v-if="anime.annee">{{ anime.annee }}</span>
+            <span v-if="anime.nbEp">• {{ anime.nbEp }} ép.</span>
+          </div>
+          <p v-if="anime.synopsis" class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3">{{ anime.synopsis }}</p>
+        </div>
+      </div>
+      
+      <div v-else class="bg-gray-100 dark:bg-gray-700 p-8 rounded-lg text-center">
+        <p>Aucun animé disponible</p>
       </div>
     </section>
 
@@ -103,6 +132,7 @@ useHead({
 })
 
 const { fetchAnimes } = useAnimeAPI()
+const { getImageUrl } = useImageUrl()
 const { fetchReviews } = useReviewsAPI()
 
 // Reactive data
@@ -120,50 +150,64 @@ const animesLoading = ref(true)
 
 // Component lifecycle and cleanup
 const isMounted = ref(false)
-const abortController = ref<AbortController | null>(null)
+const isLoading = ref(false)
+let abortController: AbortController | null = null
 
-// Load initial data
+// Load initial data - gradually re-enabling
 onMounted(async () => {
+  console.log('Index page mounted')
+  if (isLoading.value) return
+  
   isMounted.value = true
-  abortController.value = new AbortController()
+  isLoading.value = true
+  abortController = new AbortController()
   
   try {
-    await Promise.all([
-      loadStats(),
-      loadCritiques(),
-      loadFeaturedAnimes()
-    ])
-  } catch (error) {
-    if (error.name !== 'AbortError') {
-      console.error('Error loading homepage data:', error)
-    }
+    // Load stats, reviews, and animes
+    await loadStats()
+    console.log('Stats loaded successfully')
+    
+    if (!isMounted.value) return
+    await loadCritiques()
+    console.log('Reviews loaded successfully')
+    
+    if (!isMounted.value) return
+    await loadFeaturedAnimes()
+    console.log('Animes loaded successfully')
+  } catch (error: any) {
+    console.error('Error loading homepage data:', error)
+  } finally {
+    isLoading.value = false
   }
+  
+  console.log('Index page mount complete')
 })
 
 onBeforeUnmount(() => {
   isMounted.value = false
-  if (abortController.value) {
-    abortController.value.abort()
-    abortController.value = null
+  if (abortController) {
+    abortController.abort()
+    abortController = null
   }
 })
 
 const loadStats = async () => {
-  if (!isMounted.value || !abortController.value) return
+  if (!isMounted.value || !abortController) return
   
   try {
-    const signal = abortController.value.signal
+    const signal = abortController.signal
+    if (signal.aborted || !isMounted.value) return
     
     // Get stats from APIs with abort signal
     const [animesResponse, mangasResponse, reviewsResponse] = await Promise.allSettled([
-      fetchAnimes({ limit: 1 }),
+      fetchAnimes({ limit: 1 }).catch(() => ({ pagination: { total: 0 } })),
       $fetch(`${useRuntimeConfig().public.apiBase}/api/mangas`, { 
         params: { limit: 1 },
         signal 
-      }),
+      }).catch(() => ({ pagination: { total: 0 } })),
       $fetch(`${useRuntimeConfig().public.apiBase}/api/reviews/count`, { 
         signal 
-      })
+      }).catch(() => ({ count: 0 }))
     ])
     
     // Check if component is still mounted before updating reactive state
@@ -175,7 +219,7 @@ const loadStats = async () => {
       reviews: reviewsResponse.status === 'fulfilled' ? ((reviewsResponse.value as any)?.count || 0) : 0
     }
   } catch (error: any) {
-    if (error.name === 'AbortError' || !isMounted.value) return
+    if (error?.name === 'AbortError' || !isMounted.value) return
     
     console.error('Error loading stats:', error)
     if (isMounted.value) {
@@ -189,23 +233,24 @@ const loadStats = async () => {
 }
 
 const loadCritiques = async () => {
-  if (!isMounted.value || !abortController.value) return
+  if (!isMounted.value || !abortController) return
   
   try {
-    const signal = abortController.value.signal
+    const signal = abortController.signal
+    if (signal.aborted || !isMounted.value) return
     
     const response = await fetchReviews({ 
       limit: 4,
       sortBy: 'dateCritique',
       sortOrder: 'desc'
-    })
+    }).catch(() => ({ data: [], reviews: [] }))
     
     if (!isMounted.value || signal.aborted) return
     
     const raw = (response as any).data || (response as any).reviews || []
-    critiques.value = raw.map(normalizeReview)
+    critiques.value = Array.isArray(raw) ? raw.map(normalizeReview) : []
   } catch (error: any) {
-    if (error.name === 'AbortError' || !isMounted.value) return
+    if (error?.name === 'AbortError' || !isMounted.value) return
     
     console.error('Error loading critiques:', error)
     if (isMounted.value) {
@@ -219,24 +264,27 @@ const loadCritiques = async () => {
 }
 
 const loadFeaturedAnimes = async () => {
-  if (!isMounted.value || !abortController.value) return
+  if (!isMounted.value || !abortController) return
   
   try {
-    const signal = abortController.value.signal
+    const signal = abortController.signal
+    if (signal.aborted || !isMounted.value) return
     
     const response = await fetchAnimes({ 
       limit: 3, 
       sortBy: 'titre', 
       sortOrder: 'asc' 
-    }) as ApiResponse<Anime[]>
+    }).catch(() => ({ animes: [] })) as ApiResponse<Anime[]>
     
     if (!isMounted.value || signal.aborted) return
     
-    if (response && response.animes) {
+    if (response && Array.isArray(response.animes)) {
       featuredAnimes.value = response.animes
+    } else {
+      featuredAnimes.value = []
     }
   } catch (error: any) {
-    if (error.name === 'AbortError' || !isMounted.value) return
+    if (error?.name === 'AbortError' || !isMounted.value) return
     
     console.error('Error loading featured animes:', error)
     if (isMounted.value) {
@@ -280,24 +328,43 @@ const viewReview = (review: ReviewData) => {
 }
 
 const normalizeReview = (r: any): ReviewData => {
+  if (!r || typeof r !== 'object') {
+    return {
+      idCritique: 0,
+      niceUrl: '',
+      titre: 'Untitled Review',
+      critique: '',
+      notation: 0,
+      dateCritique: new Date().toISOString(),
+      statut: 1,
+      idMembre: 0,
+      idAnime: 0,
+      idManga: 0,
+      nbClics: 0,
+      anime: null,
+      manga: null,
+      membre: undefined
+    }
+  }
+
   return {
-    idCritique: r.idCritique || r.id,
-    niceUrl: r.niceUrl,
-    titre: r.titre,
-    critique: r.critique || r.contenu,
-    notation: r.notation || r.note,
-    dateCritique: r.reviewDate || r.dateCritique || r.dateCreation,
+    idCritique: r.idCritique || r.id || 0,
+    niceUrl: r.niceUrl || '',
+    titre: r.titre || 'Untitled Review',
+    critique: r.critique || r.contenu || '',
+    notation: r.notation || r.note || 0,
+    dateCritique: r.reviewDate || r.dateCritique || r.dateCreation || new Date().toISOString(),
     statut: typeof r.statut === 'number' ? r.statut : 1,
     idMembre: r.idMembre || r.userId || 0,
     idAnime: r.idAnime || r.animeId || 0,
     idManga: r.idManga || r.mangaId || 0,
     nbClics: r.nbClics || r.nbVues || 0,
-    anime: r.anime,
-    manga: r.manga,
+    anime: r.anime || null,
+    manga: r.manga || null,
     membre: r.membre ? {
-      id: r.membre.id || r.membre.idMember,
-      pseudo: r.membre.pseudo || r.membre.memberName,
-      avatar: r.membre.avatar
+      id: r.membre.id || r.membre.idMember || 0,
+      pseudo: r.membre.pseudo || r.membre.memberName || 'Anonymous',
+      avatar: r.membre.avatar || ''
     } : undefined
   }
 }
