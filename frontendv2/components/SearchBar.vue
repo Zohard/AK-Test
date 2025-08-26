@@ -15,7 +15,6 @@
                focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500
                hover:border-primary-400 transition-all duration-200
                shadow-sm hover:shadow-md focus:shadow-lg"
-        @input="onInput"
         @focus="handleFocus"
         @blur="hideSuggestions"
         @keydown.escape="clearSearch"
@@ -247,7 +246,6 @@ onMounted(() => {
 
 // Debounced search implementation
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
-
 const performAutocomplete = async (searchQuery: string) => {
   if (searchQuery.length < 2) {
     suggestions.value = []
@@ -301,16 +299,16 @@ const performAutocomplete = async (searchQuery: string) => {
   }
 }
 
-const onInput = () => {
+watch(query, (newQuery) => {
   selectedSuggestionIndex.value = -1
   if (searchTimeout) {
     clearTimeout(searchTimeout)
   }
-  const searchQuery = query.value
+  const searchQuery = newQuery
   searchTimeout = setTimeout(() => {
     performAutocomplete(searchQuery)
   }, 300)
-}
+})
 
 const handleFocus = () => {
   showSuggestions.value = true

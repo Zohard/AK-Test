@@ -74,7 +74,7 @@ const props = withDefaults(defineProps<Props>(), {
   rounded: false
 })
 
-const emit = defineEmits<Emits>()
+const emitEvent = defineEmits<Emits>()
 
 // Determine component tag
 const tag = computed(() => {
@@ -218,7 +218,7 @@ const handleClick = (event: MouseEvent) => {
     event.preventDefault()
     return
   }
-  emit('click', event)
+  emitEvent('click', event)
 }
 </script>
 
