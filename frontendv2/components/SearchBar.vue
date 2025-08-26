@@ -245,10 +245,10 @@ onMounted(() => {
   }
 })
 
-const config = useRuntimeConfig()
+// Debounced search implementation
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
-// Debounced search for autocomplete
-const debouncedSearch = useDebounceFn(async (searchQuery: string) => {
+const performAutocomplete = async (searchQuery: string) => {
   if (searchQuery.length < 2) {
     suggestions.value = []
     return
@@ -257,8 +257,8 @@ const debouncedSearch = useDebounceFn(async (searchQuery: string) => {
   loading.value = true
   try {
     const config = useRuntimeConfig()
-    
-    // Search both anime and manga simultaneously  
+
+    // Search both anime and manga simultaneously
     const [animeResults, mangaResults] = await Promise.all([
       $fetch(`${config.public.apiBase}/api/animes/autocomplete`, {
         params: { q: searchQuery, limit: 3 }
@@ -267,8 +267,7 @@ const debouncedSearch = useDebounceFn(async (searchQuery: string) => {
         params: { q: searchQuery, limit: 3 }
       })
     ])
-    
-    // Process anime results
+
     const animeData = (animeResults as any).data || []
     const animeItems = Array.isArray(animeData) ? animeData.map((item: any) => ({
       id: item.id || item.id_anime,
@@ -278,8 +277,7 @@ const debouncedSearch = useDebounceFn(async (searchQuery: string) => {
       moyenne_notes: item.moyenne_notes || item.moyennenotes,
       image: item.image
     })) : []
-    
-    // Process manga results
+
     const mangaData = (mangaResults as any).data || []
     const mangaItems = Array.isArray(mangaData) ? mangaData.map((item: any) => ({
       id: item.id || item.id_manga,
@@ -289,26 +287,29 @@ const debouncedSearch = useDebounceFn(async (searchQuery: string) => {
       moyenne_notes: item.moyenne_notes || item.moyennenotes,
       image: item.image
     })) : []
-    
-    // Combine and limit results
+
     suggestions.value = [...animeItems, ...mangaItems].slice(0, 5)
   } catch (error: any) {
     console.error('Search error:', error)
     suggestions.value = []
-    
-    // If search endpoint doesn't exist yet, gracefully handle
+
     if (error.status === 404) {
       console.warn('Search endpoint not implemented yet')
     }
   } finally {
     loading.value = false
   }
-}, 300)
+}
 
-// Enhanced event handlers
 const onInput = () => {
   selectedSuggestionIndex.value = -1
-  debouncedSearch(query.value)
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+  }
+  const searchQuery = query.value
+  searchTimeout = setTimeout(() => {
+    performAutocomplete(searchQuery)
+  }, 300)
 }
 
 const handleFocus = () => {
@@ -462,6 +463,9 @@ onUnmounted(() => {
   }
   if (clickHandler) {
     document.removeEventListener('click', clickHandler)
+  }
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
   }
 })
 </script>
