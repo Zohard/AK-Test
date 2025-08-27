@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/services/prisma.service';
 import * as nodemailer from 'nodemailer';
 import { ConfigService } from '@nestjs/config';
@@ -188,11 +189,11 @@ export class NotificationsService {
     const offset = (page - 1) * limit;
 
     const whereClause = unreadOnly
-      ? `WHERE user_id = ${userId} AND read_at IS NULL`
-      : `WHERE user_id = ${userId}`;
+      ? Prisma.sql`WHERE user_id = ${userId} AND read_at IS NULL`
+      : Prisma.sql`WHERE user_id = ${userId}`;
 
     const notifications = await this.prisma.$queryRaw`
-      SELECT 
+      SELECT
         id,
         type,
         title,
@@ -201,7 +202,7 @@ export class NotificationsService {
         priority,
         read_at,
         created_at
-      FROM user_notifications 
+      FROM user_notifications
       ${whereClause}
       ORDER BY created_at DESC
       LIMIT ${limit} OFFSET ${offset}
@@ -209,7 +210,7 @@ export class NotificationsService {
 
     const countResult = await this.prisma.$queryRaw`
       SELECT COUNT(*) as total
-      FROM user_notifications 
+      FROM user_notifications
       ${whereClause}
     `;
 
